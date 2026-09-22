@@ -9,7 +9,7 @@
   --bg:#0b0a17; --panel:#161428; --panel2:#120f20; --border:#2e2a4a;
   --violet:#8b5cf6; --violetDim:#6941b3; --gold:#e8c76f; --dp:#b39cf0;
   --text:#ece7fb; --sub:#9c93bd; --danger:#ff6b6b; --bar:#1c1832;
-  --coin:#e0c078; --gem:#7fe0e6;
+  --pp:#e0c078; --gem:#7fe0e6;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
@@ -54,16 +54,12 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
 #core{width:100%;height:100%;border-radius:50%;overflow:hidden;position:relative;z-index:1;
   background:var(--panel2);
   box-shadow:0 0 30px 6px rgba(139,92,246,.45), inset 0 0 20px rgba(0,0,0,.35);
-  border:2px solid var(--gold); cursor:pointer; user-select:none;
-  transition:transform .12s cubic-bezier(.4,0,.2,1);
+  border:2px solid var(--gold);
 }
 #core svg.heroArt{width:100%;height:100%;display:block}
 #fx{position:absolute;inset:0;z-index:2;pointer-events:none;width:100%;height:100%}
-#core:active{transform:scale(.93)}
-.fg{animation:fg .6s ease}
-@keyframes fg{0%{box-shadow:0 0 0 0 #e8c76f00}40%{box-shadow:0 0 50px 8px #e8c76f}100%{box-shadow:0 0 30px 6px rgba(139,92,246,.45)}}
-.float{position:absolute;left:50%;top:20%;transform:translateX(-50%);color:var(--gold);font-weight:bold;font-size:1rem;pointer-events:none;animation:floatUp 1s ease forwards;z-index:3}
-@keyframes floatUp{0%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,-45px)}}
+.fg{animation:fg .9s ease}
+@keyframes fg{0%{box-shadow:0 0 0 0 #e8c76f00}35%{box-shadow:0 0 50px 8px #e8c76f}100%{box-shadow:0 0 30px 6px rgba(139,92,246,.45)}}
 .btnRow{display:flex;gap:8px;margin-top:4px}
 .b{flex:1;padding:10px 6px;border-radius:10px;border:1px solid var(--border);background:var(--panel2);color:var(--text);font-size:.85rem;font-family:inherit;transition:transform .15s ease,box-shadow .2s ease,border-color .2s ease;cursor:pointer}
 .b:hover{box-shadow:0 4px 16px rgba(232,199,111,.22);border-color:#f0e0a8}
@@ -73,15 +69,16 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
 .tabs{display:flex;gap:6px;margin:8px 0}
 .tab{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:7px 4px;border-radius:10px;border:1px solid var(--border);background:var(--panel2);color:var(--sub);font-size:.78rem;cursor:pointer}
 .tab.active{background:var(--violet);color:#fff;border-color:var(--gold)}
-.shopItem{display:flex;justify-content:space-between;align-items:center;padding:8px 6px;border-bottom:1px solid var(--border)}
-.shopItem:last-child{border-bottom:none}
-.shopName{font-size:.85rem;display:flex;align-items:center;gap:5px}
-.shopDesc{font-size:.68rem;color:var(--sub)}
-.buyBtn{display:inline-flex;align-items:center;gap:4px;padding:7px 10px;border-radius:8px;border:1px solid var(--gold);background:var(--panel2);color:var(--gold);font-size:.75rem;white-space:nowrap}
-.buyBtn:disabled{opacity:.4;color:var(--sub);border-color:var(--border)}
+.allocItem{display:flex;justify-content:space-between;align-items:center;padding:8px 6px;border-bottom:1px solid var(--border)}
+.allocItem:last-child{border-bottom:none}
+.allocName{font-size:.85rem;display:flex;align-items:center;gap:5px}
+.allocDesc{font-size:.68rem;color:var(--sub)}
+.allocBtn{display:inline-flex;align-items:center;gap:4px;padding:7px 10px;border-radius:8px;border:1px solid var(--gold);background:var(--panel2);color:var(--gold);font-size:.75rem;white-space:nowrap}
+.allocBtn:disabled{opacity:.4;color:var(--sub);border-color:var(--border)}
+.ppHead{display:flex;align-items:center;justify-content:center;gap:6px;font-size:.85rem;color:var(--pp);padding:2px 0 8px;border-bottom:1px solid var(--border);margin-bottom:6px}
 .logBox{font-size:.72rem;color:var(--sub);max-height:70px;overflow-y:auto;border-top:1px solid var(--border);padding-top:6px}
 .logBox div{margin:1px 0}
-.coinTxt{color:var(--coin)}
+.ppTxt{color:var(--pp)}
 .gemTxt{color:var(--gem)}
 .ic{flex:none;display:inline-block;vertical-align:-2px}
 #toast{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--gold);color:var(--text);padding:8px 14px;border-radius:10px;font-size:.8rem;opacity:0;pointer-events:none;transition:opacity .3s ease;z-index:50}
@@ -114,9 +111,8 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
         <circle cx="20" cy="20" r="1.3" fill="currentColor" stroke="none"/>
       </g>
     </symbol>
-    <symbol id="icon-coin" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.6"/>
-      <circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".65"/>
+    <symbol id="icon-spark" viewBox="0 0 24 24">
+      <path d="M12 2 L14 10 L22 12 L14 14 L12 22 L10 14 L2 12 L10 10 Z" fill="currentColor" stroke="none"/>
     </symbol>
     <symbol id="icon-gem" viewBox="0 0 24 24">
       <path d="M6 4h12l4 6-10 10L2 10z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
@@ -130,9 +126,11 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
       <line x1="7" y1="9" x2="14" y2="9" stroke="currentColor" stroke-width="1.1"/>
       <line x1="7" y1="13" x2="14" y2="13" stroke="currentColor" stroke-width="1.1"/>
     </symbol>
-    <symbol id="icon-pouch" viewBox="0 0 24 24">
-      <path d="M8 3h8l1 4H7z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
-      <path d="M6 7h12l1.5 9A3 3 0 0 1 16.5 20h-9A3 3 0 0 1 4.5 16z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+    <symbol id="icon-alloc" viewBox="0 0 24 24">
+      <circle cx="12" cy="5" r="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <circle cx="5" cy="19" r="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <circle cx="19" cy="19" r="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M12 7 L12 13 M12 13 L6 17.5 M12 13 L18 17.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
     </symbol>
     <symbol id="icon-fist" viewBox="0 0 24 24">
       <path d="M7 10V7a2 2 0 0 1 4 0M11 10V6a2 2 0 0 1 4 0v4M15 10V7a2 2 0 0 1 4 0v6a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5v-2a2 2 0 0 1 4 0" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>
@@ -171,7 +169,7 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
     <div class="statline"><span><svg class="ic" width="14" height="14" style="color:var(--dp)"><use href="#icon-bolt"></use></svg> พลังเทวะ (DP)</span><b id="qiTxt">0</b></div>
     <div class="bar qbar"><i id="qiBar" style="width:0%"></i></div>
     <div class="row" style="margin-top:6px">
-      <div class="statline" style="margin:0"><span><svg class="ic" width="13" height="13" style="color:var(--coin)"><use href="#icon-coin"></use></svg> เหรียญศรัทธา</span> <b class="coinTxt" id="goldTxt">0</b></div>
+      <div class="statline" style="margin:0"><span><svg class="ic" width="13" height="13" style="color:var(--pp)"><use href="#icon-spark"></use></svg> แต้มพลัง</span> <b class="ppTxt" id="ppTxt">0</b></div>
       <div class="statline" style="margin:0"><span><svg class="ic" width="13" height="13" style="color:var(--gem)"><use href="#icon-gem"></use></svg> เศษแก่นเทพ</span> <b class="gemTxt" id="gemTxt">0</b></div>
     </div>
   </div>
@@ -179,7 +177,7 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
   <div id="main">
     <div id="trainZone">
       <div id="coreWrap">
-        <div id="core" role="button" tabindex="0" aria-label="แตะเพื่อบำเพ็ญ">
+        <div id="core" aria-hidden="true">
           <svg class="heroArt" viewBox="0 0 200 200" aria-hidden="true">
             <defs>
               <radialGradient id="haloGrad" cx="50%" cy="42%" r="55%">
@@ -212,8 +210,8 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
         </div>
         <canvas id="fx"></canvas>
       </div>
-      <div style="font-size:.75rem;color:var(--sub);text-align:center">แตะแก่นพลังเพื่อบำเพ็ญ +<span id="clickPow">1</span> DP</div>
-      <div style="font-size:.72rem;color:var(--sub);margin-top:2px">อัตโนมัติ: <span id="autoPow">0</span> DP/วิ</div>
+      <div style="font-size:.75rem;color:var(--sub);text-align:center">พลังไหลเข้าโดยอัตโนมัติ <b style="color:var(--dp)"><span id="autoPow">0</span> DP/วิ</b></div>
+      <div style="font-size:.68rem;color:var(--sub);margin-top:2px">แต้มพลังใหม่ทุก 6 วินาที — นำไปจัดสรรเพื่อเร่งพลัง</div>
       <button class="b bPrimary" id="breakthroughBtn" style="margin-top:12px;width:100%">
         <svg class="ic" width="16" height="16"><use href="#icon-sword"></use></svg>
         <span id="btLabel">突破 ทลายขีดจำกัด</span>
@@ -222,11 +220,14 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
 
     <div class="tabs">
       <div class="tab active" data-tab="train" role="button" tabindex="0"><svg class="ic" width="14" height="14"><use href="#icon-fist"></use></svg>บำเพ็ญ</div>
-      <div class="tab" data-tab="shop" role="button" tabindex="0"><svg class="ic" width="14" height="14"><use href="#icon-pouch"></use></svg>ร้านค้า</div>
+      <div class="tab" data-tab="alloc" role="button" tabindex="0"><svg class="ic" width="14" height="14"><use href="#icon-alloc"></use></svg>จัดสรร</div>
       <div class="tab" data-tab="log" role="button" tabindex="0"><svg class="ic" width="14" height="14"><use href="#icon-scroll"></use></svg>บันทึกศึก</div>
     </div>
 
-    <div id="tab-shop" class="panel" style="display:none"></div>
+    <div id="tab-alloc" class="panel" style="display:none">
+      <div class="ppHead"><svg class="ic" width="15" height="15"><use href="#icon-spark"></use></svg>มีแต้มพลัง <b id="ppHeadTxt">0</b> แต้ม — จัดสรรเข้าสายพลังที่ต้องการ</div>
+      <div id="allocList"></div>
+    </div>
     <div id="tab-log" class="panel logBox" style="display:none"></div>
   </div>
 </div>
@@ -246,13 +247,13 @@ const GODS = [
 ];
 const REALM_BASE = 50;
 const REALM_GROWTH = 1.55;
+const PP_INTERVAL_SEC = 6;
 const SAVE_KEY = 'godKillerSave';
 
 let state = {
-  qi:0, gold:0, gems:0,
+  qi:0, pp:0, gems:0,
   realm:0,
-  clickBase:1,
-  autoBase:0,
+  autoBase:2,
   upgrades:{ fist:0, root:0, sword:0, manual:0, disciple:0 },
   godsSlain:0,
   lastSave: Date.now(),
@@ -261,22 +262,22 @@ let state = {
 };
 
 const UPG = {
-  fist:   { name:"ปลุกพลังในตน",   desc:"+1 DP ต่อแตะ",        base:10,  grow:1.16, effect:"click", amt:1, icon:"icon-fist" },
-  root:   { name:"แท่นบูชาเทวะ",   desc:"+1 DP/วิ อัตโนมัติ",   base:25,  grow:1.18, effect:"auto",  amt:1, icon:"icon-bolt" },
-  sword:  { name:"พรสวรรค์",       desc:"+3 DP ต่อแตะ",        base:150, grow:1.20, effect:"click", amt:3, icon:"icon-sword" },
-  manual: { name:"คัมภีร์ต้องห้าม", desc:"+5 DP/วิ อัตโนมัติ",   base:400, grow:1.22, effect:"auto",  amt:5, icon:"icon-scroll" },
-  disciple:{name:"ผู้ติดตามศรัทธา", desc:"+15 DP/วิ อัตโนมัติ",  base:2000,grow:1.25, effect:"auto",  amt:15, icon:"icon-disciple" }
+  fist:    { name:"ปลุกพลังในตน",    desc:"+1 DP/วิ",  base:1, grow:1.15, amt:1,  icon:"icon-fist" },
+  root:    { name:"แท่นบูชาเทวะ",    desc:"+2 DP/วิ",  base:1, grow:1.17, amt:2,  icon:"icon-bolt" },
+  sword:   { name:"พรสวรรค์",        desc:"+4 DP/วิ",  base:2, grow:1.19, amt:4,  icon:"icon-sword" },
+  manual:  { name:"คัมภีร์ต้องห้าม",  desc:"+8 DP/วิ",  base:3, grow:1.21, amt:8,  icon:"icon-scroll" },
+  disciple:{ name:"ผู้ติดตามศรัทธา",  desc:"+15 DP/วิ", base:5, grow:1.24, amt:15, icon:"icon-disciple" }
 };
 
 let fx = null;
+let ppAccumSec = 0;
 
 function realmThreshold(i){ return Math.floor(REALM_BASE * Math.pow(REALM_GROWTH, i)); }
 function realmName(i){ return REALMS[Math.min(i, REALMS.length-1)] + (i>=REALMS.length ? " ("+(i-REALMS.length+2)+"ชั้น)" : ""); }
 function godForKill(n){ return GODS[(n-1) % GODS.length]; }
 
-function clickPower(){ return state.clickBase + state.upgrades.fist*UPG.fist.amt + state.upgrades.sword*UPG.sword.amt; }
-function autoPower(){ return state.autoBase + state.upgrades.root*UPG.root.amt + state.upgrades.manual*UPG.manual.amt + state.upgrades.disciple*UPG.disciple.amt; }
-function upgCost(key){ const u = UPG[key]; return Math.floor(u.base * Math.pow(u.grow, state.upgrades[key])); }
+function autoPower(){ return state.autoBase + state.upgrades.fist*UPG.fist.amt + state.upgrades.root*UPG.root.amt + state.upgrades.sword*UPG.sword.amt + state.upgrades.manual*UPG.manual.amt + state.upgrades.disciple*UPG.disciple.amt; }
+function upgCost(key){ const u = UPG[key]; return Math.ceil(u.base * Math.pow(u.grow, state.upgrades[key])); }
 
 function fmt(n){
   if(n < 1000) return Math.floor(n).toString();
@@ -349,34 +350,34 @@ function render(){
   document.getElementById('realmSigil').innerHTML = sigilSVG(state.realm);
   document.getElementById('qiTxt').textContent = fmt(state.qi)+" / "+fmt(need);
   document.getElementById('qiBar').style.width = Math.min(100, state.qi/need*100)+"%";
-  document.getElementById('goldTxt').textContent = fmt(state.gold);
+  document.getElementById('ppTxt').textContent = fmt(state.pp);
+  document.getElementById('ppHeadTxt').textContent = fmt(state.pp);
   document.getElementById('gemTxt').textContent = fmt(state.gems);
-  document.getElementById('clickPow').textContent = fmt(clickPower());
   document.getElementById('autoPow').textContent = fmt(autoPower());
   const btBtn = document.getElementById('breakthroughBtn');
   const ready = state.qi >= need;
   btBtn.disabled = !ready;
   document.getElementById('btLabel').textContent = ready ? "突破 ทลายขีดจำกัด!" : "突破 ทลายขีดจำกัด (ต้องการ DP เพิ่ม)";
-  renderShop();
+  renderAlloc();
 }
 
-function renderShop(){
-  const box = document.getElementById('tab-shop');
+function renderAlloc(){
+  const box = document.getElementById('allocList');
   box.innerHTML = '';
   Object.keys(UPG).forEach(key=>{
     const u = UPG[key];
     const cost = upgCost(key);
     const lvl = state.upgrades[key];
     const div = document.createElement('div');
-    div.className = 'shopItem';
+    div.className = 'allocItem';
     div.innerHTML = `
       <div>
-        <div class="shopName"><svg class="ic" width="15" height="15"><use href="#${u.icon}"></use></svg>${u.name} <span style="color:var(--sub)">Lv.${lvl}</span></div>
-        <div class="shopDesc">${u.desc}</div>
+        <div class="allocName"><svg class="ic" width="15" height="15"><use href="#${u.icon}"></use></svg>${u.name} <span style="color:var(--sub)">Lv.${lvl}</span></div>
+        <div class="allocDesc">${u.desc} ต่อระดับ</div>
       </div>
-      <button class="buyBtn" ${state.gold < cost ? 'disabled' : ''}><svg class="ic" width="12" height="12"><use href="#icon-coin"></use></svg>${fmt(cost)} เหรียญ</button>
+      <button class="allocBtn" ${state.pp < cost ? 'disabled' : ''}><svg class="ic" width="12" height="12"><use href="#icon-spark"></use></svg>${cost} แต้ม</button>
     `;
-    div.querySelector('button').addEventListener('click', ()=>buyUpgrade(key));
+    div.querySelector('button').addEventListener('click', ()=>allocate(key));
     box.appendChild(div);
   });
 }
@@ -386,33 +387,14 @@ function renderLog(){
   box.innerHTML = state.log.map(l=>`<div>${l}</div>`).join('') || '<div>ยังไม่มีบันทึก</div>';
 }
 
-function buyUpgrade(key){
+function allocate(key){
   const cost = upgCost(key);
-  if(state.gold < cost) return;
-  state.gold -= cost;
+  if(state.pp < cost) return;
+  state.pp -= cost;
   state.upgrades[key]++;
-  addLog(`เสริมพลัง: ${UPG[key].name} เป็น Lv.${state.upgrades[key]}`);
+  addLog(`จัดสรรพลังเข้า ${UPG[key].name} เป็น Lv.${state.upgrades[key]} (รวม ${fmt(autoPower())} DP/วิ)`);
   render();
   save();
-}
-
-function train(e){
-  const pow = clickPower();
-  state.qi += pow;
-  const core = document.getElementById('core');
-  core.classList.remove('fg'); void core.offsetWidth; core.classList.add('fg');
-  const f = document.createElement('div');
-  f.className='float';
-  f.textContent = '+'+fmt(pow);
-  document.getElementById('coreWrap').appendChild(f);
-  setTimeout(()=>f.remove(), 1000);
-  if(fx){
-    const rect = document.getElementById('fx').getBoundingClientRect();
-    let x = rect.width/2, y = rect.height/2;
-    if(e && typeof e.clientX === 'number' && e.clientX){ x = e.clientX - rect.left; y = e.clientY - rect.top; }
-    fx.tapBurst(x, y);
-  }
-  render();
 }
 
 function breakthrough(){
@@ -421,8 +403,11 @@ function breakthrough(){
   state.qi -= need;
   state.realm++;
   state.totalBreakthroughs++;
-  const goldReward = Math.floor(need*0.6) + state.realm*8;
-  state.gold += goldReward;
+  const ppReward = 2 + Math.floor(state.realm/2);
+  state.pp += ppReward;
+
+  const core = document.getElementById('core');
+  core.classList.remove('fg'); void core.offsetWidth; core.classList.add('fg');
 
   const rect = document.getElementById('fx') ? document.getElementById('fx').getBoundingClientRect() : null;
 
@@ -430,13 +415,15 @@ function breakthrough(){
     state.godsSlain++;
     const god = godForKill(state.godsSlain);
     const gemReward = 1 + Math.floor(state.realm/6);
+    const bonusPP = 5 + state.godsSlain*2;
     state.gems += gemReward;
-    addLog(`ทลายขีดจำกัดสำเร็จ! สังหาร "${god}" ได้เศษแก่นเทพ ${gemReward} และเหรียญศรัทธา ${fmt(goldReward)}`);
+    state.pp += bonusPP;
+    addLog(`ทลายขีดจำกัดสำเร็จ! สังหาร "${god}" ได้เศษแก่นเทพ ${gemReward} และแต้มพลัง ${ppReward+bonusPP}`);
     toast('⚔ สังหาร '+god+' สำเร็จ!');
     if(fx && rect){ fx.breakBurst(rect.width/2, rect.height/2, true); }
     flashScreen(true);
   } else {
-    addLog(`ทลายขีดจำกัดสำเร็จ! ก้าวสู่ "${realmName(state.realm)}" ได้เหรียญศรัทธา ${fmt(goldReward)}`);
+    addLog(`ทลายขีดจำกัดสำเร็จ! ก้าวสู่ "${realmName(state.realm)}" ได้แต้มพลัง ${ppReward}`);
     toast('突破成功！ ก้าวสู่ '+realmName(state.realm));
     if(fx && rect){ fx.breakBurst(rect.width/2, rect.height/2, false); }
     flashScreen(false);
@@ -447,7 +434,10 @@ function breakthrough(){
 
 function tick(){
   const auto = autoPower();
-  if(auto>0){ state.qi += auto/10; render(); }
+  if(auto>0){ state.qi += auto; }
+  ppAccumSec++;
+  if(ppAccumSec >= PP_INTERVAL_SEC){ ppAccumSec = 0; state.pp += 1; }
+  render();
 }
 
 function save(){
@@ -462,13 +452,15 @@ function load(){
     const loaded = JSON.parse(raw);
     state = Object.assign(state, loaded);
     state.upgrades = Object.assign({fist:0,root:0,sword:0,manual:0,disciple:0}, loaded.upgrades||{});
-    const offlineSec = Math.max(0, Math.floor((Date.now() - (loaded.lastSave||Date.now()))/1000));
+    const offlineSec = Math.min(Math.max(0, Math.floor((Date.now() - (loaded.lastSave||Date.now()))/1000)), 8*3600);
     if(offlineSec > 5){
       const auto = autoPower();
-      const gained = Math.min(offlineSec, 8*3600) * auto;
-      if(gained > 0){
-        state.qi += gained;
-        addLog(`ขณะไม่อยู่ (${Math.floor(offlineSec/60)} นาที) บำเพ็ญอัตโนมัติได้ ${fmt(gained)} DP`);
+      const dpGained = offlineSec * auto;
+      const ppGained = Math.floor(offlineSec / PP_INTERVAL_SEC);
+      if(dpGained > 0) state.qi += dpGained;
+      if(ppGained > 0) state.pp += ppGained;
+      if(dpGained > 0 || ppGained > 0){
+        addLog(`ขณะไม่อยู่ (${Math.floor(offlineSec/60)} นาที) ได้ ${fmt(dpGained)} DP และแต้มพลัง ${ppGained}`);
       }
     }
   }catch(e){}
@@ -483,7 +475,7 @@ function initTabs(){
       const name = t.dataset.tab;
       document.getElementById('trainZone').style.display = name==='train' ? 'flex' : 'none';
       document.getElementById('breakthroughBtn').style.display = name==='train' ? 'flex' : 'none';
-      document.getElementById('tab-shop').style.display = name==='shop' ? 'block' : 'none';
+      document.getElementById('tab-alloc').style.display = name==='alloc' ? 'block' : 'none';
       document.getElementById('tab-log').style.display = name==='log' ? 'block' : 'none';
     });
   });
@@ -553,19 +545,16 @@ function initFX(canvas){
   requestAnimationFrame(frame);
 
   return {
-    tapBurst(x,y){ burst(x,y, 8, false); },
     breakBurst(x,y,strong){ burst(x,y, strong?26:14, !!strong); }
   };
 }
 
-document.getElementById('core').addEventListener('click', train);
-document.getElementById('core').addEventListener('keydown', e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); train(); } });
 document.getElementById('breakthroughBtn').addEventListener('click', breakthrough);
 initTabs();
 fx = initFX(document.getElementById('fx'));
 load();
 render();
-if(state.log.length===0) addLog('เริ่มต้นเส้นทางสังหารเทพ ขอให้พลังเทวะสถิตกับท่าน!');
+if(state.log.length===0) addLog('เริ่มต้นเส้นทางสังหารเทพ พลังเทวะจะไหลเข้าตัวท่านเองเรื่อยๆ ขอให้จัดสรรอย่างชาญฉลาด!');
 renderLog();
 
 setInterval(tick, 1000);
