@@ -260,11 +260,11 @@ let state = {
 };
 
 const UPG = {
-  fist:    { name:"ปลุกพลังในตน",    desc:"+1 DP/วิ",  base:1, grow:1.15, amt:1,  icon:"icon-fist" },
-  root:    { name:"แท่นบูชาเทวะ",    desc:"+2 DP/วิ",  base:1, grow:1.17, amt:2,  icon:"icon-bolt" },
-  sword:   { name:"พรสวรรค์",        desc:"+4 DP/วิ",  base:2, grow:1.19, amt:4,  icon:"icon-sword" },
-  manual:  { name:"คัมภีร์ต้องห้าม",  desc:"+8 DP/วิ",  base:3, grow:1.21, amt:8,  icon:"icon-scroll" },
-  disciple:{ name:"ผู้ติดตามศรัทธา",  desc:"+15 DP/วิ", base:5, grow:1.24, amt:15, icon:"icon-disciple" }
+  fist:    { name:"ปลุกพลังในตน",    desc:"+2 DP/วิ (คงที่) ต่อระดับ",                          base:2, grow:1.35, icon:"icon-fist" },
+  root:    { name:"แท่นบูชาเทวะ",    desc:"+8% พลัง DP/วิ ทั้งหมด ต่อระดับ",                    base:4, grow:1.45, icon:"icon-bolt" },
+  sword:   { name:"พรสวรรค์",        desc:"-2% พลังที่ต้องใช้ทลายขีดจำกัด ต่อระดับ (สูงสุด 60%)", base:3, grow:1.40, icon:"icon-sword" },
+  manual:  { name:"คัมภีร์ต้องห้าม",  desc:"+1 แต้มพลังทุกรอบ 6 วิ ต่อระดับ",                    base:5, grow:1.50, icon:"icon-scroll" },
+  disciple:{ name:"ผู้ติดตามศรัทธา",  desc:"+20% เศษแก่นเทพ และ +1 แต้มพลังต่อครั้งทลายขีดจำกัด",  base:4, grow:1.40, icon:"icon-disciple" }
 };
 
 let fx = null;
@@ -310,11 +310,18 @@ function drawPixelHero(canvas){
   });
 }
 
-function realmThreshold(i){ return Math.floor(REALM_BASE * Math.pow(REALM_GROWTH, i)); }
+function thresholdMult(){ return Math.max(0.4, 1 - state.upgrades.sword*0.02); }
+function realmThreshold(i){ return Math.max(1, Math.floor(REALM_BASE * Math.pow(REALM_GROWTH, i) * thresholdMult())); }
 function realmName(i){ return REALMS[Math.min(i, REALMS.length-1)] + (i>=REALMS.length ? " ("+(i-REALMS.length+2)+"ชั้น)" : ""); }
 function godForKill(n){ return GODS[(n-1) % GODS.length]; }
 
-function autoPower(){ return state.autoBase + state.upgrades.fist*UPG.fist.amt + state.upgrades.root*UPG.root.amt + state.upgrades.sword*UPG.sword.amt + state.upgrades.manual*UPG.manual.amt + state.upgrades.disciple*UPG.disciple.amt; }
+function autoPower(){
+  const flat = state.autoBase + state.upgrades.fist*2;
+  const mult = 1 + state.upgrades.root*0.08;
+  return flat * mult;
+}
+function ppPerTick(){ return 1 + state.upgrades.manual; }
+function gemMult(){ return 1 + state.upgrades.disciple*0.2; }
 function upgCost(key){ const u = UPG[key]; return Math.ceil(u.base * Math.pow(u.grow, state.upgrades[key])); }
 
 function fmt(n){
@@ -411,7 +418,7 @@ function renderAlloc(){
     div.innerHTML = `
       <div>
         <div class="allocName"><svg class="ic" width="15" height="15"><use href="#${u.icon}"></use></svg>${u.name} <span style="color:var(--sub)">Lv.${lvl}</span></div>
-        <div class="allocDesc">${u.desc} ต่อระดับ</div>
+        <div class="allocDesc">${u.desc}</div>
       </div>
       <button class="allocBtn" ${state.pp < cost ? 'disabled' : ''}><svg class="ic" width="12" height="12"><use href="#icon-spark"></use></svg>${cost} แต้ม</button>
     `;
@@ -430,7 +437,7 @@ function allocate(key){
   if(state.pp < cost) return;
   state.pp -= cost;
   state.upgrades[key]++;
-  addLog(`จัดสรรพลังเข้า ${UPG[key].name} เป็น Lv.${state.upgrades[key]} (รวม ${fmt(autoPower())} DP/วิ)`);
+  addLog(`จัดสรรพลังเข้า ${UPG[key].name} เป็น Lv.${state.upgrades[key]}`);
   render();
   save();
 }
@@ -441,7 +448,7 @@ function breakthrough(){
   state.qi -= need;
   state.realm++;
   state.totalBreakthroughs++;
-  const ppReward = 2 + Math.floor(state.realm/2);
+  const ppReward = 2 + Math.floor(state.realm/2) + state.upgrades.disciple;
   state.pp += ppReward;
 
   const core = document.getElementById('core');
@@ -452,7 +459,7 @@ function breakthrough(){
   if(state.realm % 3 === 0){
     state.godsSlain++;
     const god = godForKill(state.godsSlain);
-    const gemReward = 1 + Math.floor(state.realm/6);
+    const gemReward = Math.max(1, Math.round((1 + Math.floor(state.realm/6)) * gemMult()));
     const bonusPP = 5 + state.godsSlain*2;
     state.gems += gemReward;
     state.pp += bonusPP;
@@ -474,7 +481,7 @@ function tick(){
   const auto = autoPower();
   if(auto>0){ state.qi += auto; }
   ppAccumSec++;
-  if(ppAccumSec >= PP_INTERVAL_SEC){ ppAccumSec = 0; state.pp += 1; }
+  if(ppAccumSec >= PP_INTERVAL_SEC){ ppAccumSec = 0; state.pp += ppPerTick(); }
   render();
 }
 
@@ -494,7 +501,7 @@ function load(){
     if(offlineSec > 5){
       const auto = autoPower();
       const dpGained = offlineSec * auto;
-      const ppGained = Math.floor(offlineSec / PP_INTERVAL_SEC);
+      const ppGained = Math.floor(offlineSec / PP_INTERVAL_SEC) * ppPerTick();
       if(dpGained > 0) state.qi += dpGained;
       if(ppGained > 0) state.pp += ppGained;
       if(dpGained > 0 || ppGained > 0){
