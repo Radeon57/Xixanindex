@@ -212,6 +212,144 @@ textarea:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
 @media (prefers-reduced-motion: reduce){
   *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
 }
+/* ---------- platform: every screen (safe areas, list grids, focus, kbd hints) ---------- */
+#side{display:contents}
+#app{padding:max(10px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+@supports (height:100dvh){ #app{height:100dvh} }
+#toast{bottom:calc(14px + env(safe-area-inset-bottom))}
+.jobList,#createList,#monoList,#upList,#dgList,#petList,#gearList,#ubList,#chalList,#mightList{display:grid;grid-template-columns:minmax(0,1fr)}
+:where(button,[role="button"],textarea,input,[tabindex]):focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+button:disabled{cursor:default}
+.kHint,.keyBtn{display:none}
+#keyHelp{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(5,4,12,.66)}
+#keyHelp.open{display:flex}
+.khBox{width:min(420px,100%);max-height:100%;overflow:auto;background:var(--panel);border:1px solid var(--gold);border-radius:14px;padding:12px 14px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.khBox .row b{color:var(--gold);font-size:.95rem}
+.khList{margin:8px 0 4px}
+.khRow{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);font-size:.78rem;color:var(--sub)}
+.khRow:last-child{border-bottom:0}
+.khKeys{flex:none;width:98px;color:var(--text)}
+kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--text);background:var(--panel2);border:1px solid var(--border);border-bottom-width:2px;border-radius:5px;padding:3px 5px;min-width:18px;text-align:center}
+
+/* ---------- mouse: hover states, cursors, scrollbars (fine pointers only) ---------- */
+@media (hover:hover) and (pointer:fine){
+  .kHint{display:inline-block}
+  .tab .kHint{position:absolute;top:2px;left:3px;font-size:.5rem;padding:1px 3px;min-width:0;opacity:.75;color:var(--sub);background:transparent;border-bottom-width:1px}
+  .tab.active .kHint{color:#fff;border-color:rgba(255,255,255,.45)}
+  .bPrimary .kHint{font-size:.6rem;padding:2px 4px;min-width:0;color:#fff;background:rgba(0,0,0,.2);border-color:rgba(255,255,255,.4)}
+  .keyBtn{display:inline-block;font:inherit;font-size:.72rem;font-weight:bold;line-height:1;padding:3px 7px;margin-left:4px}
+  .tab:not(.active):hover{background:#1f1a3a;color:var(--text);border-color:#4a4372}
+  .tab.locked:hover{opacity:.6}
+  .b:not(:disabled):hover{border-color:var(--sub)}
+  .bPrimary:not(:disabled):hover{border-color:#fff3d0;box-shadow:0 0 0 1px rgba(232,199,111,.5),0 4px 18px rgba(139,92,246,.35)}
+  .miniBtn:not(:disabled):hover,.logBtn:hover{color:var(--text);border-color:var(--sub);background:rgba(255,255,255,.04)}
+  .planBtn.on:hover{color:var(--gold)}
+  .selBtn:not(:disabled):hover{background:rgba(232,199,111,.14);color:#fff3d0}
+  .cItem.active .selBtn:not(:disabled):hover{background:var(--violetDim)}
+  .ctlBtn:not(:disabled):hover{background:#1f1a3a;border-color:var(--sub)}
+  .ctlBtn.plus:not(:disabled):hover{background:rgba(232,199,111,.14);border-color:#fff3d0}
+  .seg button:not(:disabled):not(.on):hover{background:#1f1a3a;color:var(--text)}
+  .job:hover,.cItem:not(.active):not(.inTeam):hover{background:rgba(255,255,255,.028)}
+  .godRow:hover{border-color:var(--border)}
+  .ach:hover{border-color:#4a4372}
+  .toggle:hover{color:var(--text)}
+  .chip[title],.hpRow[title],.godCount[title]{cursor:help}
+  #main,#side{scrollbar-gutter:stable}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:#3a3462;border-radius:6px;border:3px solid transparent;background-clip:padding-box}
+  ::-webkit-scrollbar-thumb:hover{background-color:#5a5290}
+  @supports not selector(::-webkit-scrollbar){ #main,#side,textarea{scrollbar-width:thin;scrollbar-color:#3a3462 transparent} }
+}
+
+/* ---------- tablet: 600–1023px (not short landscape phones) ---------- */
+@media (min-width:600px) and (max-width:1023px) and (min-height:501px){
+  #app{max-width:840px;padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,env(safe-area-inset-right));padding-top:max(16px,env(safe-area-inset-top))}
+  .hudGrid{grid-template-columns:repeat(4,1fr)}
+  .tabs{grid-template-columns:repeat(8,1fr)}
+  .tab{flex-direction:column;gap:2px;padding:7px 2px;font-size:.72rem}
+  .tab .ic{width:18px;height:18px}
+  section.panel{padding:12px 16px}
+  .jobList,#createList,#monoList,#upList,#dgList,#petList,#gearList,#chalList,#mightList{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:18px}
+  .achGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .godList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .portrait{width:112px;height:112px}
+}
+
+/* ---------- split layout: sidebar (HUD + tabs) beside the content — desktop and landscape phones ---------- */
+@media (min-width:1024px), (orientation:landscape) and (max-height:500px) and (min-width:540px){
+  #app{display:grid;grid-template-columns:var(--sideW,300px) minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);column-gap:var(--colGap,20px);max-width:1280px}
+  #side{display:flex;flex-direction:column;grid-column:1;grid-row:1/-1;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+  #tutor{grid-column:2;grid-row:1}
+  #tabTip{grid-column:2;grid-row:2}
+  #main{grid-column:2;grid-row:3}
+  .hudTop{flex-wrap:wrap;gap:4px}
+}
+
+/* ---------- desktop: 1024px and up ---------- */
+@media (min-width:1024px){
+  #app{padding:max(20px,env(safe-area-inset-top)) 24px 20px}
+  #hud{padding:14px 16px}
+  .brand{font-size:1.3rem}
+  .hpRow{font-size:.78rem}
+  .hudGrid{grid-template-columns:1fr;gap:6px}
+  .chip{font-size:.82rem}
+  .tabs{display:flex;flex-direction:column;gap:5px;margin:0}
+  .tab{justify-content:flex-start;gap:10px;padding:10px 12px;font-size:.9rem;border-radius:10px}
+  .tab .ic{width:18px;height:18px}
+  .tab .dot{top:50%;margin-top:-4px;right:40px}
+  .tab .kHint{position:static;margin-left:auto;font-size:.62rem;padding:2px 5px;min-width:18px;opacity:.8}
+  .tab.guide::after{border-radius:12px}
+  section.panel{padding:16px 20px}
+  .jobList,#createList,#monoList,#upList,#dgList,#petList,#gearList,#ubList,#chalList,#mightList{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .job,.cItem,.cItem:last-child,.job:last-child{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+  .cItem.active{background:rgba(139,92,246,.14);border-color:var(--violetDim)}
+  .cItem.inTeam{background:rgba(232,199,111,.08);border-color:rgba(232,199,111,.45)}
+  .jobList{margin-top:8px}
+  .achGrid{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .ach{padding:8px 10px;font-size:.74rem}
+  .godList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .godRow{padding:8px 10px;font-size:.8rem}
+  #arenaWrap{max-width:760px;margin:0 auto}
+  .portrait{width:140px;height:140px}
+  #heroPixel{width:68px;height:108px}
+  .godPortrait svg{width:128px;height:128px}
+  .fName{font-size:.95rem}
+  .fStat{font-size:.74rem}
+  .vs{font-size:1.2rem;margin-top:-70px}
+  .predict{font-size:.84rem}
+  .toolbar,.planBar,.summary{font-size:.82rem}
+  .tutor,.tip{font-size:.8rem;padding:9px 12px}
+  #toast{left:auto;right:28px;bottom:calc(24px + env(safe-area-inset-bottom));translate:50% 0;max-width:380px;text-align:left}
+}
+@media (min-width:1024px) and (max-height:720px){
+  .hudGrid{grid-template-columns:1fr 1fr;gap:4px 10px}
+  .tab{padding:7px 12px}
+}
+
+/* ---------- landscape phones: short screens get a compact sidebar ---------- */
+@media (orientation:landscape) and (max-height:500px) and (min-width:540px) and (max-width:1023px){
+  #app{--sideW:clamp(220px,34vw,290px);--colGap:10px;max-width:none;padding:max(6px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(6px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left))}
+  #hud{padding:6px 10px;margin-bottom:6px}
+  .hudTop{margin-bottom:3px}
+  .brand{font-size:.9rem}
+  .godCount{font-size:.7rem}
+  .hpRow{margin-bottom:3px}
+  .hudGrid{gap:1px 8px}
+  .chip{font-size:.68rem}
+  .tabs{grid-template-columns:repeat(2,minmax(0,1fr));margin:0}
+  .tab{justify-content:flex-start;padding:6px 8px;font-size:.7rem}
+  .tutor,.tip{font-size:.68rem;padding:5px 8px;margin-bottom:6px}
+  .portrait{width:76px;height:76px}
+  #heroPixel{width:37px;height:59px}
+  .vs{margin-top:-30px}
+}
+@media (min-width:1024px) and (max-height:500px){
+  .hudGrid{grid-template-columns:1fr 1fr}
+  .tabs{display:grid;grid-template-columns:1fr 1fr}
+  .tab{padding:6px 10px;font-size:.78rem}
+  .tab .kHint{display:none}
+}
 </style>
 </head>
 <body>
@@ -295,6 +433,7 @@ textarea:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
 </div>
 
 <div id="app">
+  <div id="side">
   <header class="panel" id="hud">
     <div class="hudTop">
       <div class="brand">God Killer</div>
@@ -324,6 +463,7 @@ textarea:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
     <div class="tab" data-tab="gods" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-crown"></use></svg>ท้าเทพ</div>
     <div class="tab" data-tab="rebirth" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-cycle"></use></svg>เกิดใหม่</div>
   </nav>
+  </div>
 
   <div class="tutor" id="tutor" role="status">
     <span class="tutorStep" id="tutorStep"></span>
