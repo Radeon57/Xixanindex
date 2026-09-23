@@ -1,5 +1,7 @@
 # รายการภาพของ God Killer
 
+ตอนนี้ภาพครบทุกไฟล์แล้ว (สร้างด้วย Leonardo.ai แล้วตัดเป็น 256×256) ถ้ามีภาพที่สวยกว่า ใช้ชื่อไฟล์เดิมทับได้เลย · `make_art.py` คือภาพวาดเวกเตอร์ชุดสำรอง ถ้ารันจะเขียนทับภาพทั้งหมด
+
 วางไฟล์ภาพตามชื่อในตารางลงโฟลเดอร์นี้ (`god-killer/img/<หมวด>/<เลข>.webp`) แล้ว push ภาพจะขึ้นในเกมเอง ไม่ต้องแก้โค้ด
 ถ้ายังไม่มีไฟล์ เกมจะแสดงตราสัญลักษณ์สีแทน
 
@@ -44,7 +46,7 @@ dark mythic Thai-fantasy, painterly digital art, bust portrait, centered, dramat
 | `monsters/04.webp` | งูพิษทมิฬ | black venom serpent, dripping green poison, dark mythic Thai-fantasy, painterly digital art, bust portrait, centered, dramatic rim light, deep indigo background, ornate gold details, high detail, no text, square |
 | `monsters/05.webp` | อสูรเพลิง | fire demon, horns, burning body, dark mythic Thai-fantasy, painterly digital art, bust portrait, centered, dramatic rim light, deep indigo background, ornate gold details, high detail, no text, square |
 | `monsters/06.webp` | ยักษ์ภูผา | mountain giant, Thai yaksha guardian style, stone crown, dark mythic Thai-fantasy, painterly digital art, bust portrait, centered, dramatic rim light, deep indigo background, ornate gold details, high detail, no text, square |
-| `monsters/07.webp` | พญานาคดำ | black naga king, multi-headed serpent, Thai temple style, dark mythic Thai-fantasy, painterly digital art, bust portrait, centered, dramatic rim light, deep indigo background, ornate gold details, high detail, no text, square |
+| `monsters/07.webp` | เทพพระเจ้ามักกร | Makara, mythical Thai sea beast, crocodile body with elephant trunk snout, fish tail, golden Thai scales, dark mythic Thai-fantasy, painterly digital art, bust portrait, centered, dramatic rim light, deep indigo background, ornate gold details, high detail, no text, square |
 | `monsters/08.webp` | ปีศาจอสนี | lightning demon, storm wings, electric claws, dark mythic Thai-fantasy, painterly digital art, bust portrait, centered, dramatic rim light, deep indigo background, ornate gold details, high detail, no text, square |
 | `monsters/09.webp` | อสูรกาลเวลา | time demon, broken clock face, fractured hourglass, dark mythic Thai-fantasy, painterly digital art, bust portrait, centered, dramatic rim light, deep indigo background, ornate gold details, high detail, no text, square |
 | `monsters/10.webp` | ราชันอสูร | demon king, obsidian throne armor, burning red crown, dark mythic Thai-fantasy, painterly digital art, bust portrait, centered, dramatic rim light, deep indigo background, ornate gold details, high detail, no text, square |

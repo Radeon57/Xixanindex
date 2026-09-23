@@ -35,7 +35,7 @@ const KILL_RATIO_CAP = 2;    // being stronger than this many times the monster 
 const DEATH_RATE = 0.5;      // clone deaths per clone per second at 0 power ratio (scales down to 0 at ratio 1)
 const MONSTERS = [
   'ภูตหมอก','หมาป่าเงา','โกเลมหิน','งูพิษทมิฬ','อสูรเพลิง',
-  'ยักษ์ภูผา','พญานาคดำ','ปีศาจอสนี','อสูรกาลเวลา','ราชันอสูร'
+  'ยักษ์ภูผา','เทพพระเจ้ามักกร','ปีศาจอสนี','อสูรกาลเวลา','ราชันอสูร'
 ].map((name,i)=>({ name, power: 1.5*Math.pow(6, i), dp: Math.pow(5, i), battle: 0.05*Math.pow(6, i) }));
 
 // The hero creates one item at a time; higher items consume lower ones as ingredients.
