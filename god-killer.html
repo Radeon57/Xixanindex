@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>God Killer</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%230b0a17'/%3E%3Cpath d='M13 3 5 14h6l-1 7 8-11h-6z' fill='%23e8c76f'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0b0a17; --panel:#161428; --panel2:#120f20; --border:#2e2a4a;
+  --violet:#8b5cf6; --violetDim:#6941b3; --gold:#e8c76f; --dp:#b39cf0;
+  --text:#ece7fb; --sub:#9c93bd; --danger:#ff6b6b; --warn:#ffb454; --ok:#6fd49a; --bar:#1c1832;
+  --phys:#ff9a6b; --myst:#7fb0ff; --battle:#e8c76f;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:'Trebuchet MS', system-ui, -apple-system, sans-serif;
+  display:flex; justify-content:center; overflow:hidden; touch-action:manipulation;
+}
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:-2;
+  background:radial-gradient(circle at 50% -8%, rgba(139,92,246,.16), transparent 55%),
+             radial-gradient(circle at 50% 118%, rgba(232,199,111,.08), transparent 52%);
+}
+#bgScene{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+#bgScene svg{position:absolute;bottom:0;left:0;width:100%;height:42%;opacity:.9}
+.star{position:absolute;width:2px;height:2px;border-radius:50%;background:#f2e6d8;opacity:.7;animation:twinkle 3.4s ease-in-out infinite}
+@keyframes twinkle{0%,100%{opacity:.15;transform:scale(1)}50%{opacity:1;transform:scale(1.7)}}
+
+#app{width:100%;max-width:480px;height:100%;display:flex;flex-direction:column;padding:10px 16px;position:relative;overflow:hidden}
+#app::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:40;opacity:0;box-shadow:inset 0 0 80px rgba(232,199,111,.5)}
+@keyframes flashFade{0%{opacity:0}25%{opacity:1}100%{opacity:0}}
+#app.flash::after{animation:flashFade .9s ease}
+
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:10px 12px;margin-bottom:8px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.ic{flex:none;display:inline-block;vertical-align:-2px}
+.bar{height:10px;border-radius:5px;background:var(--bar);overflow:hidden;border:1px solid var(--border);position:relative;flex:1}
+.bar>i{display:block;width:100%;height:100%;background:linear-gradient(90deg,var(--violetDim),var(--violet));transform-origin:0 50%;transform:scaleX(0);will-change:transform}
+.bar.thin{height:6px;border-radius:3px}
+.bar.hp>i{background:linear-gradient(90deg,#8a3a3a,#ff6b6b)}
+.bar.gold>i{background:linear-gradient(90deg,#a8873e,var(--gold))}
+
+/* HUD */
+#hud{padding:8px 12px}
+.hudTop{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.brand{font-size:1.05rem;font-weight:bold;color:var(--gold);letter-spacing:1px;text-shadow:0 0 12px rgba(232,199,111,.35)}
+.godCount{font-size:.75rem;color:var(--sub);display:flex;align-items:center;gap:4px}
+.godCount b{color:var(--gold)}
+.hpRow{display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--sub);margin-bottom:6px}
+.hpRow b{color:var(--text);min-width:74px;text-align:right;font-weight:normal}
+.hudGrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px}
+.chip{display:flex;align-items:center;gap:5px;font-size:.74rem;color:var(--sub);min-width:0}
+.chip b{margin-left:auto;color:var(--text);white-space:nowrap}
+
+/* tabs */
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:0 0 8px}
+.tab{min-width:0;display:flex;align-items:center;justify-content:center;gap:4px;padding:6px 2px;border-radius:10px;border:1px solid var(--border);background:var(--panel2);color:var(--sub);font-size:.68rem;white-space:nowrap;cursor:pointer;position:relative}
+.tab.active{background:var(--violet);color:#fff;border-color:var(--gold)}
+.tab.locked{opacity:.45}
+.tab .dot{position:absolute;top:3px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--gold);display:none}
+.tab.alert .dot{display:block}
+
+#main{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:6px}
+section.panel{display:none}
+
+/* job lists */
+.toolbar{display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+.idleTxt{font-size:.74rem;color:var(--sub);margin-right:auto}
+.idleTxt b{color:var(--gold)}
+.seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.seg button{background:var(--panel2);color:var(--sub);border:0;border-right:1px solid var(--border);font:inherit;font-size:.68rem;padding:6px 7px;cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--violetDim);color:#fff}
+.miniBtn{background:transparent;border:1px solid var(--border);color:var(--sub);border-radius:8px;font:inherit;font-size:.68rem;padding:6px 8px;cursor:pointer}
+.summary{font-size:.78rem;color:var(--sub);padding:6px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:2px;display:flex;justify-content:space-between;gap:8px}
+.summary b{color:var(--text)}
+.hint{font-size:.72rem;color:var(--gold);background:rgba(232,199,111,.08);border:1px dashed rgba(232,199,111,.35);border-radius:8px;padding:6px 8px;margin:6px 0}
+.job{padding:8px 2px;border-bottom:1px solid var(--border)}
+.job:last-child{border-bottom:0}
+.jobHead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:.84rem}
+.jobName{font-weight:bold}
+.jobLv{font-size:.74rem;color:var(--gold);white-space:nowrap}
+.jobBody{display:flex;align-items:center;gap:10px;margin-top:5px}
+.jobInfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.jobSub{font-size:.68rem;color:var(--sub);line-height:1.4}
+.ctl{display:flex;align-items:center;gap:4px;flex:none}
+.ctlBtn{width:34px;height:34px;border-radius:9px;border:1px solid var(--border);background:var(--panel2);color:var(--text);font-size:1.05rem;line-height:1;cursor:pointer;font-family:inherit}
+.ctlBtn.plus{border-color:var(--gold);color:var(--gold)}
+.ctlBtn:disabled{opacity:.35;cursor:default}
+.ctlN{min-width:30px;text-align:center;font-size:.85rem}
+.lockTxt{display:none;font-size:.7rem;color:var(--sub);margin-top:4px}
+.job.locked{opacity:.55}
+.job.locked .jobBody,.job.locked .jobLv{display:none}
+.job.locked .lockTxt{display:block}
+.pow.safe{color:var(--ok)} .pow.risky{color:var(--warn)} .pow.deadly{color:var(--danger)}
+.die{color:var(--danger)}
+
+/* creation */
+.curCard{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-bottom:8px}
+.curCard .row{font-size:.8rem;margin-bottom:6px}
+.curCard .row b{color:var(--gold)}
+.note{font-size:.68rem;color:var(--sub);margin-top:5px}
+.toggle{display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--sub);margin-top:6px;cursor:pointer}
+.toggle input{accent-color:var(--violet);width:16px;height:16px;margin:0}
+.cItem{padding:8px 4px;border-bottom:1px solid var(--border)}
+.cItem:last-child{border-bottom:0}
+.cItem.active{background:rgba(139,92,246,.1);border-radius:8px}
+.cDesc{font-size:.7rem;color:var(--gold);margin-top:2px}
+.cFoot{display:flex;align-items:center;gap:8px;margin-top:5px}
+.cCost{flex:1;min-width:0;font-size:.68rem;color:var(--sub)}
+.cCost .short{color:var(--danger)}
+.cOwn{font-size:.7rem;color:var(--sub);white-space:nowrap}
+.cItem.locked{opacity:.55}
+.cItem.locked .cFoot,.cItem.locked .cDesc,.cItem.locked .cOwn{display:none}
+.cItem.locked .lockTxt{display:block}
+.selBtn{display:inline-flex;align-items:center;gap:4px;padding:7px 10px;border-radius:8px;border:1px solid var(--gold);background:var(--panel2);color:var(--gold);font-size:.72rem;font-family:inherit;white-space:nowrap;cursor:pointer}
+.cItem.active .selBtn{background:var(--violet);color:#fff}
+
+/* gods */
+.arena{position:relative;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:6px 0 4px}
+.fighter{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px}
+.portrait{width:92px;height:92px;border-radius:50%;background:var(--panel2);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden}
+#heroPixel{width:45px;height:72px;image-rendering:pixelated;image-rendering:crisp-edges;animation:heroBob 2.6s ease-in-out infinite;will-change:transform}
+@keyframes heroBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+.fighting #heroPixel{animation:heroLunge .5s ease-in-out infinite}
+@keyframes heroLunge{0%,100%{transform:translateX(0)}40%{transform:translateX(6px)}}
+.godPortrait svg{display:block;will-change:transform}
+.fighting .godPortrait svg{animation:godShake .5s ease-in-out infinite}
+@keyframes godShake{0%,100%{transform:translateX(0)}60%{transform:translateX(-3px)}}
+.fName{font-size:.82rem;font-weight:bold;color:var(--gold);text-align:center}
+.fighter .bar{width:100%;flex:none}
+.fStat{font-size:.66rem;color:var(--sub);text-align:center;line-height:1.35;overflow-wrap:anywhere}
+.vs{align-self:center;font-weight:bold;color:var(--danger);font-size:.9rem;margin-top:-40px}
+#fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
+.predict{text-align:center;font-size:.76rem;margin:8px 0}
+.predict.win{color:var(--ok)} .predict.lose{color:var(--danger)}
+.b{width:100%;padding:11px 6px;border-radius:10px;border:1px solid var(--border);background:var(--panel2);color:var(--text);font-size:.88rem;font-family:inherit;cursor:pointer;transition:transform .15s ease}
+.b:active{transform:scale(.97)}
+.b:disabled{opacity:.45;cursor:default}
+.bPrimary{display:flex;align-items:center;justify-content:center;gap:7px;background:linear-gradient(180deg,var(--violet),var(--violetDim));border-color:var(--gold);color:#fff;font-weight:bold}
+.bPrimary.flee{background:linear-gradient(180deg,#9b3b3b,#6e2626);border-color:var(--danger)}
+.rewardBox{font-size:.72rem;color:var(--sub);background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-top:8px;line-height:1.6}
+.rewardBox b{color:var(--gold)}
+.godList{margin-top:10px;display:flex;flex-direction:column;gap:4px}
+.godRow{display:flex;align-items:center;gap:8px;font-size:.74rem;color:var(--sub);padding:5px 8px;border-radius:8px;background:var(--panel2);border:1px solid transparent}
+.godRow.done{color:var(--text)}
+.godRow.done .gMark{color:var(--ok)}
+.godRow.next{border-color:var(--gold);color:var(--gold)}
+.gMark{width:16px;text-align:center}
+.secTitle{font-size:.8rem;color:var(--gold);font-weight:bold;margin:12px 0 4px}
+.secSub{font-size:.66rem;color:var(--sub);font-weight:normal}
+.achGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ach{background:var(--panel2);border:1px solid var(--border);border-radius:9px;padding:6px 8px;font-size:.68rem;color:var(--sub)}
+.ach b{display:block;color:var(--text);font-size:.72rem;margin-bottom:2px}
+.ach.done{border-color:var(--gold)}
+.ach.done b{color:var(--gold)}
+.ach .bar{margin-top:4px;height:5px}
+.logBtn{background:transparent;border:1px solid var(--border);color:var(--sub);border-radius:8px;padding:3px 6px;margin-left:6px;cursor:pointer;line-height:0}
+.logBtn.on{border-color:var(--gold);color:var(--gold)}
+.subSeg{margin-bottom:8px}
+.subSeg button{flex:1;font-size:.72rem;padding:7px 2px}
+.petDot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:0}
+.cItem .bar.thin{margin-top:5px}
+.cItem.locked .dgInfo,.cItem.locked .jobLv{display:none}
+.cItem.inTeam{background:rgba(232,199,111,.07);border-radius:8px}
+.cItem .ctl{margin-right:auto}
+.cItem .ctlN{min-width:44px;font-size:.74rem}
+.chalBar{display:none;font-size:.7rem;color:var(--warn);background:rgba(255,180,84,.08);border:1px solid rgba(255,180,84,.35);border-radius:8px;padding:4px 8px;margin-bottom:6px}
+.tutor{display:none;align-items:center;gap:8px;background:linear-gradient(90deg,rgba(139,92,246,.22),rgba(232,199,111,.12));border:1px solid var(--gold);border-radius:12px;padding:7px 10px;margin-bottom:8px;font-size:.74rem;line-height:1.45}
+.tutorStep{flex:none;font-size:.66rem;color:var(--bg);background:var(--gold);border-radius:6px;padding:1px 6px;font-weight:bold}
+.tutorText{flex:1;min-width:0}
+.tutor .miniBtn,.tip .miniBtn{flex:none;padding:4px 7px}
+.tip{display:none;align-items:center;gap:8px;font-size:.72rem;color:var(--text);background:var(--panel);border:1px dashed var(--gold);border-radius:10px;padding:6px 9px;margin-bottom:8px;line-height:1.45}
+.tip span{flex:1;min-width:0}
+.tab.guide::after{content:'';position:absolute;inset:-3px;border:2px solid var(--gold);border-radius:12px;pointer-events:none;animation:guide 1.4s ease-in-out infinite}
+@keyframes guide{0%,100%{opacity:.15}50%{opacity:1}}
+.btnPair{display:flex;gap:6px;margin:6px 0}
+.btnPair .miniBtn{flex:1;padding:8px}
+.miniBtn.danger{color:var(--danger);border-color:rgba(255,107,107,.5)}
+textarea{width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 8px;font:inherit;font-size:.68rem;resize:vertical;margin-top:4px}
+.planBar{display:flex;gap:6px;margin:0 0 6px}
+.planBar .miniBtn{flex:1}
+.planBtn.on{border-color:var(--gold);color:var(--gold);background:rgba(232,199,111,.1)}
+.planBox{display:none;margin-bottom:6px}
+.planSeg button{flex:1}
+.dmg{position:absolute;z-index:3;pointer-events:none;font-size:.78rem;font-weight:bold;transform:translate(-50%,0);animation:dmgUp .8s ease-out forwards;text-shadow:0 1px 2px #000}
+.dmg.dealt{color:#fff3d0}
+.dmg.taken{color:var(--danger)}
+@keyframes dmgUp{0%{opacity:0;transform:translate(-50%,6px)}20%{opacity:1}100%{opacity:0;transform:translate(-50%,-26px)}}
+.doneBox{display:none;text-align:center;font-size:.8rem;color:var(--gold);padding:14px 6px;line-height:1.7}
+
+.logBox{font-size:.72rem;color:var(--sub);line-height:1.5}
+.logBox div{margin:2px 0}
+
+#toast{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--gold);color:var(--text);padding:8px 14px;border-radius:10px;font-size:.8rem;opacity:0;pointer-events:none;transition:opacity .3s ease;z-index:50;max-width:calc(100% - 32px);text-align:center}
+#toast.show{opacity:1}
+button:focus-visible,.tab:focus-visible,.toggle input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="icon-sword" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+        <line x1="4" y1="20" x2="19" y2="5"/><line x1="14.5" y1="6" x2="17.5" y2="9"/>
+        <line x1="20" y1="20" x2="5" y2="5"/><line x1="9.5" y1="6" x2="6.5" y2="9"/>
+      </g>
+    </symbol>
+    <symbol id="icon-shield" viewBox="0 0 24 24">
+      <path d="M12 2 L20 5 V11 C20 16 16.5 20 12 22 C7.5 20 4 16 4 11 V5 Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="icon-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6z" fill="currentColor"/></symbol>
+    <symbol id="icon-heart" viewBox="0 0 24 24">
+      <path d="M12 21 C12 21 3 14.5 3 8.5 C3 5.5 5.5 3 8.5 3 C10.2 3 11.5 3.8 12 5 C12.5 3.8 13.8 3 15.5 3 C18.5 3 21 5.5 21 8.5 C21 14.5 12 21 12 21 Z" fill="currentColor"/>
+    </symbol>
+    <symbol id="icon-clones" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <circle cx="9" cy="8" r="3"/><path d="M3.5 20c0-3 2.5-5.5 5.5-5.5s5.5 2.5 5.5 5.5"/>
+        <circle cx="16.5" cy="7" r="2.4" opacity=".6"/><path d="M15 13.2c.5-.1 1-.2 1.5-.2 2.8 0 5 2.2 5 5" opacity=".6"/>
+      </g>
+    </symbol>
+    <symbol id="icon-fist" viewBox="0 0 24 24">
+      <path d="M7 10V7a2 2 0 0 1 4 0M11 10V6a2 2 0 0 1 4 0v4M15 10V7a2 2 0 0 1 4 0v6a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5v-2a2 2 0 0 1 4 0" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="icon-orb" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M12 4a4 4 0 0 1 0 8a4 4 0 0 0 0 8" fill="none" stroke="currentColor" stroke-width="1.4"/>
+      <circle cx="12" cy="8" r="1.2" fill="currentColor"/><circle cx="12" cy="16" r="1.2" fill="currentColor" opacity=".5"/>
+    </symbol>
+    <symbol id="icon-monster" viewBox="0 0 24 24">
+      <path d="M4 9 L7 4 L9 8 M20 9 L17 4 L15 8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M4 10 a8 7 0 0 1 16 0 v3 a8 7 0 0 1 -16 0 z" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <circle cx="9" cy="12" r="1.3" fill="currentColor"/><circle cx="15" cy="12" r="1.3" fill="currentColor"/>
+    </symbol>
+    <symbol id="icon-spark" viewBox="0 0 24 24"><path d="M12 2 L14 10 L22 12 L14 14 L12 22 L10 14 L2 12 L10 10 Z" fill="currentColor"/></symbol>
+    <symbol id="icon-crown" viewBox="0 0 24 24">
+      <path d="M3 18 L4.5 7 L9 12 L12 5 L15 12 L19.5 7 L21 18 Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+      <line x1="3.5" y1="21" x2="20.5" y2="21" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="icon-scroll" viewBox="0 0 24 24">
+      <path d="M6 4h12v3a2 2 0 0 1 0 4v3a2 2 0 0 1 0 4v2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+      <line x1="7" y1="9" x2="14" y2="9" stroke="currentColor" stroke-width="1.1"/><line x1="7" y1="13" x2="14" y2="13" stroke="currentColor" stroke-width="1.1"/>
+    </symbol>
+    <symbol id="icon-temple" viewBox="0 0 24 24">
+      <path d="M3 9 L12 3 L21 9 Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+      <path d="M6 10v8M10 10v8M14 10v8M18 10v8M3 20h18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="icon-cycle" viewBox="0 0 24 24">
+      <path d="M19 12a7 7 0 1 1-2.1-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      <path d="M17.5 3v4.2h-4.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="icon-paw" viewBox="0 0 24 24">
+      <circle cx="12" cy="15" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <circle cx="6" cy="9" r="2" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="10" cy="5.5" r="2" fill="none" stroke="currentColor" stroke-width="1.4"/>
+      <circle cx="14" cy="5.5" r="2" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="18" cy="9" r="2" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    </symbol>
+    <symbol id="icon-lock" viewBox="0 0 24 24">
+      <rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="1.6"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div id="bgScene" aria-hidden="true">
+  <svg viewBox="0 0 480 200" preserveAspectRatio="xMidYMax slice">
+    <path d="M0 160 L60 100 L100 140 L150 80 L200 130 L250 90 L300 150 L350 110 L400 150 L480 120 L480 200 L0 200 Z" fill="#120f20"/>
+    <path d="M210 130 L230 90 L250 130 Z" fill="#1c1832"/>
+    <rect x="221" y="130" width="18" height="20" fill="#1c1832"/>
+    <line x1="230" y1="90" x2="230" y2="72" stroke="#1c1832" stroke-width="2"/>
+  </svg>
+  <span class="star" style="left:12%;top:18%;animation-delay:.2s"></span>
+  <span class="star" style="left:28%;top:9%;animation-delay:1.1s"></span>
+  <span class="star" style="left:47%;top:14%;animation-delay:.6s"></span>
+  <span class="star" style="left:63%;top:7%;animation-delay:1.6s"></span>
+  <span class="star" style="left:78%;top:16%;animation-delay:.9s"></span>
+  <span class="star" style="left:88%;top:10%;animation-delay:.3s"></span>
+</div>
+
+<div id="app">
+  <header class="panel" id="hud">
+    <div class="hudTop">
+      <div class="brand">God Killer</div>
+      <div class="godCount"><svg class="ic" width="14" height="14"><use href="#icon-crown"></use></svg>สังหารเทพ <b id="hudGods">0/0</b>
+        <button class="logBtn" id="logBtn" aria-label="เปิดบันทึก"><svg class="ic" width="15" height="15"><use href="#icon-scroll"></use></svg></button></div>
+    </div>
+    <div class="chalBar" id="chalBar"></div>
+    <div class="hpRow">
+      <svg class="ic" width="13" height="13" style="color:var(--danger)"><use href="#icon-heart"></use></svg>
+      <div class="bar hp"><i id="hudHpBar"></i></div><b id="hudHp">0</b>
+    </div>
+    <div class="hudGrid">
+      <div class="chip"><svg class="ic" width="13" height="13" style="color:var(--phys)"><use href="#icon-sword"></use></svg>โจมตี<b id="hudAtk">0</b></div>
+      <div class="chip"><svg class="ic" width="13" height="13" style="color:var(--myst)"><use href="#icon-shield"></use></svg>ป้องกัน<b id="hudDef">0</b></div>
+      <div class="chip"><svg class="ic" width="13" height="13" style="color:var(--dp)"><use href="#icon-bolt"></use></svg>พลังเทวะ<b id="hudDp">0</b></div>
+      <div class="chip"><svg class="ic" width="13" height="13" style="color:var(--gold)"><use href="#icon-clones"></use></svg>ร่างเงา<b id="hudClones">0</b></div>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <div class="tab" data-tab="train" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-fist"></use></svg>ฝึกกาย</div>
+    <div class="tab" data-tab="skill" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-orb"></use></svg>วิชาเวท</div>
+    <div class="tab" data-tab="mon" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-monster"></use></svg>สนามรบ</div>
+    <div class="tab" data-tab="create" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-spark"></use></svg>สร้าง</div>
+    <div class="tab" data-tab="temple" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-temple"></use></svg>เทวาลัย</div>
+    <div class="tab" data-tab="pets" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-paw"></use></svg>คู่หู</div>
+    <div class="tab" data-tab="gods" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-crown"></use></svg>ท้าเทพ</div>
+    <div class="tab" data-tab="rebirth" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-cycle"></use></svg>เกิดใหม่</div>
+  </nav>
+
+  <div class="tutor" id="tutor" role="status">
+    <span class="tutorStep" id="tutorStep"></span>
+    <span class="tutorText" id="tutorText"></span>
+    <button class="miniBtn" id="tutorBtn"></button>
+  </div>
+  <div class="tip" id="tabTip"><span id="tabTipText"></span><button class="miniBtn" id="tabTipBtn">เข้าใจแล้ว</button></div>
+
+  <main id="main">
+    <section id="tab-train" class="panel"></section>
+    <section id="tab-skill" class="panel"></section>
+    <section id="tab-mon" class="panel"></section>
+
+    <section id="tab-create" class="panel">
+      <div class="curCard">
+        <div class="row"><span>กำลังสร้าง</span><b id="cCurName">—</b></div>
+        <div class="bar gold"><i id="cCurBar"></i></div>
+        <div class="note" id="cCurNote"></div>
+        <label class="toggle"><input type="checkbox" id="autoClone"> เติมร่างเงาให้เต็มก่อนเสมอ</label>
+        <div class="note">ความเร็วสร้าง ×<span id="cSpeed">1</span> · ของที่เคยสร้างให้โบนัสถาวร แม้จะถูกใช้เป็นวัตถุดิบไปแล้ว</div>
+      </div>
+      <div class="hint" id="createLock">สร้างได้แค่ร่างเงาก่อน — ปลดล็อกการสร้างสรรพสิ่งเมื่อสังหาร <b id="createLockGod"></b></div>
+      <div id="createList"></div>
+    </section>
+
+    <section id="tab-gods" class="panel">
+      <div id="arenaWrap">
+        <div class="arena" id="arena">
+          <div class="fighter">
+            <div class="portrait"><canvas id="heroPixel" aria-hidden="true"></canvas></div>
+            <div class="fName">ท่าน</div>
+            <div class="bar hp"><i id="aHeroHp"></i></div>
+            <div class="fStat" id="aHeroHpTxt"></div>
+            <div class="fStat">โจมตี <span id="aHeroAtk"></span><br>ป้องกัน <span id="aHeroDef"></span></div>
+          </div>
+          <div class="vs">VS</div>
+          <div class="fighter">
+            <div class="portrait godPortrait" id="godArt"></div>
+            <div class="fName" id="aGodName"></div>
+            <div class="bar hp"><i id="aGodHp"></i></div>
+            <div class="fStat" id="aGodHpTxt"></div>
+            <div class="fStat">โจมตี <span id="aGodAtk"></span><br>ป้องกัน <span id="aGodDef"></span></div>
+          </div>
+          <canvas id="fx"></canvas>
+        </div>
+        <div class="predict" id="predict"></div>
+        <button class="b bPrimary" id="fightBtn"><svg class="ic" width="16" height="16"><use href="#icon-sword"></use></svg><span id="fightLabel">ท้าสู้</span></button>
+        <label class="toggle" id="autoFightRow"><input type="checkbox" id="autoFight"> ท้าเทพองค์ถัดไปอัตโนมัติเมื่อพลังชีวิตเต็มและคาดว่าชนะ</label>
+        <div class="note" id="autoFightLock">ท้าเทพอัตโนมัติจะปลดล็อกหลังเกิดใหม่ครั้งแรก</div>
+        <div class="rewardBox" id="godReward"></div>
+      </div>
+      <div class="doneBox" id="godsDone">สังหารเทพครบทุกองค์แล้ว! ท่านคือผู้สังหารเทพ<br>ท้าสิ่งมีชีวิตสูงสุดต่อได้ที่ด้านล่าง</div>
+      <div class="godList" id="godList"></div>
+      <div class="secTitle">สิ่งมีชีวิตสูงสุด <span class="secSub">สู้ซ้ำได้ไม่จำกัด ทุกเลเวลแข็งขึ้น ×1.3 · ชนะได้แต้ม Might</span></div>
+      <div class="hint" id="ubLock">ปลดล็อกเมื่อสังหารเทพครบทั้ง 10 องค์ในรอบเดียว</div>
+      <button class="miniBtn" id="backToGod" style="margin:4px 0">กลับไปท้าเทพองค์ถัดไป</button>
+      <div id="ubList"></div>
+    </section>
+
+    <section id="tab-temple" class="panel">
+      <div class="curCard">
+        <div class="row"><span>เครื่องผลิตพลังเทวะ</span><b id="genLv">Lv.0</b></div>
+        <div class="note" id="genRate"></div>
+        <button class="b bPrimary" id="genBtn" style="margin-top:8px"></button>
+      </div>
+      <div class="hint" id="monoLock">ปลดล็อกอนุสรณ์เมื่อสังหาร <b id="monoLockGod"></b></div>
+      <div class="secTitle" id="monoTitle">อนุสรณ์ <span class="secSub">ใช้พลังเทวะและของที่สร้างไว้ — ให้โบนัสจนกว่าจะเกิดใหม่</span></div>
+      <div id="monoList"></div>
+    </section>
+
+    <section id="tab-rebirth" class="panel">
+      <div class="seg subSeg" role="group" aria-label="มุมมอง">
+        <button data-act="rbView" data-v="main">เกิดใหม่</button><button data-act="rbView" data-v="chal">ท้าทาย</button><button data-act="rbView" data-v="might">Might</button><button data-act="rbView" data-v="ach">สำเร็จ</button>
+      </div>
+      <div id="rv-main">
+        <div class="curCard">
+          <div class="row"><span>God Power</span><b id="gpTxt">0</b></div>
+          <div class="note" id="rbInfo"></div>
+          <div class="note">เกิดใหม่จะรีเซ็ตรอบนี้ทั้งหมด (การฝึก ร่างเงา พลังเทวะ ของที่สร้าง อนุสรณ์ เครื่องผลิต เทพที่สังหาร) แต่เก็บ God Power อัปเกรดถาวร คู่หู อุปกรณ์ และความสำเร็จไว้</div>
+          <button class="b bPrimary" id="rbBtn" style="margin-top:8px"></button>
+        </div>
+        <div class="secTitle">อัปเกรดถาวร <span class="secSub">ใช้ God Power · อยู่ถาวรข้ามการเกิดใหม่</span></div>
+        <div id="upList"></div>
+      </div>
+      <div id="rv-chal">
+        <div class="note" style="margin-bottom:6px">เริ่มความท้าทาย = เกิดใหม่ทันที (ได้ God Power ของรอบนี้ตามปกติ) แล้วเล่นรอบใหม่ภายใต้กฎพิเศษ สังหารเทพเป้าหมายได้เมื่อไหร่ กฎจะหายไปและได้โบนัสถาวร ยิ่งทำสำเร็จมาก เป้าหมายยิ่งไกลขึ้น</div>
+        <div id="chalList"></div>
+      </div>
+      <div id="rv-might">
+        <div class="curCard">
+          <div class="row"><span>แต้ม Might</span><b id="mpTxt">0</b></div>
+          <div class="note">ได้จากการชนะสิ่งมีชีวิตสูงสุดที่แท็บท้าเทพ · ความสามารถทั้งหมดอยู่ถาวร</div>
+        </div>
+        <div class="hint" id="mightLock">ปลดล็อกเมื่อสังหารเทพครบทั้ง 10 องค์ในรอบเดียว</div>
+        <div id="mightList"></div>
+      </div>
+      <div id="rv-ach">
+        <div class="secTitle" style="margin-top:0">ความสำเร็จ <span class="secSub" id="achSum"></span></div>
+        <div id="achList" class="achGrid"></div>
+      </div>
+    </section>
+
+    <section id="tab-pets" class="panel">
+      <div class="seg subSeg" role="group" aria-label="มุมมอง">
+        <button data-act="petView" data-v="dg">ดันเจี้ยน</button><button data-act="petView" data-v="pets">คู่หู</button><button data-act="petView" data-v="gear">อุปกรณ์</button>
+      </div>
+      <div id="pv-dg">
+        <div class="curCard">
+          <div class="row"><span>กำลังสำรวจ</span><b id="dgCur">—</b></div>
+          <div class="bar gold"><i id="dgBar"></i></div>
+          <div class="note" id="dgNote"></div>
+          <label class="toggle"><input type="checkbox" id="dgAuto"> สำรวจซ้ำอัตโนมัติ (ลงชั้นลึกขึ้นเองเมื่อชนะแน่นอน)</label>
+          <button class="b" id="dgStop" style="margin-top:8px">หยุดสำรวจ</button>
+        </div>
+        <div class="summary"><span id="teamPow"></span><span id="matLine"></span></div>
+        <div id="dgList"></div>
+      </div>
+      <div id="pv-pets">
+        <div class="planBar"><button class="miniBtn" data-act="bestTeam" id="bestTeam">จัดทีมที่แข็งที่สุด</button></div>
+        <div class="note" id="teamLine" style="margin-bottom:4px"></div>
+        <div id="petList"></div>
+      </div>
+      <div id="pv-gear">
+        <div class="summary"><span>วัตถุดิบ</span><span id="matLine2"></span></div>
+        <div id="gearList"></div>
+      </div>
+    </section>
+
+    <section id="tab-log" class="panel">
+      <div class="secTitle" style="margin-top:0">ย้ายเซฟ <span class="secSub">คัดลอกโค้ดไปวางในอีกเครื่องเพื่อเล่นต่อ</span></div>
+      <div class="btnPair">
+        <button class="miniBtn" id="exportBtn">สร้างโค้ดเซฟ</button>
+        <button class="miniBtn" id="copyBtn">คัดลอกโค้ด</button>
+      </div>
+      <textarea id="exportBox" readonly rows="3" aria-label="โค้ดเซฟ"></textarea>
+      <textarea id="importBox" rows="3" placeholder="วางโค้ดเซฟที่นี่" aria-label="วางโค้ดเซฟ"></textarea>
+      <div class="btnPair">
+        <button class="miniBtn" id="importBtn">โหลดจากโค้ด</button>
+        <button class="miniBtn danger" id="wipeBtn">เริ่มใหม่ทั้งหมด</button>
+      </div>
+      <div class="note" id="saveMsg"></div>
+      <div class="secTitle">บันทึกเหตุการณ์</div>
+      <div class="logBox" id="logList"></div>
+    </section>
+  </main>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script src="god-killer/data.js"></script>
+<script src="god-killer/engine.js"></script>
+<script src="god-killer/ui.js"></script>
+</body>
+</html>
