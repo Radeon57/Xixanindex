@@ -1,6 +1,7 @@
 # Draws the God Killer portraits as SVG and renders them to god-killer/img/<set>/<NN>.webp.
 # Run from the repo root:  python3 god-killer/img/make_art.py
 # Needs Python Playwright with Chromium. Any file can later be replaced by a hand-made or AI image of the same name.
+# WARNING: it overwrites every file in those folders, including the AI-painted portraits now in the repo.
 import base64, math, os, random
 from playwright.sync_api import sync_playwright
 
