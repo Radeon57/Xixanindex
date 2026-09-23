@@ -31,10 +31,12 @@ body::before{
 .star{position:absolute;width:2px;height:2px;border-radius:50%;background:#f2e6d8;opacity:.7;animation:twinkle 3.4s ease-in-out infinite}
 @keyframes twinkle{0%,100%{opacity:.15;transform:scale(1)}50%{opacity:1;transform:scale(1.7)}}
 #app{width:100%;max-width:480px;height:100%;display:flex;flex-direction:column;padding:12px 16px;position:relative;overflow:hidden}
-@keyframes flashPulse{0%{box-shadow:inset 0 0 0 rgba(232,199,111,0)}30%{box-shadow:inset 0 0 46px rgba(232,199,111,.32)}100%{box-shadow:inset 0 0 0 rgba(232,199,111,0)}}
-@keyframes flashPulseStrong{0%{box-shadow:inset 0 0 0 rgba(232,199,111,0)}25%{box-shadow:inset 0 0 80px rgba(232,199,111,.5)}100%{box-shadow:inset 0 0 0 rgba(232,199,111,0)}}
-.burstFlash{animation:flashPulse .5s ease}
-.burstFlashStrong{animation:flashPulseStrong .85s ease}
+/* screen flash: a pre-painted glow layer whose opacity animates (compositor-only, no repaint) */
+#app::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:40;opacity:0;box-shadow:inset 0 0 46px rgba(232,199,111,.32)}
+#app.burstFlashStrong::after{box-shadow:inset 0 0 80px rgba(232,199,111,.5)}
+@keyframes flashFade{0%{opacity:0}30%{opacity:1}100%{opacity:0}}
+.burstFlash::after{animation:flashFade .5s ease}
+.burstFlashStrong::after{animation:flashFade .85s ease}
 h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-spacing:1px;text-shadow:0 0 12px rgba(232,199,111,.35)}
 .sub{text-align:center;color:var(--sub);font-size:.72rem;margin-bottom:8px}
 .panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:10px 12px;margin-bottom:8px}
@@ -43,16 +45,18 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
 .statline span{display:inline-flex;align-items:center;gap:4px}
 .statline b{color:var(--text)}
 .bar{height:12px;border-radius:6px;background:var(--bar);overflow:hidden;border:1px solid var(--border);position:relative}
-.bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--violetDim),var(--violet));transition:width .25s ease}
+.bar>i{display:block;width:100%;height:100%;background:linear-gradient(90deg,var(--violetDim),var(--violet));transform-origin:0 50%;transform:scaleX(0);transition:transform .25s ease;will-change:transform}
+.bar>i.live{transition:none}
 .qbar{position:relative;overflow:hidden}
-.qbar::after{content:'';position:absolute;top:0;left:-60%;width:42%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);animation:qshine 2.8s ease-in-out infinite;pointer-events:none}
-@keyframes qshine{0%{left:-60%}55%{left:165%}100%{left:165%}}
+.qbar::after{content:'';position:absolute;top:0;left:0;width:42%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);animation:qshine 2.8s ease-in-out infinite;pointer-events:none;transform:translateX(-143%);will-change:transform}
+@keyframes qshine{0%{transform:translateX(-143%)}55%{transform:translateX(393%)}100%{transform:translateX(393%)}}
 #main{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding-bottom:6px}
 #main::before,#main::after{content:'';flex:1 0 0}
 .realmRow{display:flex;align-items:center;justify-content:center;gap:8px;margin:4px 0 8px}
 .realmName{font-size:1.05rem;color:var(--gold);text-align:center;font-weight:bold}
 #trainZone{display:flex;flex-direction:column;align-items:center;padding:14px 0 6px}
 #coreWrap{position:relative;width:150px;height:150px;margin-bottom:10px}
+#coreWrap::before{content:'';position:absolute;inset:0;border-radius:50%;box-shadow:0 0 50px 8px #e8c76f;opacity:0;pointer-events:none}
 #core{width:100%;height:100%;border-radius:50%;overflow:hidden;position:relative;z-index:1;
   background:var(--panel2);
   box-shadow:0 0 30px 6px rgba(139,92,246,.45), inset 0 0 20px rgba(0,0,0,.35);
@@ -62,10 +66,10 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
 @keyframes heroBob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-3px)}}
 #heroPixel{position:absolute;left:50%;bottom:14%;width:42%;height:auto;transform:translateX(-50%);
   image-rendering:pixelated;image-rendering:crisp-edges;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5));
-  animation:heroBob 2.6s ease-in-out infinite}
+  animation:heroBob 2.6s ease-in-out infinite;will-change:transform}
 #fx{position:absolute;inset:0;z-index:2;pointer-events:none;width:100%;height:100%}
-.fg{animation:fg .9s ease}
-@keyframes fg{0%{box-shadow:0 0 0 0 #e8c76f00}35%{box-shadow:0 0 50px 8px #e8c76f}100%{box-shadow:0 0 30px 6px rgba(139,92,246,.45)}}
+.fg::before{animation:fg .9s ease}
+@keyframes fg{0%{opacity:0}35%{opacity:1}100%{opacity:0}}
 .btnRow{display:flex;gap:8px;margin-top:4px}
 .b{flex:1;padding:10px 6px;border-radius:10px;border:1px solid var(--border);background:var(--panel2);color:var(--text);font-size:.85rem;font-family:inherit;transition:transform .15s ease,box-shadow .2s ease,border-color .2s ease;cursor:pointer}
 .b:hover{box-shadow:0 4px 16px rgba(232,199,111,.22);border-color:#f0e0a8}
@@ -221,7 +225,7 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
       <span class="realmName" id="realmName">-</span>
     </div>
     <div class="statline"><span><svg class="ic" width="14" height="14" style="color:var(--dp)"><use href="#icon-bolt"></use></svg> พลังเทวะ (DP)</span><b id="qiTxt">0</b></div>
-    <div class="bar qbar"><i id="qiBar" style="width:0%"></i></div>
+    <div class="bar qbar"><i id="qiBar" class="live"></i></div>
     <div class="row" style="margin-top:6px">
       <div class="statline" style="margin:0"><span><svg class="ic" width="13" height="13" style="color:var(--pp)"><use href="#icon-spark"></use></svg> แต้มพลัง</span> <b class="ppTxt" id="ppTxt">0</b></div>
       <div class="statline" style="margin:0"><span><svg class="ic" width="13" height="13" style="color:var(--gem)"><use href="#icon-gem"></use></svg> เศษแก่นเทพ</span> <b class="gemTxt" id="gemTxt">0</b></div>
@@ -282,14 +286,14 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
     <div id="tab-battle" class="panel" style="display:none">
       <div class="ppHead"><svg class="ic" width="15" height="15"><use href="#icon-monster"></use></svg>พลังต่อสู้ (CP): <b id="cpTxt">0</b></div>
       <div class="statline" style="margin:4px 0"><span><svg class="ic" width="13" height="13" style="color:var(--danger)"><use href="#icon-heart"></use></svg> พลังชีวิต (HP)</span> <b id="hpTxt">0/0</b></div>
-      <div class="bar"><i id="hpBar" style="width:100%;background:linear-gradient(90deg,#8a3a3a,#ff6b6b)"></i></div>
+      <div class="bar"><i id="hpBar" style="transform:scaleX(1);background:linear-gradient(90deg,#8a3a3a,#ff6b6b)"></i></div>
       <div id="downedNote" style="font-size:.68rem;color:var(--danger);text-align:center;margin-top:3px;display:none">🩹 บาดเจ็บหนัก กำลังพักฟื้น ต่อสู้ชั่วคราวไม่ได้</div>
       <div style="text-align:center;margin:6px 0 10px">
         <svg class="ic" width="30" height="30" style="color:var(--danger)"><use href="#icon-monster"></use></svg>
         <div id="stageName" style="color:var(--gold);font-weight:bold;margin-top:4px">ด่านที่ 1</div>
         <div style="font-size:.72rem;color:var(--sub)">พลังศัตรู: <span id="monsterPow">0</span></div>
       </div>
-      <div class="bar"><i id="battleBar" style="width:0%;background:linear-gradient(90deg,#8a3a3a,var(--danger))"></i></div>
+      <div class="bar"><i id="battleBar" style="background:linear-gradient(90deg,#8a3a3a,var(--danger))"></i></div>
       <div style="font-size:.72rem;color:var(--sub);text-align:center;margin-top:4px">ชนะ <span id="stageWins">0</span>/5 เพื่อผ่านด่าน — ต่อสู้อัตโนมัติทุก 4 วิ</div>
       <div class="row" style="margin-top:10px">
         <div class="statline" style="margin:0"><span><svg class="ic" width="13" height="13" style="color:#c99a5a"><use href="#icon-ore"></use></svg> เศษโลหะ</span> <b id="oreTxt">0</b></div>
@@ -377,6 +381,8 @@ const COMPANIONS = [
 ];
 
 let fx = null;
+let activeTab = 'train';
+let logDirty = true;
 let ppAccumSec = 0;
 let battleAccSec = 0;
 let lastTickAt = Date.now();
@@ -521,10 +527,20 @@ function sigilSVG(i){
 
 const $ = id => document.getElementById(id);
 
+// DOM writes are skipped when the value hasn't changed, so a render only costs style/layout work for what actually moved
+function setText(el, v){ v = String(v); if(el._v !== v){ el._v = v; el.textContent = v; } }
+function setDisabled(el, v){ if(el.disabled !== v) el.disabled = v; }
+function setShown(el, v, how){ const d = v ? (how||'block') : 'none'; if(el._d !== d){ el._d = d; el.style.display = d; } }
+function setBar(el, frac){
+  const k = Math.round(Math.max(0, Math.min(1, frac))*1000);
+  if(el._k !== k){ el._k = k; el.style.transform = 'scaleX('+(k/1000)+')'; }
+}
+
 function addLog(msg){
   state.log.unshift("["+new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})+"] "+msg);
   if(state.log.length>40) state.log.length=40;
-  renderLog();
+  logDirty = true;
+  if(activeTab === 'log') renderLog();
 }
 
 function toast(msg){
@@ -543,24 +559,36 @@ function flashScreen(strong){
 }
 
 let lastSigilRealm = -1;
+let E = null; // cached element refs, filled by cacheEls() at boot
+function cacheEls(){
+  E = {};
+  ['realmName','realmSigil','qiTxt','qiBar','ppTxt','ppHeadTxt','gemTxt','autoPow','breakthroughBtn','btLabel',
+   'cpTxt','hpTxt','hpBar','downedNote','stageName','monsterPow','battleBar','stageWins','oreTxt','keyTxt',
+   'keyTxt2','chestTierTxt','openChestBtn','chestUpCost','upgradeChestBtn','gearGrid','compGrid','tab-log'
+  ].forEach(id=>{ E[id] = $(id); });
+}
+// the DP bar is the one thing that moves continuously, so it is updated every animation frame
+function renderQiBar(){ setBar(E.qiBar, state.qi / realmThreshold(state.realm)); }
 function render(){
   const need = realmThreshold(state.realm);
-  $('realmName').textContent = realmName(state.realm);
-  if(state.realm !== lastSigilRealm){ $('realmSigil').innerHTML = sigilSVG(state.realm); lastSigilRealm = state.realm; }
-  $('qiTxt').textContent = fmt(state.qi)+" / "+fmt(need);
-  $('qiBar').style.width = Math.min(100, state.qi/need*100)+"%";
-  $('ppTxt').textContent = fmt(state.pp);
-  $('ppHeadTxt').textContent = fmt(state.pp);
-  $('gemTxt').textContent = fmt(state.gems);
-  $('autoPow').textContent = fmt(autoPower());
+  setText(E.realmName, realmName(state.realm));
+  if(state.realm !== lastSigilRealm){ E.realmSigil.innerHTML = sigilSVG(state.realm); lastSigilRealm = state.realm; }
+  setText(E.qiTxt, fmt(state.qi)+" / "+fmt(need));
+  renderQiBar();
+  setText(E.ppTxt, fmt(state.pp));
+  setText(E.gemTxt, fmt(state.gems));
+  setText(E.autoPow, fmt(autoPower()));
   const ready = state.qi >= need;
-  $('breakthroughBtn').disabled = !ready;
-  $('btLabel').textContent = ready ? "突破 ทลายขีดจำกัด!" : "突破 ทลายขีดจำกัด (ต้องการ DP เพิ่ม)";
-  renderAlloc();
-  renderBattle();
-  renderGear();
+  setDisabled(E.breakthroughBtn, !ready);
+  setText(E.btLabel, ready ? "突破 ทลายขีดจำกัด!" : "突破 ทลายขีดจำกัด (ต้องการ DP เพิ่ม)");
+  // hidden tabs are skipped; selectTab() renders a tab as it is shown
+  if(activeTab === 'alloc') renderAlloc();
+  else if(activeTab === 'battle') renderBattle();
+  else if(activeTab === 'gear') renderGear();
+  else if(activeTab === 'log' && logDirty) renderLog();
 }
 
+let allocRows = [];
 function buildAlloc(){
   const box = $('allocList');
   box.innerHTML = Object.keys(UPG).map(key=>{
@@ -573,20 +601,24 @@ function buildAlloc(){
       <button class="allocBtn" data-key="${key}"><svg class="ic" width="12" height="12"><use href="#icon-spark"></use></svg><span class="cost"></span></button>
     </div>`;
   }).join('');
+  allocRows = [...box.querySelectorAll('button[data-key]')].map(btn=>({
+    key: btn.dataset.key, btn, lvl: btn.closest('.allocItem').querySelector('.lvl'), cost: btn.querySelector('.cost')
+  }));
 }
 function renderAlloc(){
-  document.querySelectorAll('#allocList button[data-key]').forEach(btn=>{
-    const key = btn.dataset.key;
-    const maxed = upgMaxed(key);
-    const cost = upgCost(key);
-    btn.closest('.allocItem').querySelector('.lvl').textContent = 'Lv.'+state.upgrades[key];
-    btn.querySelector('.cost').textContent = maxed ? 'สูงสุดแล้ว' : cost+' แต้ม';
-    btn.disabled = maxed || state.pp < cost;
+  setText(E.ppHeadTxt, fmt(state.pp));
+  allocRows.forEach(r=>{
+    const maxed = upgMaxed(r.key);
+    const cost = upgCost(r.key);
+    setText(r.lvl, 'Lv.'+state.upgrades[r.key]);
+    setText(r.cost, maxed ? 'สูงสุดแล้ว' : cost+' แต้ม');
+    setDisabled(r.btn, maxed || state.pp < cost);
   });
 }
 
 function renderLog(){
-  const box = $('tab-log');
+  logDirty = false;
+  const box = E['tab-log'];
   if(!state.log.length){ box.textContent = 'ยังไม่มีบันทึก'; return; }
   box.replaceChildren(...state.log.map(l=>{ const d = document.createElement('div'); d.textContent = l; return d; }));
 }
@@ -603,17 +635,17 @@ function allocate(key){
 }
 
 function renderBattle(){
-  $('cpTxt').textContent = fmt(combatPower());
+  setText(E.cpTxt, fmt(combatPower()));
   const mh = maxHP();
-  $('hpTxt').textContent = fmt(state.hp)+' / '+fmt(mh);
-  $('hpBar').style.width = Math.max(0, Math.min(100, state.hp/mh*100))+'%';
-  $('downedNote').style.display = state.downed ? 'block' : 'none';
-  $('stageName').textContent = stageLabel(state.stage);
-  $('monsterPow').textContent = fmt(monsterPower(state.stage));
-  $('battleBar').style.width = (state.stageWins/5*100)+'%';
-  $('stageWins').textContent = state.stageWins;
-  $('oreTxt').textContent = fmt(state.ore);
-  $('keyTxt').textContent = fmt(state.keys);
+  setText(E.hpTxt, fmt(state.hp)+' / '+fmt(mh));
+  setBar(E.hpBar, state.hp/mh);
+  setShown(E.downedNote, state.downed);
+  setText(E.stageName, stageLabel(state.stage));
+  setText(E.monsterPow, fmt(monsterPower(state.stage)));
+  setBar(E.battleBar, state.stageWins/5);
+  setText(E.stageWins, state.stageWins);
+  setText(E.oreTxt, fmt(state.ore));
+  setText(E.keyTxt, fmt(state.keys));
 }
 
 function battleStep(quiet){
@@ -673,31 +705,32 @@ function gearCardHTML(slot){
       <svg class="ic" width="11" height="11"><use href="#icon-ore"></use></svg>${fmt(forgeCost(item))} (${Math.round(forgeChance(item)*100)}%)
     </button>`;
 }
+const gearCards = {};
 function renderGear(){
-  $('keyTxt2').textContent = fmt(state.keys);
-  $('chestTierTxt').textContent = state.chestTier+1;
-  $('openChestBtn').disabled = state.keys < 1;
+  setText(E.keyTxt2, fmt(state.keys));
+  setText(E.chestTierTxt, state.chestTier+1);
+  setDisabled(E.openChestBtn, state.keys < 1);
   const upCost = chestUpgradeCost();
-  $('chestUpCost').textContent = fmt(upCost);
-  $('upgradeChestBtn').disabled = state.gems < upCost;
+  setText(E.chestUpCost, fmt(upCost));
+  setDisabled(E.upgradeChestBtn, state.gems < upCost);
 
-  const grid = $('gearGrid');
+  const grid = E.gearGrid;
   if(!grid.children.length){
     grid.innerHTML = Object.keys(SLOTS).map(slot=>`<div class="gearCard" data-card="${slot}"></div>`).join('');
+    Object.keys(SLOTS).forEach(slot=>{ gearCards[slot] = { card: grid.querySelector(`[data-card="${slot}"]`), btn: null }; });
   }
   Object.keys(SLOTS).forEach(slot=>{
     const item = state.equipment[slot];
     const sig = item ? item.rarity+'|'+item.level : 'none';
-    const card = grid.querySelector(`[data-card="${slot}"]`);
-    if(gearSig[slot] !== sig){ card.innerHTML = gearCardHTML(slot); gearSig[slot] = sig; }
-    const btn = card.querySelector('button');
-    if(btn) btn.disabled = state.ore < forgeCost(item);
+    const g = gearCards[slot];
+    if(gearSig[slot] !== sig){ g.card.innerHTML = gearCardHTML(slot); g.btn = g.card.querySelector('button'); gearSig[slot] = sig; }
+    if(g.btn) setDisabled(g.btn, state.ore < forgeCost(item));
   });
 
   const sig = state.companions.join(',');
   if(sig !== compSig){
     compSig = sig;
-    $('compGrid').innerHTML = COMPANIONS.map(c=>{
+    E.compGrid.innerHTML = COMPANIONS.map(c=>{
       const owned = state.companions.includes(c.id);
       return `<div class="compCard${owned?' owned':''}">
         <svg class="ic" width="18" height="18" style="color:${owned?'var(--gold)':'var(--sub)'}"><use href="#icon-paw"></use></svg>
@@ -786,8 +819,8 @@ function breakthrough(){
   const ppReward = 2 + Math.floor(state.realm/2) + state.upgrades.disciple;
   state.pp += ppReward;
 
-  const core = $('core');
-  core.classList.remove('fg'); void core.offsetWidth; core.classList.add('fg');
+  const glow = $('coreWrap');
+  glow.classList.remove('fg'); void glow.offsetWidth; glow.classList.add('fg');
 
   const rect = $('fx').getBoundingClientRect();
 
@@ -828,13 +861,26 @@ function advance(dt){
   for(let i=0;i<steps;i++) battleStep(steps > 1);
 }
 
-function tick(){
+function step(){
   const now = Date.now();
   const dt = (now - lastTickAt)/1000;
   lastTickAt = now;
   if(dt > 0) advance(dt);
-  render();
 }
+function tick(){ step(); render(); }
+
+// Main loop: the simulation advances every frame so the DP bar fills smoothly; text/buttons refresh a few times a second.
+// requestAnimationFrame pauses in background tabs, so a 1s interval takes over there (both are wall-clock based).
+const UI_INTERVAL_MS = 200;
+let lastFrameAt = 0, lastUiAt = 0;
+function loop(now){
+  lastFrameAt = now;
+  step();
+  if(now - lastUiAt >= UI_INTERVAL_MS){ lastUiAt = now; render(); }
+  else renderQiBar();
+  requestAnimationFrame(loop);
+}
+function fallbackTick(){ if(performance.now() - lastFrameAt > 1500) tick(); }
 
 function storageGet(){
   try{ return localStorage.getItem(SAVE_KEY); }catch(e){ storageOk = false; return null; }
@@ -893,16 +939,19 @@ function load(){
 }
 
 function selectTab(name){
+  activeTab = name;
   document.querySelectorAll('.tab').forEach(x=>{
     const on = x.dataset.tab === name;
     x.classList.toggle('active', on);
     x.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
-  $('trainZone').style.display = name==='train' ? 'flex' : 'none';
-  $('tab-alloc').style.display = name==='alloc' ? 'block' : 'none';
-  $('tab-battle').style.display = name==='battle' ? 'block' : 'none';
-  $('tab-gear').style.display = name==='gear' ? 'block' : 'none';
-  $('tab-log').style.display = name==='log' ? 'block' : 'none';
+  setShown($('trainZone'), name==='train', 'flex');
+  setShown($('tab-alloc'), name==='alloc');
+  setShown($('tab-battle'), name==='battle');
+  setShown($('tab-gear'), name==='gear');
+  setShown(E['tab-log'], name==='log');
+  if(name === 'train' && fx) fx.wake();
+  render();
 }
 
 function initTabs(){
@@ -917,66 +966,92 @@ function initTabs(){
 function initFX(canvas){
   const ctx = canvas.getContext('2d');
   const DPR = Math.min(window.devicePixelRatio||1, 2);
-  function resize(w, h){
-    canvas.width = Math.max(1, Math.round(w*DPR));
-    canvas.height = Math.max(1, Math.round(h*DPR));
-    ctx.setTransform(DPR,0,0,DPR,0,0);
+  const MAX_PARTICLES = 90;
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let w = 0, h = 0;
+  // size comes from a ResizeObserver so the frame loop never has to read layout
+  function resize(cw, ch){
+    w = cw; h = ch;
+    if(w > 0 && h > 0){
+      canvas.width = Math.round(w*DPR);
+      canvas.height = Math.round(h*DPR);
+      ctx.setTransform(DPR,0,0,DPR,0,0);
+    }
+    wake();
+  }
+  if(window.ResizeObserver){
+    new ResizeObserver(entries=>{ const r = entries[entries.length-1].contentRect; resize(r.width, r.height); }).observe(canvas);
+  } else {
+    const measure = ()=>{ const r = canvas.getBoundingClientRect(); resize(r.width, r.height); };
+    window.addEventListener('resize', measure); measure();
   }
 
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let particles = [];
-
-  function spawnAmbient(w, h){
-    particles.push({
+  const particles = [];
+  function add(p){ if(particles.length < MAX_PARTICLES) particles.push(p); }
+  function spawnAmbient(){
+    add({
       x: Math.random()*w, y: h+4, vx:(Math.random()-.5)*6, vy:-(18+Math.random()*22),
       r: 1+Math.random()*1.8, life:0, maxLife: 2.4+Math.random()*1.8,
-      color: Math.random()<.5 ? '230,199,111' : '179,156,240', kind:'ambient'
+      color: Math.random()<.5 ? '#e6c76f' : '#b39cf0', burst:false
     });
   }
   function burst(x,y,count,strong){
     for(let i=0;i<count;i++){
       const a = Math.random()*Math.PI*2;
       const spd = strong ? 60+Math.random()*90 : 30+Math.random()*40;
-      particles.push({
+      add({
         x, y, vx:Math.cos(a)*spd, vy:Math.sin(a)*spd,
         r: strong ? 1.6+Math.random()*2.4 : 1+Math.random()*1.6,
         life:0, maxLife: strong ? 0.7+Math.random()*0.5 : 0.4+Math.random()*0.35,
-        color: strong ? '232,199,111' : '236,231,251', kind:'burst'
+        color: strong ? '#e8c76f' : '#ece7fb', burst:true
       });
     }
+    wake();
   }
 
-  let last = performance.now(), acc = 0;
-  function frame(now){
-    const dt = Math.min(.05, (now-last)/1000); last = now;
-    const r = canvas.getBoundingClientRect();
-    const w = r.width, h = r.height;
-    if(w > 0 && h > 0){
-      if(canvas.width !== Math.max(1, Math.round(w*DPR)) || canvas.height !== Math.max(1, Math.round(h*DPR))) resize(w, h);
-      ctx.clearRect(0,0,w,h);
-      if(!reduced){
-        acc += dt;
-        if(acc > 0.28){ acc = 0; spawnAmbient(w, h); }
-      }
-      particles = particles.filter(p=>{
-        p.life += dt;
-        if(p.life >= p.maxLife) return false;
-        p.x += p.vx*dt; p.y += p.vy*dt;
-        if(p.kind==='burst'){ p.vx *= (1-2.2*dt); p.vy *= (1-2.2*dt); }
-        const t = 1 - p.life/p.maxLife;
-        ctx.beginPath();
-        ctx.fillStyle = `rgba(${p.color},${Math.max(0,(t*0.85)).toFixed(2)})`;
-        ctx.arc(p.x, p.y, p.r*(p.kind==='burst'? t+0.3:1), 0, Math.PI*2);
-        ctx.fill();
-        return true;
-      });
-    }
+  // the loop only runs while the canvas is on screen and has something to draw
+  const visible = () => w > 0 && h > 0 && !document.hidden;
+  let running = false, last = 0, acc = 0, dirty = false;
+  function wake(){
+    if(running || !visible() || (reduced && !particles.length)) return;
+    running = true; last = performance.now();
     requestAnimationFrame(frame);
   }
-  requestAnimationFrame(frame);
+  function frame(now){
+    const dt = Math.min(.05, (now-last)/1000); last = now;
+    if(!visible()){ running = false; return; }
+    if(!reduced){
+      acc += dt;
+      if(acc > 0.28){ acc = 0; spawnAmbient(); }
+    }
+    if(dirty || particles.length){ ctx.clearRect(0,0,w,h); dirty = false; }
+    let n = 0;
+    for(let i=0;i<particles.length;i++){
+      const p = particles[i];
+      p.life += dt;
+      if(p.life >= p.maxLife) continue;
+      p.x += p.vx*dt; p.y += p.vy*dt;
+      if(p.burst){ const k = 1-2.2*dt; p.vx *= k; p.vy *= k; }
+      const t = 1 - p.life/p.maxLife;
+      ctx.globalAlpha = t*0.85;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r*(p.burst ? t+0.3 : 1), 0, 6.2832);
+      ctx.fill();
+      particles[n++] = p;
+    }
+    particles.length = n;
+    ctx.globalAlpha = 1;
+    if(n) dirty = true;
+    if(reduced && !n && !dirty){ running = false; return; }
+    requestAnimationFrame(frame);
+  }
+  document.addEventListener('visibilitychange', wake);
+  wake();
 
   return {
-    breakBurst(x,y,strong){ burst(x,y, strong?26:14, !!strong); }
+    breakBurst(x,y,strong){ burst(x,y, strong?26:14, !!strong); },
+    wake
   };
 }
 
@@ -984,6 +1059,7 @@ function boot(saved){
   if(saved && typeof saved === 'object' && Object.keys(saved).length){ state = sanitize(saved); }
   else { load(); }
 
+  cacheEls();
   buildAlloc();
   $('allocList').addEventListener('click', e=>{
     const btn = e.target.closest('button[data-key]');
@@ -997,9 +1073,9 @@ function boot(saved){
   $('openChestBtn').addEventListener('click', openChest);
   $('upgradeChestBtn').addEventListener('click', upgradeChestTier);
   initTabs();
-  selectTab('train');
   drawPixelHero($('heroPixel'));
   fx = initFX($('fx'));
+  selectTab('train');
 
   if(!state.log.length) addLog('เริ่มต้นเส้นทางสังหารเทพ พลังเทวะจะไหลเข้าตัวท่านเองเรื่อยๆ ขอให้จัดสรรอย่างชาญฉลาด!');
   if(!storageOk) addLog('เบราว์เซอร์นี้ไม่อนุญาตให้บันทึกเกม — ความคืบหน้าจะหายเมื่อปิดหน้า');
@@ -1007,7 +1083,8 @@ function boot(saved){
   lastTickAt = Date.now();
   render();
 
-  setInterval(tick, 1000);
+  requestAnimationFrame(loop);
+  setInterval(fallbackTick, 1000);
   setInterval(save, 10000);
   window.addEventListener('pagehide', save);
   window.addEventListener('beforeunload', save);
