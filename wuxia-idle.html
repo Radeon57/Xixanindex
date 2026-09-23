@@ -2,8 +2,9 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>จอมยุทธ์บุกเบิก</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='11' fill='%23d84b3a'/%3E%3Ccircle cx='12' cy='12' r='5' fill='%23e0b054'/%3E%3C/svg%3E">
 <style>
 :root{
   --bg:#140b0a; --panel:#1d1210; --panel2:#170e0c; --border:#3a221c;
@@ -25,12 +26,12 @@ body::before{
              radial-gradient(circle at 50% 118%, rgba(224,176,84,.08), transparent 52%);
   pointer-events:none;z-index:-1;
 }
-#app{width:100%;max-width:480px;height:100dvh;display:flex;flex-direction:column;padding:10px 12px;position:relative;overflow:hidden}
+#app{width:100%;max-width:480px;height:100%;display:flex;flex-direction:column;padding:12px 16px;position:relative;overflow:hidden}
 h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-spacing:1px;text-shadow:0 0 12px rgba(224,176,84,.35)}
 .sub{text-align:center;color:var(--sub);font-size:.72rem;margin-bottom:8px}
 .panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:10px 12px;margin-bottom:8px}
 .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.statline{display:flex;justify-content:space-between;font-size:.82rem;margin:3px 0;color:var(--sub)}
+.statline{display:flex;justify-content:space-between;gap:6px;font-size:.82rem;margin:3px 0;color:var(--sub)}
 .statline b{color:var(--text)}
 .bar{height:12px;border-radius:6px;background:var(--bar);overflow:hidden;border:1px solid var(--border);position:relative}
 .bar>i{display:block;height:100%;background:linear-gradient(90deg,var(--redDim),var(--red));transition:width .25s ease}
@@ -70,9 +71,10 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
 .shopItem:last-child{border-bottom:none}
 .shopName{font-size:.85rem}
 .shopDesc{font-size:.68rem;color:var(--sub)}
-.buyBtn{padding:7px 10px;border-radius:8px;border:1px solid var(--gold);background:var(--panel2);color:var(--gold);font-size:.75rem;white-space:nowrap}
-.buyBtn:disabled{opacity:.4;color:var(--sub);border-color:var(--border)}
-.logBox{font-size:.72rem;color:var(--sub);max-height:70px;overflow-y:auto;border-top:1px solid var(--border);padding-top:6px}
+.buyBtn{padding:7px 10px;border-radius:8px;border:1px solid var(--gold);background:var(--panel2);color:var(--gold);font-size:.75rem;font-family:inherit;white-space:nowrap;cursor:pointer}
+.buyBtn:disabled{opacity:.4;color:var(--sub);border-color:var(--border);cursor:default}
+.b:focus-visible,.tab:focus-visible,.buyBtn:focus-visible,#core:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.logBox{font-size:.72rem;color:var(--sub);max-height:min(55vh,460px);overflow-y:auto;border-top:1px solid var(--border);padding-top:6px}
 .logBox div{margin:1px 0}
 .coinTxt{color:var(--coin)}
 .gemTxt{color:var(--gem)}
@@ -80,6 +82,9 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
 #toast.show{opacity:1}
 ::-webkit-scrollbar{width:5px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
 </style>
 </head>
 <body>
@@ -102,7 +107,7 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
       <div id="coreWrap">
         <div class="ring2"></div>
         <div class="ring"></div>
-        <div id="core">☯</div>
+        <div id="core" role="button" tabindex="0" aria-label="แตะเพื่อฝึกวรยุทธ์">☯</div>
       </div>
       <div style="font-size:.75rem;color:var(--sub);text-align:center">แตะดวงแก่นเพื่อฝึกวรยุทธ์ +<span id="clickPow">1</span> Qi</div>
       <div style="font-size:.72rem;color:var(--sub);margin-top:2px">อัตโนมัติ: <span id="autoPow">0</span> Qi/วิ</div>
@@ -110,16 +115,16 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
     </div>
 
     <div class="tabs">
-      <div class="tab active" data-tab="train">ฝึกฝน</div>
-      <div class="tab" data-tab="shop">ร้านค้า</div>
-      <div class="tab" data-tab="log">บันทึก</div>
+      <div class="tab active" data-tab="train" role="button" tabindex="0">ฝึกฝน</div>
+      <div class="tab" data-tab="shop" role="button" tabindex="0">ร้านค้า</div>
+      <div class="tab" data-tab="log" role="button" tabindex="0">บันทึก</div>
     </div>
 
     <div id="tab-shop" class="panel" style="display:none"></div>
     <div id="tab-log" class="panel logBox" style="display:none"></div>
   </div>
 </div>
-<div id="toast"></div>
+<div id="toast" role="status" aria-live="polite"></div>
 
 <script>
 (function(){
@@ -131,8 +136,10 @@ const REALMS = [
 ];
 const REALM_BASE = 50;
 const REALM_GROWTH = 1.55;
+const MAX_CATCHUP_SEC = 8*3600;
+const SAVE_KEY = 'wuxiaIdleSave';
 
-let state = {
+const defaultState = () => ({
   qi:0, gold:0, gems:0,
   realm:0,
   clickBase:1,
@@ -141,15 +148,20 @@ let state = {
   lastSave: Date.now(),
   totalBreakthroughs:0,
   log:[]
-};
+});
+let state = defaultState();
+let lastTickAt = Date.now();
+let storageOk = true;
 
 const UPG = {
-  fist:   { name:"หมัดเหล็ก",      desc:"+1 Qi ต่อแตะ",        base:10,  grow:1.16, effect:"click", amt:1 },
-  root:   { name:"รากปราณ",       desc:"+1 Qi/วิ อัตโนมัติ",    base:25,  grow:1.18, effect:"auto",  amt:1 },
-  sword:  { name:"กระบี่วิถี",     desc:"+3 Qi ต่อแตะ",        base:150, grow:1.20, effect:"click", amt:3 },
-  manual: { name:"คัมภีร์ลับ",     desc:"+5 Qi/วิ อัตโนมัติ",    base:400, grow:1.22, effect:"auto",  amt:5 },
-  disciple:{name:"ศิษย์ผู้ช่วย",   desc:"+15 Qi/วิ อัตโนมัติ",   base:2000,grow:1.25, effect:"auto",  amt:15 }
+  fist:   { name:"หมัดเหล็ก",      desc:"+1 Qi ต่อแตะ",        base:10,  grow:1.16, amt:1 },
+  root:   { name:"รากปราณ",       desc:"+1 Qi/วิ อัตโนมัติ",    base:25,  grow:1.18, amt:1 },
+  sword:  { name:"กระบี่วิถี",     desc:"+3 Qi ต่อแตะ",        base:150, grow:1.20, amt:3 },
+  manual: { name:"คัมภีร์ลับ",     desc:"+5 Qi/วิ อัตโนมัติ",    base:400, grow:1.22, amt:5 },
+  disciple:{name:"ศิษย์ผู้ช่วย",   desc:"+15 Qi/วิ อัตโนมัติ",   base:2000,grow:1.25, amt:15 }
 };
+
+const $ = id => document.getElementById(id);
 
 function realmThreshold(i){ return Math.floor(REALM_BASE * Math.pow(REALM_GROWTH, i)); }
 function realmName(i){ return REALMS[Math.min(i, REALMS.length-1)] + (i>=REALMS.length ? " ("+(i-REALMS.length+2)+"ชั้น)" : ""); }
@@ -159,6 +171,7 @@ function autoPower(){ return state.autoBase + state.upgrades.root*UPG.root.amt +
 function upgCost(key){ const u = UPG[key]; return Math.floor(u.base * Math.pow(u.grow, state.upgrades[key])); }
 
 function fmt(n){
+  if(!Number.isFinite(n)) return '0';
   if(n < 1000) return Math.floor(n).toString();
   const units = ["K","M","B","T","Qa","Qi"];
   let u = -1;
@@ -173,7 +186,7 @@ function addLog(msg){
 }
 
 function toast(msg){
-  const t=document.getElementById('toast');
+  const t = $('toast');
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toast._h);
@@ -182,44 +195,46 @@ function toast(msg){
 
 function render(){
   const need = realmThreshold(state.realm);
-  document.getElementById('realmName').textContent = realmName(state.realm);
-  document.getElementById('qiTxt').textContent = fmt(state.qi)+" / "+fmt(need);
-  document.getElementById('qiBar').style.width = Math.min(100, state.qi/need*100)+"%";
-  document.getElementById('goldTxt').textContent = fmt(state.gold);
-  document.getElementById('gemTxt').textContent = fmt(state.gems);
-  document.getElementById('clickPow').textContent = fmt(clickPower());
-  document.getElementById('autoPow').textContent = fmt(autoPower());
-  const btBtn = document.getElementById('breakthroughBtn');
+  $('realmName').textContent = realmName(state.realm);
+  $('qiTxt').textContent = fmt(state.qi)+" / "+fmt(need);
+  $('qiBar').style.width = Math.min(100, state.qi/need*100)+"%";
+  $('goldTxt').textContent = fmt(state.gold);
+  $('gemTxt').textContent = fmt(state.gems);
+  $('clickPow').textContent = fmt(clickPower());
+  $('autoPow').textContent = fmt(autoPower());
+  const btBtn = $('breakthroughBtn');
   const ready = state.qi >= need;
   btBtn.disabled = !ready;
   btBtn.textContent = ready ? "突破 ทลายด่าน!" : "突破 ทลายด่าน (ต้องการ Qi เพิ่ม)";
   renderShop();
 }
 
-function renderShop(){
-  const box = document.getElementById('tab-shop');
-  box.innerHTML = '';
-  Object.keys(UPG).forEach(key=>{
+function buildShop(){
+  $('tab-shop').innerHTML = Object.keys(UPG).map(key=>{
     const u = UPG[key];
-    const cost = upgCost(key);
-    const lvl = state.upgrades[key];
-    const div = document.createElement('div');
-    div.className = 'shopItem';
-    div.innerHTML = `
+    return `<div class="shopItem">
       <div>
-        <div class="shopName">${u.name} <span style="color:var(--sub)">Lv.${lvl}</span></div>
+        <div class="shopName">${u.name} <span class="lvl" style="color:var(--sub)"></span></div>
         <div class="shopDesc">${u.desc}</div>
       </div>
-      <button class="buyBtn" ${state.gold < cost ? 'disabled' : ''}>${fmt(cost)} เงิน</button>
-    `;
-    div.querySelector('button').addEventListener('click', ()=>buyUpgrade(key));
-    box.appendChild(div);
+      <button class="buyBtn" data-key="${key}"></button>
+    </div>`;
+  }).join('');
+}
+function renderShop(){
+  document.querySelectorAll('#tab-shop button[data-key]').forEach(btn=>{
+    const key = btn.dataset.key;
+    const cost = upgCost(key);
+    btn.closest('.shopItem').querySelector('.lvl').textContent = 'Lv.'+state.upgrades[key];
+    btn.textContent = fmt(cost)+' เงิน';
+    btn.disabled = state.gold < cost;
   });
 }
 
 function renderLog(){
-  const box = document.getElementById('tab-log');
-  box.innerHTML = state.log.map(l=>`<div>${l}</div>`).join('') || '<div>ยังไม่มีบันทึก</div>';
+  const box = $('tab-log');
+  if(!state.log.length){ box.textContent = 'ยังไม่มีบันทึก'; return; }
+  box.replaceChildren(...state.log.map(l=>{ const d = document.createElement('div'); d.textContent = l; return d; }));
 }
 
 function buyUpgrade(key){
@@ -235,12 +250,12 @@ function buyUpgrade(key){
 function train(){
   const pow = clickPower();
   state.qi += pow;
-  const core = document.getElementById('core');
+  const core = $('core');
   core.classList.remove('fg'); void core.offsetWidth; core.classList.add('fg');
   const f = document.createElement('div');
   f.className='float';
   f.textContent = '+'+fmt(pow);
-  document.getElementById('coreWrap').appendChild(f);
+  $('coreWrap').appendChild(f);
   setTimeout(()=>f.remove(), 1000);
   render();
 }
@@ -262,60 +277,88 @@ function breakthrough(){
 }
 
 function tick(){
-  const auto = autoPower();
-  if(auto>0){ state.qi += auto/10; render(); }
+  const now = Date.now();
+  const dt = Math.min((now - lastTickAt)/1000, MAX_CATCHUP_SEC);
+  lastTickAt = now;
+  if(dt > 0) state.qi += autoPower()*dt;
+  render();
 }
 
 function save(){
   state.lastSave = Date.now();
-  localStorage.setItem('wuxiaIdleSave', JSON.stringify(state));
+  if(!storageOk) return;
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }catch(e){ storageOk = false; }
+}
+
+const isNum = v => typeof v === 'number' && Number.isFinite(v);
+function sanitize(raw){
+  const d = defaultState();
+  if(!raw || typeof raw !== 'object') return d;
+  Object.keys(d).forEach(k=>{ if(typeof d[k] === 'number' && isNum(raw[k])) d[k] = Math.max(0, raw[k]); });
+  d.realm = Math.floor(d.realm);
+  if(!(raw.lastSave > 0) || raw.lastSave > Date.now()) d.lastSave = Date.now();
+  if(raw.upgrades && typeof raw.upgrades === 'object'){
+    Object.keys(d.upgrades).forEach(k=>{ if(isNum(raw.upgrades[k])) d.upgrades[k] = Math.max(0, Math.floor(raw.upgrades[k])); });
+  }
+  if(Array.isArray(raw.log)) d.log = raw.log.filter(l => typeof l === 'string').slice(0, 40);
+  return d;
 }
 
 function load(){
-  const raw = localStorage.getItem('wuxiaIdleSave');
+  let raw = null;
+  try{ raw = localStorage.getItem(SAVE_KEY); }catch(e){ storageOk = false; }
   if(!raw) return;
-  try{
-    const loaded = JSON.parse(raw);
-    state = Object.assign(state, loaded);
-    state.upgrades = Object.assign({fist:0,root:0,sword:0,manual:0,disciple:0}, loaded.upgrades||{});
-    const offlineSec = Math.max(0, Math.floor((Date.now() - (loaded.lastSave||Date.now()))/1000));
-    if(offlineSec > 5){
-      const auto = autoPower();
-      const gained = Math.min(offlineSec, 8*3600) * auto;
-      if(gained > 0){
-        state.qi += gained;
-        addLog(`ขณะไม่อยู่ (${Math.floor(offlineSec/60)} นาที) ฝึกฝนอัตโนมัติได้ ${fmt(gained)} Qi`);
-      }
+  let parsed;
+  try{ parsed = JSON.parse(raw); }catch(e){ return; }
+  state = sanitize(parsed);
+  const offlineSec = Math.min(Math.max(0, Math.floor((Date.now() - state.lastSave)/1000)), MAX_CATCHUP_SEC);
+  if(offlineSec > 5){
+    const gained = offlineSec * autoPower();
+    if(gained > 0){
+      state.qi += gained;
+      addLog(`ขณะไม่อยู่ (${Math.floor(offlineSec/60)} นาที) ฝึกฝนอัตโนมัติได้ ${fmt(gained)} Qi`);
     }
-  }catch(e){}
+  }
 }
 
-function initTabs(){
-  const tabs = document.querySelectorAll('.tab');
-  tabs.forEach(t=>{
-    t.addEventListener('click', ()=>{
-      tabs.forEach(x=>x.classList.remove('active'));
-      t.classList.add('active');
-      const name = t.dataset.tab;
-      document.getElementById('trainZone').style.display = name==='train' ? 'flex' : 'none';
-      document.getElementById('breakthroughBtn').style.display = name==='train' ? 'block' : 'none';
-      document.getElementById('tab-shop').style.display = name==='shop' ? 'block' : 'none';
-      document.getElementById('tab-log').style.display = name==='log' ? 'block' : 'none';
-    });
+function selectTab(name){
+  document.querySelectorAll('.tab').forEach(x=>{
+    const on = x.dataset.tab === name;
+    x.classList.toggle('active', on);
+    x.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
+  $('trainZone').style.display = name==='train' ? 'flex' : 'none';
+  $('tab-shop').style.display = name==='shop' ? 'block' : 'none';
+  $('tab-log').style.display = name==='log' ? 'block' : 'none';
 }
 
-document.getElementById('core').addEventListener('click', train);
-document.getElementById('breakthroughBtn').addEventListener('click', breakthrough);
-initTabs();
+const onActivate = fn => e => { if(e.key==='Enter' || e.key===' '){ e.preventDefault(); fn(); } };
+
+$('core').addEventListener('click', train);
+$('core').addEventListener('keydown', onActivate(train));
+$('breakthroughBtn').addEventListener('click', breakthrough);
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>selectTab(t.dataset.tab));
+  t.addEventListener('keydown', onActivate(()=>selectTab(t.dataset.tab)));
+});
+buildShop();
+$('tab-shop').addEventListener('click', e=>{
+  const btn = e.target.closest('button[data-key]');
+  if(btn) buyUpgrade(btn.dataset.key);
+});
+selectTab('train');
 load();
-render();
-if(state.log.length===0) addLog('เริ่มต้นเส้นทางสู่ยุทธจักร ขอให้โชคดี!');
+if(!state.log.length) addLog('เริ่มต้นเส้นทางสู่ยุทธจักร ขอให้โชคดี!');
+if(!storageOk) addLog('เบราว์เซอร์นี้ไม่อนุญาตให้บันทึกเกม — ความคืบหน้าจะหายเมื่อปิดหน้า');
 renderLog();
+lastTickAt = Date.now();
+render();
 
 setInterval(tick, 1000);
 setInterval(save, 10000);
+window.addEventListener('pagehide', save);
 window.addEventListener('beforeunload', save);
+document.addEventListener('visibilitychange', ()=>{ if(document.hidden) save(); else tick(); });
 })();
 </script>
 </body>
