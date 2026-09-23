@@ -10,7 +10,8 @@ const JOB_KINDS = ['train','skill','mon'];
 function newMeta(){
   return { gp:0, gpTotal:0, rebirths:0, bestGods:0, dpLife:0, up:{}, ach:{},
            pets:{}, team:[], mats:{}, gear:{}, dgBest:{}, run:null, dgAuto:true,
-           chal:{}, ub:[], mp:0, mpTotal:0, might:{} };
+           chal:{}, ub:[], mp:0, mpTotal:0, might:{},
+           tut:0, seen:{} };
 }
 function newState(meta){
   return {
@@ -83,7 +84,9 @@ function mults(s){
   const mortal = inChallenge(s, 'mortal');
   const compound = (defs, levelOf) => defs.forEach(x=>{ const L = levelOf(x); if(L) m[x.stat] *= Math.pow(1 + x.per, L); });
   if(!mortal){
-    apply(D.UPGRADES, u => s.meta.up[u.key] || 0);
+    // God Power upgrades compound so each rebirth clearly pushes the next run past the last one
+    apply(D.UPGRADES.filter(u=>u.add), u => s.meta.up[u.key] || 0);
+    compound(D.UPGRADES.filter(u=>!u.add), u => s.meta.up[u.key] || 0);
     compound(D.MIGHT.filter(x=>x.stat), x => mightLv(s, x.key));
     compound(D.CHALLENGES.filter(c=>c.stat === 'stat'), c => s.meta.chal[c.key] || 0);
   }
@@ -613,6 +616,9 @@ function sanitize(raw){
   m.mp = nonNeg(rm.mp, 0); m.mpTotal = nonNeg(rm.mpTotal, 0);
   if(rm.might && typeof rm.might === 'object') D.MIGHT.forEach(x=>{ if(isNum(rm.might[x.key])) m.might[x.key] = Math.min(x.max, Math.floor(Math.max(0, rm.might[x.key]))); });
   if(D.CHALLENGES.some(c=>c.key===raw.challenge) && chalDone(d, raw.challenge) < D.CHAL_MAX) d.challenge = raw.challenge;
+  // tutorial progress; saves from before the tutorial existed skip it once past the basics
+  m.tut = isNum(rm.tut) ? Math.floor(Math.max(0, rm.tut)) : (m.bestGods >= 2 || m.rebirths ? 999 : 0);
+  if(rm.seen && typeof rm.seen === 'object') for(const k in rm.seen) if(rm.seen[k] === 1) m.seen[k] = 1;
   const r = rm.run;
   if(r && typeof r === 'object' && Number.isInteger(r.i) && r.i >= 0 && r.i < D.DUNGEONS.length && Number.isInteger(r.depth) && r.depth >= 1 && r.depth <= D.MAX_DEPTH)
     m.run = { i:r.i, depth:r.depth, t: Math.min(nonNeg(r.t, 0), D.DUNGEONS[r.i].time) };

@@ -56,7 +56,7 @@ function addLog(msg){
 }
 function renderLog(){
   logDirty = false;
-  const box = $('tab-log');
+  const box = $('logList');
   if(!s.log.length){ box.textContent = 'ยังไม่มีบันทึก'; return; }
   box.replaceChildren(...s.log.map(l=>{ const d = document.createElement('div'); d.textContent = l; return d; }));
 }
@@ -604,6 +604,93 @@ function renderPets(d, full){
   }
 }
 
+// ---------- tutorial & first-visit tips ----------
+// each step finishes itself once its condition holds; the last one waits for the player
+const TUT = [
+  { tab:'train',  text:'ร่างเงาจะถูกสร้างขึ้นเองทีละร่าง — กด + ที่ "วิดพื้น" เพื่อส่งไปฝึก (เลือก "ทั้งหมด" เพื่อส่งทุกร่างในครั้งเดียว)', done:()=>s.train.some(r=>r.n>0) || s.meta.bestGods >= 1 },
+  { tab:'mon',    text:'ส่งร่างเงาบางส่วนไปสู้ "ภูตหมอก" เพื่อหาพลังเทวะและค่ายุทธ์ — ศัตรูสีเขียวแปลว่าร่างเงาจะไม่ตาย', done:()=>s.mon.some(r=>r.n>0) || s.meta.bestGods >= 1 },
+  { tab:'train',  text:'วิดพื้นถึง Lv.10 แล้ว "ซิทอัพ" จะปลดล็อก — ย้ายร่างเงาไปขั้นที่สูงกว่า เพราะได้พลังต่อเลเวลมากกว่า 6 เท่า', done:()=>s.train[1].n>0 || s.meta.bestGods >= 1 },
+  { tab:'gods',   text:'ดูคาดการณ์ที่แท็บท้าเทพ เมื่อขึ้นว่า "ชนะ" ให้กดท้าสู้เทพสายฟ้า', done:()=>s.meta.bestGods >= 1 },
+  { tab:'skill',  text:'วิชาเวทปลดล็อกแล้ว! แบ่งร่างเงาไปฝึกวิชาเวทเพื่อเพิ่มพลังป้องกัน — จำเป็นสำหรับเทพองค์ต่อไป', done:()=>s.skill.some(r=>r.n>0) || s.meta.bestGods >= 2 },
+  { tab:'gods',   text:'เป้าหมายต่อไป: สังหารเทพสงคราม เพื่อปลดล็อกการสร้างสรรพสิ่ง', done:()=>s.meta.bestGods >= 2 },
+  { tab:'create', text:'การสร้างปลดล็อกแล้ว! เลือกสร้าง "แสงสวรรค์" — ของทุกชิ้นที่เคยสร้างให้โบนัสถาวรจนจบรอบ', done:()=>(s.made.light||0) > 0 || s.meta.rebirths > 0 },
+  { tab:null,     text:'จบบทสอนพื้นฐานแล้ว! ระบบใหม่จะปลดล็อกเมื่อสังหารเทพเพิ่ม — จุดสีทองบนแท็บบอกว่ามีอะไรใหม่', manual:true }
+];
+const TIPS = {
+  mon:'ร่างเงาที่อ่อนกว่าศัตรูจะตาย! ดูสีพลังศัตรู: เขียว = ปลอดภัย, เหลือง = เสี่ยง, แดง = อันตราย',
+  create:'เลือกของที่ต้องการ แล้วตัวละครจะสร้างต่อเนื่องเอง ถ้าวัตถุดิบขาดจะทำวัตถุดิบให้ก่อนอัตโนมัติ',
+  gods:'ตัวละครสู้เองโดยแลกหมัดทุก 0.5 วินาที ถ้าแพ้ พลังชีวิตจะฟื้นเองเมื่อออกจากการต่อสู้',
+  temple:'เครื่องผลิตสร้างพลังเทวะให้เองตลอดเวลา · อนุสรณ์ใช้พลังเทวะกับของที่สร้างไว้แลกตัวคูณ — ทั้งคู่รีเซ็ตเมื่อเกิดใหม่',
+  pets:'คู่หู อุปกรณ์ และวัตถุดิบอยู่ถาวรข้ามการเกิดใหม่ · ส่งทีมไปดันเจี้ยนเก็บเลเวล แล้วนำวัตถุดิบไปตีบวกอุปกรณ์',
+  rebirth:'ติดเทพองค์ไหนนานๆ ให้เกิดใหม่ — God Power ที่ได้ใช้ซื้ออัปเกรดถาวร ทำให้รอบต่อไปแข็งแกร่งกว่าเดิมมาก'
+};
+function renderTutor(){
+  const m = s.meta;
+  while(m.tut < TUT.length && !TUT[m.tut].manual && TUT[m.tut].done()) m.tut++;
+  const step = TUT[m.tut];
+  setShown($('tutor'), !!step, 'flex');
+  document.querySelectorAll('.tab').forEach(t=>setClass(t, 'guide', !!step && step.tab === t.dataset.tab && activeTab !== step.tab));
+  if(step){
+    setText($('tutorStep'), step.manual ? '✓' : (m.tut+1) + '/' + (TUT.length-1));
+    setText($('tutorText'), step.text);
+    setText($('tutorBtn'), step.manual ? 'เริ่มลุย!' : 'ข้าม');
+  }
+  const k = activeTab, basics = ['mon','create','gods'].includes(k);
+  const tip = TIPS[k] && !m.seen[k] && !tabLocked(k) && (!basics || m.tut >= TUT.length);
+  setShown($('tabTip'), !!tip, 'flex');
+  if(tip) setText($('tabTipText'), TIPS[k]);
+}
+
+// ---------- save transfer ----------
+const CODE_PREFIX = 'GK2.';
+function exportCode(){ return CODE_PREFIX + btoa(unescape(encodeURIComponent(JSON.stringify(s)))); }
+function decodeSave(code){
+  code = code.trim().replace(/\s+/g, '');
+  if(code.startsWith(CODE_PREFIX)) code = code.slice(CODE_PREFIX.length);
+  const raw = JSON.parse(decodeURIComponent(escape(atob(code))));
+  if(!raw || typeof raw !== 'object' || raw.v !== G.SAVE_VERSION) throw new Error('bad save');
+  return G.sanitize(raw);
+}
+// swap in a whole new state and drop every cache tied to the old one
+function replaceState(next){
+  s = next;
+  lastLost = s.clonesLost; shownArt = ''; arenaSel = 'god'; lastHits = 0;
+  rbArmedUntil = 0; logDirty = true;
+  lastTickAt = Date.now();
+  save();
+  render(true);
+}
+let wipeArmedUntil = 0;
+function initSaveTools(){
+  const msg = t => setText($('saveMsg'), t);
+  $('exportBtn').addEventListener('click', ()=>{ save(); $('exportBox').value = exportCode(); msg('สร้างโค้ดแล้ว — คัดลอกไปวางในเครื่องอื่นที่ช่อง "วางโค้ดเซฟ"'); });
+  $('copyBtn').addEventListener('click', ()=>{
+    const box = $('exportBox');
+    if(!box.value) box.value = exportCode();
+    const fallback = ()=>{ box.select(); try{ document.execCommand('copy'); msg('คัดลอกแล้ว'); }catch(e){ msg('คัดลอกอัตโนมัติไม่ได้ — กดค้างที่ช่องโค้ดแล้วคัดลอกเอง'); } };
+    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(box.value).then(()=>msg('คัดลอกแล้ว'), fallback);
+    else fallback();
+  });
+  $('importBtn').addEventListener('click', ()=>{
+    let next;
+    try{ next = decodeSave($('importBox').value); }catch(e){ msg('โค้ดไม่ถูกต้อง — ตรวจว่าคัดลอกมาครบทั้งหมด'); return; }
+    replaceState(next);
+    $('importBox').value = '';
+    addLog('โหลดเซฟจากโค้ดสำเร็จ');
+    msg('โหลดเซฟสำเร็จ!');
+    toast('โหลดเซฟสำเร็จ!');
+  });
+  $('wipeBtn').addEventListener('click', ()=>{
+    if(Date.now() >= wipeArmedUntil){ wipeArmedUntil = Date.now() + 4000; setText($('wipeBtn'), 'แตะอีกครั้งเพื่อลบทุกอย่าง'); setTimeout(()=>setText($('wipeBtn'), 'เริ่มใหม่ทั้งหมด'), 4000); return; }
+    wipeArmedUntil = 0;
+    setText($('wipeBtn'), 'เริ่มใหม่ทั้งหมด');
+    replaceState(G.newState());
+    addLog('เริ่มเกมใหม่ทั้งหมด — เริ่มต้นเส้นทางสังหารเทพอีกครั้ง');
+    msg('ลบเซฟแล้ว เริ่มใหม่ตั้งแต่ต้น');
+    selectTab('train');
+  });
+}
+
 // ---------- HUD & tabs ----------
 function renderHud(d, full){
   setBar($('hudHpBar'), s.hp / d.maxHp);
@@ -655,7 +742,7 @@ function render(full){
   else if(activeTab === 'rebirth') renderRebirth(d, full);
   else if(activeTab === 'pets') renderPets(d, full);
   else if(activeTab === 'log' && logDirty) renderLog();
-  if(full) renderTabs(d);
+  if(full){ renderTabs(d); renderTutor(); }
 }
 
 // ---------- engine events ----------
@@ -954,6 +1041,9 @@ function boot(saved){
   $('fightBtn').addEventListener('click', onFight);
   $('genBtn').addEventListener('click', onGen);
   $('backToGod').addEventListener('click', ()=>{ arenaSel = 'god'; render(true); });
+  $('tutorBtn').addEventListener('click', ()=>{ s.meta.tut = 999; save(); render(true); });
+  $('tabTipBtn').addEventListener('click', ()=>{ s.meta.seen[activeTab] = 1; save(); render(true); });
+  initSaveTools();
   $('dgStop').addEventListener('click', ()=>{ G.stopDungeon(s); addLog('หยุดสำรวจดันเจี้ยน'); render(true); });
   $('dgAuto').addEventListener('change', e=>{ s.meta.dgAuto = e.target.checked; render(true); });
   $('rbBtn').addEventListener('click', onRebirth);

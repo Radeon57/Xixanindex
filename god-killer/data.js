@@ -61,28 +61,29 @@ const HP_REGEN = 0.1;          // share of max HP regained per second outside a 
 // unlock: 'skills' | 'create' | 'gen' | 'monuments' | 'pets' | 'rebirth'; monsters unlock two at a time per god.
 // gp: God Power paid out on rebirth for every god killed in that run.
 const GODS = [
-  { name:'เทพสายฟ้า',   hp:34000, atk:160, def:810,       gp:1,  reward:{ unlock:'skills', maxClones:10, stat:1.3 } },
-  { name:'เทพสงคราม',   hp:3.7e5, atk:4400, def:8800,     gp:1,  reward:{ unlock:'create', maxClones:20, stat:1.3 } },
-  { name:'เทพมรณะ',    hp:2.4e7, atk:3.3e5, def:5.8e5,   gp:2,  reward:{ unlock:'gen', maxClones:30, stat:1.3, clone:2 } },
-  { name:'เทพโชคชะตา',  hp:2.9e9, atk:4e7, def:7e7,       gp:3,  reward:{ unlock:'monuments', maxClones:40, stat:1.3, dp:2 } },
-  { name:'เทพทะเล',    hp:3.1e11, atk:4.3e9, def:7.4e9,  gp:4,  reward:{ unlock:'pets', maxClones:50, stat:1.3, speed:2 } },
-  { name:'เทพอัคคี',    hp:1.3e12, atk:1.7e10, def:3e10,  gp:6,  reward:{ unlock:'rebirth', maxClones:60, stat:1.5 } },
-  { name:'เทพกาลเวลา',  hp:4.1e12, atk:5.7e10, def:1e11,  gp:10, reward:{ maxClones:80, stat:1.5, speed:2 } },
-  { name:'เทพจันทรา',   hp:1.3e13, atk:1.8e11, def:3.2e11,gp:15, reward:{ maxClones:100, stat:1.5, dp:3 } },
-  { name:'เทพสุริยัน',   hp:4.2e13, atk:5.8e11, def:1e12,  gp:25, reward:{ maxClones:120, stat:1.5, clone:3 } },
-  { name:'เทพเจ้าสูงสุด', hp:1.2e14, atk:1.6e12, def:2.9e12,gp:40, reward:{ stat:2 } }
+  { name:'เทพสายฟ้า',   hp:34000, atk:160, def:810,       gp:3,  reward:{ unlock:'skills', maxClones:10, stat:1.3 } },
+  { name:'เทพสงคราม',   hp:3.7e5, atk:4400, def:8800,     gp:3,  reward:{ unlock:'create', maxClones:20, stat:1.3 } },
+  { name:'เทพมรณะ',    hp:2.4e7, atk:3.3e5, def:5.8e5,   gp:6,  reward:{ unlock:'gen', maxClones:30, stat:1.3, clone:2 } },
+  { name:'เทพโชคชะตา',  hp:2.9e9, atk:4e7, def:7e7,       gp:9,  reward:{ unlock:'monuments', maxClones:40, stat:1.3, dp:2 } },
+  { name:'เทพทะเล',    hp:3.1e11, atk:4.3e9, def:7.4e9,  gp:12,  reward:{ unlock:'pets', maxClones:50, stat:1.3, speed:2 } },
+  { name:'เทพอัคคี',    hp:1.3e12, atk:1.7e10, def:3e10,  gp:18,  reward:{ unlock:'rebirth', maxClones:60, stat:1.5 } },
+  { name:'เทพกาลเวลา',  hp:3.8e13, atk:5.3e11, def:9.2e11,  gp:30, reward:{ maxClones:80, stat:1.5, speed:2 } },
+  { name:'เทพจันทรา',   hp:3.6e14, atk:4.9e12, def:8.5e12,gp:45, reward:{ maxClones:100, stat:1.5, dp:3 } },
+  { name:'เทพสุริยัน',   hp:7.5e15, atk:1.1e14, def:1.8e14,  gp:75, reward:{ maxClones:120, stat:1.5, clone:3 } },
+  { name:'เทพเจ้าสูงสุด', hp:4.2e17, atk:6.4e15, def:1e16,gp:120, reward:{ stat:2 } }
 ];
 // the god whose defeat unlocks each system (index into GODS)
 const UNLOCK_AT = { skills:0, create:1, gen:2, monuments:3, pets:4, rebirth:5 };
 
 // Permanent upgrades bought with God Power; survive rebirth. Level L costs cost*(L+1) GP.
+// Multipliers compound per level ((1+per)^L); maxClones adds per*L.
 const UPGRADES = [
-  { key:'might',  name:'พลังแห่งเทพ',   stat:'stat',      per:0.25,       cost:1, desc:'+25% ค่าสถานะทั้งหมด' },
+  { key:'might',  name:'พลังแห่งเทพ',   stat:'stat',      per:0.25,       cost:1, desc:'ค่าสถานะทั้งหมด ×1.25' },
   { key:'legion', name:'กองทัพเงา',     stat:'maxClones', per:10, add:true, cost:1, desc:'+10 ร่างเงาสูงสุด' },
-  { key:'focus',  name:'สมาธิเทพ',      stat:'speed',     per:0.25,       cost:2, desc:'+25% ความเร็วฝึก' },
-  { key:'faith',  name:'ศรัทธาแห่งทวยเทพ', stat:'dp',     per:0.5,        cost:2, desc:'+50% พลังเทวะที่ได้' },
-  { key:'maker',  name:'หัตถ์สร้างโลก',   stat:'create',    per:0.25,       cost:2, desc:'+25% ความเร็วสร้าง' },
-  { key:'shade',  name:'เงาอมตะ',       stat:'clone',     per:0.25,       cost:2, desc:'+25% พลังร่างเงา' }
+  { key:'focus',  name:'สมาธิเทพ',      stat:'speed',     per:0.25,       cost:2, desc:'ความเร็วฝึก ×1.25' },
+  { key:'faith',  name:'ศรัทธาแห่งทวยเทพ', stat:'dp',     per:0.5,        cost:2, desc:'พลังเทวะที่ได้ ×1.5' },
+  { key:'maker',  name:'หัตถ์สร้างโลก',   stat:'create',    per:0.25,       cost:2, desc:'ความเร็วสร้าง ×1.25' },
+  { key:'shade',  name:'เงาอมตะ',       stat:'clone',     per:0.25,       cost:2, desc:'พลังร่างเงา ×1.25' }
 ];
 
 // Divinity generator: produces DP by itself. Level L makes GEN_RATE*GEN_GROWTH^(L-1) DP/s; next level costs GEN_COST*GEN_COST_GROWTH^L DP.
@@ -175,7 +176,7 @@ const ACHIEVEMENTS = [
   { key:'sk500',  name:'จอมเวท',           type:'skillLv',  n:500 },
   { key:'k1e3',   name:'นักล่า',            type:'kills',    n:1e3 },
   { key:'k1e5',   name:'ผู้พิชิตอสูร',        type:'kills',    n:1e5 },
-  { key:'k1e7',   name:'มหันตภัยของอสูร',    type:'kills',    n:1e7 },
+  { key:'k1e7',   name:'มหันตภัยของอสูร',    type:'kills',    n:1e6 },
   { key:'m50',    name:'ผู้สร้าง',           type:'made',     n:50 },
   { key:'m1000',  name:'ผู้สร้างโลก',         type:'made',     n:1000 },
   { key:'g1',     name:'ฆ่าเทพองค์แรก',      type:'gods',     n:1 },

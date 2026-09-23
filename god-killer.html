@@ -169,6 +169,18 @@ section.panel{display:none}
 .cItem .ctl{margin-right:auto}
 .cItem .ctlN{min-width:44px;font-size:.74rem}
 .chalBar{display:none;font-size:.7rem;color:var(--warn);background:rgba(255,180,84,.08);border:1px solid rgba(255,180,84,.35);border-radius:8px;padding:4px 8px;margin-bottom:6px}
+.tutor{display:none;align-items:center;gap:8px;background:linear-gradient(90deg,rgba(139,92,246,.22),rgba(232,199,111,.12));border:1px solid var(--gold);border-radius:12px;padding:7px 10px;margin-bottom:8px;font-size:.74rem;line-height:1.45}
+.tutorStep{flex:none;font-size:.66rem;color:var(--bg);background:var(--gold);border-radius:6px;padding:1px 6px;font-weight:bold}
+.tutorText{flex:1;min-width:0}
+.tutor .miniBtn,.tip .miniBtn{flex:none;padding:4px 7px}
+.tip{display:none;align-items:center;gap:8px;font-size:.72rem;color:var(--text);background:var(--panel);border:1px dashed var(--gold);border-radius:10px;padding:6px 9px;margin-bottom:8px;line-height:1.45}
+.tip span{flex:1;min-width:0}
+.tab.guide::after{content:'';position:absolute;inset:-3px;border:2px solid var(--gold);border-radius:12px;pointer-events:none;animation:guide 1.4s ease-in-out infinite}
+@keyframes guide{0%,100%{opacity:.15}50%{opacity:1}}
+.btnPair{display:flex;gap:6px;margin:6px 0}
+.btnPair .miniBtn{flex:1;padding:8px}
+.miniBtn.danger{color:var(--danger);border-color:rgba(255,107,107,.5)}
+textarea{width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 8px;font:inherit;font-size:.68rem;resize:vertical;margin-top:4px}
 .doneBox{display:none;text-align:center;font-size:.8rem;color:var(--gold);padding:14px 6px;line-height:1.7}
 
 .logBox{font-size:.72rem;color:var(--sub);line-height:1.5}
@@ -295,6 +307,13 @@ button:focus-visible,.tab:focus-visible,.toggle input:focus-visible{outline:2px 
     <div class="tab" data-tab="rebirth" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-cycle"></use></svg>เกิดใหม่</div>
   </nav>
 
+  <div class="tutor" id="tutor" role="status">
+    <span class="tutorStep" id="tutorStep"></span>
+    <span class="tutorText" id="tutorText"></span>
+    <button class="miniBtn" id="tutorBtn"></button>
+  </div>
+  <div class="tip" id="tabTip"><span id="tabTipText"></span><button class="miniBtn" id="tabTipBtn">เข้าใจแล้ว</button></div>
+
   <main id="main">
     <section id="tab-train" class="panel"></section>
     <section id="tab-skill" class="panel"></section>
@@ -412,7 +431,22 @@ button:focus-visible,.tab:focus-visible,.toggle input:focus-visible{outline:2px 
       </div>
     </section>
 
-    <section id="tab-log" class="panel logBox"></section>
+    <section id="tab-log" class="panel">
+      <div class="secTitle" style="margin-top:0">ย้ายเซฟ <span class="secSub">คัดลอกโค้ดไปวางในอีกเครื่องเพื่อเล่นต่อ</span></div>
+      <div class="btnPair">
+        <button class="miniBtn" id="exportBtn">สร้างโค้ดเซฟ</button>
+        <button class="miniBtn" id="copyBtn">คัดลอกโค้ด</button>
+      </div>
+      <textarea id="exportBox" readonly rows="3" aria-label="โค้ดเซฟ"></textarea>
+      <textarea id="importBox" rows="3" placeholder="วางโค้ดเซฟที่นี่" aria-label="วางโค้ดเซฟ"></textarea>
+      <div class="btnPair">
+        <button class="miniBtn" id="importBtn">โหลดจากโค้ด</button>
+        <button class="miniBtn danger" id="wipeBtn">เริ่มใหม่ทั้งหมด</button>
+      </div>
+      <div class="note" id="saveMsg"></div>
+      <div class="secTitle">บันทึกเหตุการณ์</div>
+      <div class="logBox" id="logList"></div>
+    </section>
   </main>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
