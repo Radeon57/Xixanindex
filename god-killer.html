@@ -9,100 +9,155 @@
 :root{
   --bg:#0b0a17; --panel:#161428; --panel2:#120f20; --border:#2e2a4a;
   --violet:#8b5cf6; --violetDim:#6941b3; --gold:#e8c76f; --dp:#b39cf0;
-  --text:#ece7fb; --sub:#9c93bd; --danger:#ff6b6b; --bar:#1c1832;
-  --pp:#e0c078; --gem:#7fe0e6;
+  --text:#ece7fb; --sub:#9c93bd; --danger:#ff6b6b; --warn:#ffb454; --ok:#6fd49a; --bar:#1c1832;
+  --phys:#ff9a6b; --myst:#7fb0ff; --battle:#e8c76f;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%}
 body{
-  background:var(--bg);
-  color:var(--text); font-family:'Trebuchet MS', system-ui, -apple-system, sans-serif;
-  display:flex; justify-content:center; overflow:hidden;
-  touch-action:manipulation;
+  background:var(--bg); color:var(--text);
+  font-family:'Trebuchet MS', system-ui, -apple-system, sans-serif;
+  display:flex; justify-content:center; overflow:hidden; touch-action:manipulation;
 }
 body::before{
-  content:'';position:fixed;inset:0;
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:-2;
   background:radial-gradient(circle at 50% -8%, rgba(139,92,246,.16), transparent 55%),
              radial-gradient(circle at 50% 118%, rgba(232,199,111,.08), transparent 52%);
-  pointer-events:none;z-index:-2;
 }
 #bgScene{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
 #bgScene svg{position:absolute;bottom:0;left:0;width:100%;height:42%;opacity:.9}
 .star{position:absolute;width:2px;height:2px;border-radius:50%;background:#f2e6d8;opacity:.7;animation:twinkle 3.4s ease-in-out infinite}
 @keyframes twinkle{0%,100%{opacity:.15;transform:scale(1)}50%{opacity:1;transform:scale(1.7)}}
-#app{width:100%;max-width:480px;height:100%;display:flex;flex-direction:column;padding:12px 16px;position:relative;overflow:hidden}
-/* screen flash: a pre-painted glow layer whose opacity animates (compositor-only, no repaint) */
-#app::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:40;opacity:0;box-shadow:inset 0 0 46px rgba(232,199,111,.32)}
-#app.burstFlashStrong::after{box-shadow:inset 0 0 80px rgba(232,199,111,.5)}
-@keyframes flashFade{0%{opacity:0}30%{opacity:1}100%{opacity:0}}
-.burstFlash::after{animation:flashFade .5s ease}
-.burstFlashStrong::after{animation:flashFade .85s ease}
-h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-spacing:1px;text-shadow:0 0 12px rgba(232,199,111,.35)}
-.sub{text-align:center;color:var(--sub);font-size:.72rem;margin-bottom:8px}
+
+#app{width:100%;max-width:480px;height:100%;display:flex;flex-direction:column;padding:10px 16px;position:relative;overflow:hidden}
+#app::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:40;opacity:0;box-shadow:inset 0 0 80px rgba(232,199,111,.5)}
+@keyframes flashFade{0%{opacity:0}25%{opacity:1}100%{opacity:0}}
+#app.flash::after{animation:flashFade .9s ease}
+
 .panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:10px 12px;margin-bottom:8px}
 .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.statline{display:flex;justify-content:space-between;gap:6px;font-size:.82rem;margin:3px 0;color:var(--sub)}
-.statline span{display:inline-flex;align-items:center;gap:4px}
-.statline b{color:var(--text)}
-.bar{height:12px;border-radius:6px;background:var(--bar);overflow:hidden;border:1px solid var(--border);position:relative}
-.bar>i{display:block;width:100%;height:100%;background:linear-gradient(90deg,var(--violetDim),var(--violet));transform-origin:0 50%;transform:scaleX(0);transition:transform .25s ease;will-change:transform}
-.bar>i.live{transition:none}
-.qbar{position:relative;overflow:hidden}
-.qbar::after{content:'';position:absolute;top:0;left:0;width:42%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);animation:qshine 2.8s ease-in-out infinite;pointer-events:none;transform:translateX(-143%);will-change:transform}
-@keyframes qshine{0%{transform:translateX(-143%)}55%{transform:translateX(393%)}100%{transform:translateX(393%)}}
-#main{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding-bottom:6px}
-#main::before,#main::after{content:'';flex:1 0 0}
-.realmRow{display:flex;align-items:center;justify-content:center;gap:8px;margin:4px 0 8px}
-.realmName{font-size:1.05rem;color:var(--gold);text-align:center;font-weight:bold}
-#trainZone{display:flex;flex-direction:column;align-items:center;padding:14px 0 6px}
-#coreWrap{position:relative;width:150px;height:150px;margin-bottom:10px}
-#coreWrap::before{content:'';position:absolute;inset:0;border-radius:50%;box-shadow:0 0 50px 8px #e8c76f;opacity:0;pointer-events:none}
-#core{width:100%;height:100%;border-radius:50%;overflow:hidden;position:relative;z-index:1;
-  background:var(--panel2);
-  box-shadow:0 0 30px 6px rgba(139,92,246,.45), inset 0 0 20px rgba(0,0,0,.35);
-  border:2px solid var(--gold);
-}
-#core svg.heroArt{width:100%;height:100%;display:block}
-@keyframes heroBob{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(-3px)}}
-#heroPixel{position:absolute;left:50%;bottom:14%;width:42%;height:auto;transform:translateX(-50%);
-  image-rendering:pixelated;image-rendering:crisp-edges;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5));
-  animation:heroBob 2.6s ease-in-out infinite;will-change:transform}
-#fx{position:absolute;inset:0;z-index:2;pointer-events:none;width:100%;height:100%}
-.fg::before{animation:fg .9s ease}
-@keyframes fg{0%{opacity:0}35%{opacity:1}100%{opacity:0}}
-.btnRow{display:flex;gap:8px;margin-top:4px}
-.b{flex:1;padding:10px 6px;border-radius:10px;border:1px solid var(--border);background:var(--panel2);color:var(--text);font-size:.85rem;font-family:inherit;transition:transform .15s ease,box-shadow .2s ease,border-color .2s ease;cursor:pointer}
-.b:hover{box-shadow:0 4px 16px rgba(232,199,111,.22);border-color:#f0e0a8}
-.b:active{transform:scale(.96)}
-.b:disabled{opacity:.45;cursor:default;box-shadow:none}
-.bPrimary{display:flex;align-items:center;justify-content:center;gap:7px;background:linear-gradient(180deg,var(--violet),var(--violetDim));border-color:var(--gold);color:#fff;font-weight:bold}
-.tabs{display:flex;gap:4px;margin:8px 0}
-.tab{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;gap:3px;padding:7px 2px;border-radius:10px;border:1px solid var(--border);background:var(--panel2);color:var(--sub);font-size:.66rem;white-space:nowrap;cursor:pointer}
-.tab.active{background:var(--violet);color:#fff;border-color:var(--gold)}
-.allocItem{display:flex;justify-content:space-between;align-items:center;padding:8px 6px;border-bottom:1px solid var(--border)}
-.allocItem:last-child{border-bottom:none}
-.allocName{font-size:.85rem;display:flex;align-items:center;gap:5px}
-.allocDesc{font-size:.68rem;color:var(--sub)}
-.allocBtn{display:inline-flex;align-items:center;gap:4px;padding:7px 10px;border-radius:8px;border:1px solid var(--gold);background:var(--panel2);color:var(--gold);font-size:.75rem;font-family:inherit;white-space:nowrap;cursor:pointer}
-.allocBtn:disabled{opacity:.4;color:var(--sub);border-color:var(--border);cursor:default}
-.b:focus-visible,.tab:focus-visible,.allocBtn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-.ppHead{text-align:center;font-size:.85rem;color:var(--pp);padding:2px 0 8px;border-bottom:1px solid var(--border);margin-bottom:6px;line-height:1.5}
-.gearGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.gearCard{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:8px;text-align:center}
-.gearName{font-size:.72rem;color:var(--sub);margin-top:3px}
-.gearRarity{font-size:.8rem;font-weight:bold;margin:2px 0}
-.gearStat{font-size:.66rem;color:var(--sub)}
-.compGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.compCard{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:6px;text-align:center;opacity:.4}
-.compCard.owned{opacity:1;border-color:var(--gold)}
-.compBonus{font-size:.58rem;color:var(--gold);margin-top:2px}
-.logBox{font-size:.72rem;color:var(--sub);max-height:min(55vh,460px);overflow-y:auto;border-top:1px solid var(--border);padding-top:6px}
-.logBox div{margin:1px 0}
-.ppTxt{color:var(--pp)}
-.gemTxt{color:var(--gem)}
 .ic{flex:none;display:inline-block;vertical-align:-2px}
-#toast{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--gold);color:var(--text);padding:8px 14px;border-radius:10px;font-size:.8rem;opacity:0;pointer-events:none;transition:opacity .3s ease;z-index:50}
+.bar{height:10px;border-radius:5px;background:var(--bar);overflow:hidden;border:1px solid var(--border);position:relative;flex:1}
+.bar>i{display:block;width:100%;height:100%;background:linear-gradient(90deg,var(--violetDim),var(--violet));transform-origin:0 50%;transform:scaleX(0);will-change:transform}
+.bar.thin{height:6px;border-radius:3px}
+.bar.hp>i{background:linear-gradient(90deg,#8a3a3a,#ff6b6b)}
+.bar.gold>i{background:linear-gradient(90deg,#a8873e,var(--gold))}
+
+/* HUD */
+#hud{padding:8px 12px}
+.hudTop{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.brand{font-size:1.05rem;font-weight:bold;color:var(--gold);letter-spacing:1px;text-shadow:0 0 12px rgba(232,199,111,.35)}
+.godCount{font-size:.75rem;color:var(--sub);display:flex;align-items:center;gap:4px}
+.godCount b{color:var(--gold)}
+.hpRow{display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--sub);margin-bottom:6px}
+.hpRow b{color:var(--text);min-width:74px;text-align:right;font-weight:normal}
+.hudGrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px}
+.chip{display:flex;align-items:center;gap:5px;font-size:.74rem;color:var(--sub);min-width:0}
+.chip b{margin-left:auto;color:var(--text);white-space:nowrap}
+
+/* tabs */
+.tabs{display:flex;gap:4px;margin:0 0 8px}
+.tab{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 1px;border-radius:10px;border:1px solid var(--border);background:var(--panel2);color:var(--sub);font-size:.62rem;white-space:nowrap;cursor:pointer;position:relative}
+.tab.active{background:var(--violet);color:#fff;border-color:var(--gold)}
+.tab.locked{opacity:.45}
+.tab .dot{position:absolute;top:3px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--gold);display:none}
+.tab.alert .dot{display:block}
+
+#main{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-bottom:6px}
+section.panel{display:none}
+
+/* job lists */
+.toolbar{display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap}
+.idleTxt{font-size:.74rem;color:var(--sub);margin-right:auto}
+.idleTxt b{color:var(--gold)}
+.seg{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.seg button{background:var(--panel2);color:var(--sub);border:0;border-right:1px solid var(--border);font:inherit;font-size:.68rem;padding:6px 7px;cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--violetDim);color:#fff}
+.miniBtn{background:transparent;border:1px solid var(--border);color:var(--sub);border-radius:8px;font:inherit;font-size:.68rem;padding:6px 8px;cursor:pointer}
+.summary{font-size:.78rem;color:var(--sub);padding:6px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:2px;display:flex;justify-content:space-between;gap:8px}
+.summary b{color:var(--text)}
+.hint{font-size:.72rem;color:var(--gold);background:rgba(232,199,111,.08);border:1px dashed rgba(232,199,111,.35);border-radius:8px;padding:6px 8px;margin:6px 0}
+.job{padding:8px 2px;border-bottom:1px solid var(--border)}
+.job:last-child{border-bottom:0}
+.jobHead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:.84rem}
+.jobName{font-weight:bold}
+.jobLv{font-size:.74rem;color:var(--gold);white-space:nowrap}
+.jobBody{display:flex;align-items:center;gap:10px;margin-top:5px}
+.jobInfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.jobSub{font-size:.68rem;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctl{display:flex;align-items:center;gap:4px;flex:none}
+.ctlBtn{width:34px;height:34px;border-radius:9px;border:1px solid var(--border);background:var(--panel2);color:var(--text);font-size:1.05rem;line-height:1;cursor:pointer;font-family:inherit}
+.ctlBtn.plus{border-color:var(--gold);color:var(--gold)}
+.ctlBtn:disabled{opacity:.35;cursor:default}
+.ctlN{min-width:30px;text-align:center;font-size:.85rem}
+.lockTxt{display:none;font-size:.7rem;color:var(--sub);margin-top:4px}
+.job.locked{opacity:.55}
+.job.locked .jobBody,.job.locked .jobLv{display:none}
+.job.locked .lockTxt{display:block}
+.pow.safe{color:var(--ok)} .pow.risky{color:var(--warn)} .pow.deadly{color:var(--danger)}
+.die{color:var(--danger)}
+
+/* creation */
+.curCard{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-bottom:8px}
+.curCard .row{font-size:.8rem;margin-bottom:6px}
+.curCard .row b{color:var(--gold)}
+.note{font-size:.68rem;color:var(--sub);margin-top:5px}
+.toggle{display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--sub);margin-top:6px;cursor:pointer}
+.toggle input{accent-color:var(--violet);width:16px;height:16px;margin:0}
+.cItem{padding:8px 4px;border-bottom:1px solid var(--border)}
+.cItem:last-child{border-bottom:0}
+.cItem.active{background:rgba(139,92,246,.1);border-radius:8px}
+.cDesc{font-size:.7rem;color:var(--gold);margin-top:2px}
+.cFoot{display:flex;align-items:center;gap:8px;margin-top:5px}
+.cCost{flex:1;min-width:0;font-size:.68rem;color:var(--sub)}
+.cCost .short{color:var(--danger)}
+.cOwn{font-size:.7rem;color:var(--sub);white-space:nowrap}
+.cItem.locked{opacity:.55}
+.cItem.locked .cFoot,.cItem.locked .cDesc,.cItem.locked .cOwn{display:none}
+.cItem.locked .lockTxt{display:block}
+.selBtn{display:inline-flex;align-items:center;gap:4px;padding:7px 10px;border-radius:8px;border:1px solid var(--gold);background:var(--panel2);color:var(--gold);font-size:.72rem;font-family:inherit;white-space:nowrap;cursor:pointer}
+.cItem.active .selBtn{background:var(--violet);color:#fff}
+
+/* gods */
+.arena{position:relative;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:6px 0 4px}
+.fighter{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px}
+.portrait{width:92px;height:92px;border-radius:50%;background:var(--panel2);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden}
+#heroPixel{width:45px;height:72px;image-rendering:pixelated;image-rendering:crisp-edges;animation:heroBob 2.6s ease-in-out infinite;will-change:transform}
+@keyframes heroBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+.fighting #heroPixel{animation:heroLunge .5s ease-in-out infinite}
+@keyframes heroLunge{0%,100%{transform:translateX(0)}40%{transform:translateX(6px)}}
+.godPortrait svg{display:block;will-change:transform}
+.fighting .godPortrait svg{animation:godShake .5s ease-in-out infinite}
+@keyframes godShake{0%,100%{transform:translateX(0)}60%{transform:translateX(-3px)}}
+.fName{font-size:.82rem;font-weight:bold;color:var(--gold);text-align:center}
+.fighter .bar{width:100%;flex:none}
+.fStat{font-size:.66rem;color:var(--sub);text-align:center;white-space:nowrap}
+.vs{align-self:center;font-weight:bold;color:var(--danger);font-size:.9rem;margin-top:-40px}
+#fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
+.predict{text-align:center;font-size:.76rem;margin:8px 0}
+.predict.win{color:var(--ok)} .predict.lose{color:var(--danger)}
+.b{width:100%;padding:11px 6px;border-radius:10px;border:1px solid var(--border);background:var(--panel2);color:var(--text);font-size:.88rem;font-family:inherit;cursor:pointer;transition:transform .15s ease}
+.b:active{transform:scale(.97)}
+.b:disabled{opacity:.45;cursor:default}
+.bPrimary{display:flex;align-items:center;justify-content:center;gap:7px;background:linear-gradient(180deg,var(--violet),var(--violetDim));border-color:var(--gold);color:#fff;font-weight:bold}
+.bPrimary.flee{background:linear-gradient(180deg,#9b3b3b,#6e2626);border-color:var(--danger)}
+.rewardBox{font-size:.72rem;color:var(--sub);background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-top:8px;line-height:1.6}
+.rewardBox b{color:var(--gold)}
+.godList{margin-top:10px;display:flex;flex-direction:column;gap:4px}
+.godRow{display:flex;align-items:center;gap:8px;font-size:.74rem;color:var(--sub);padding:5px 8px;border-radius:8px;background:var(--panel2);border:1px solid transparent}
+.godRow.done{color:var(--text)}
+.godRow.done .gMark{color:var(--ok)}
+.godRow.next{border-color:var(--gold);color:var(--gold)}
+.gMark{width:16px;text-align:center}
+.doneBox{display:none;text-align:center;font-size:.8rem;color:var(--gold);padding:14px 6px;line-height:1.7}
+
+.logBox{font-size:.72rem;color:var(--sub);line-height:1.5}
+.logBox div{margin:2px 0}
+
+#toast{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--gold);color:var(--text);padding:8px 14px;border-radius:10px;font-size:.8rem;opacity:0;pointer-events:none;transition:opacity .3s ease;z-index:50;max-width:calc(100% - 32px);text-align:center}
 #toast.show{opacity:1}
+button:focus-visible,.tab:focus-visible,.toggle input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 ::-webkit-scrollbar{width:5px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 @media (prefers-reduced-motion: reduce){
@@ -114,88 +169,50 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
-    <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%">
-      <feGaussianBlur stdDeviation="2.1" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
     <symbol id="icon-sword" viewBox="0 0 24 24">
       <g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
-        <line x1="4" y1="20" x2="19" y2="5"/>
-        <line x1="14.5" y1="6" x2="17.5" y2="9"/>
-        <circle cx="4" cy="20" r="1.3" fill="currentColor" stroke="none"/>
-        <line x1="20" y1="20" x2="5" y2="5"/>
-        <line x1="9.5" y1="6" x2="6.5" y2="9"/>
-        <circle cx="20" cy="20" r="1.3" fill="currentColor" stroke="none"/>
+        <line x1="4" y1="20" x2="19" y2="5"/><line x1="14.5" y1="6" x2="17.5" y2="9"/>
+        <line x1="20" y1="20" x2="5" y2="5"/><line x1="9.5" y1="6" x2="6.5" y2="9"/>
       </g>
-    </symbol>
-    <symbol id="icon-spark" viewBox="0 0 24 24">
-      <path d="M12 2 L14 10 L22 12 L14 14 L12 22 L10 14 L2 12 L10 10 Z" fill="currentColor" stroke="none"/>
-    </symbol>
-    <symbol id="icon-gem" viewBox="0 0 24 24">
-      <path d="M6 4h12l4 6-10 10L2 10z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
-      <path d="M6 4l3 6h6l3-6M9 10l3 10 3-10M2 10h20" fill="none" stroke="currentColor" stroke-width="1" opacity=".6"/>
-    </symbol>
-    <symbol id="icon-bolt" viewBox="0 0 24 24">
-      <path d="M13 2 4 14h6l-1 8 9-12h-6z" fill="currentColor" stroke="none"/>
-    </symbol>
-    <symbol id="icon-scroll" viewBox="0 0 24 24">
-      <path d="M6 4h12v3a2 2 0 0 1 0 4v3a2 2 0 0 1 0 4v2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
-      <line x1="7" y1="9" x2="14" y2="9" stroke="currentColor" stroke-width="1.1"/>
-      <line x1="7" y1="13" x2="14" y2="13" stroke="currentColor" stroke-width="1.1"/>
-    </symbol>
-    <symbol id="icon-alloc" viewBox="0 0 24 24">
-      <circle cx="12" cy="5" r="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
-      <circle cx="5" cy="19" r="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
-      <circle cx="19" cy="19" r="2" fill="none" stroke="currentColor" stroke-width="1.5"/>
-      <path d="M12 7 L12 13 M12 13 L6 17.5 M12 13 L18 17.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
-    </symbol>
-    <symbol id="icon-fist" viewBox="0 0 24 24">
-      <path d="M7 10V7a2 2 0 0 1 4 0M11 10V6a2 2 0 0 1 4 0v4M15 10V7a2 2 0 0 1 4 0v6a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5v-2a2 2 0 0 1 4 0" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>
-    </symbol>
-    <symbol id="icon-disciple" viewBox="0 0 24 24">
-      <circle cx="12" cy="7" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/>
-      <path d="M6 20c0-3.3 2.7-6 6-6s6 2.7 6 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
     </symbol>
     <symbol id="icon-shield" viewBox="0 0 24 24">
       <path d="M12 2 L20 5 V11 C20 16 16.5 20 12 22 C7.5 20 4 16 4 11 V5 Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
     </symbol>
-    <symbol id="icon-ring" viewBox="0 0 24 24">
-      <circle cx="12" cy="15" r="6" fill="none" stroke="currentColor" stroke-width="1.8"/>
-      <path d="M9 9 L12 3 L15 9 Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+    <symbol id="icon-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6z" fill="currentColor"/></symbol>
+    <symbol id="icon-heart" viewBox="0 0 24 24">
+      <path d="M12 21 C12 21 3 14.5 3 8.5 C3 5.5 5.5 3 8.5 3 C10.2 3 11.5 3.8 12 5 C12.5 3.8 13.8 3 15.5 3 C18.5 3 21 5.5 21 8.5 C21 14.5 12 21 12 21 Z" fill="currentColor"/>
     </symbol>
-    <symbol id="icon-amulet" viewBox="0 0 24 24">
-      <path d="M6 3 Q12 8 18 3" fill="none" stroke="currentColor" stroke-width="1.4"/>
-      <path d="M12 9 L17 16 L12 21 L7 16 Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+    <symbol id="icon-clones" viewBox="0 0 24 24">
+      <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <circle cx="9" cy="8" r="3"/><path d="M3.5 20c0-3 2.5-5.5 5.5-5.5s5.5 2.5 5.5 5.5"/>
+        <circle cx="16.5" cy="7" r="2.4" opacity=".6"/><path d="M15 13.2c.5-.1 1-.2 1.5-.2 2.8 0 5 2.2 5 5" opacity=".6"/>
+      </g>
     </symbol>
-    <symbol id="icon-chest" viewBox="0 0 24 24">
-      <rect x="3" y="10" width="18" height="10" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/>
-      <path d="M3 10 Q12 4 21 10" fill="none" stroke="currentColor" stroke-width="1.6"/>
-      <rect x="10.5" y="10" width="3" height="4" fill="currentColor"/>
+    <symbol id="icon-fist" viewBox="0 0 24 24">
+      <path d="M7 10V7a2 2 0 0 1 4 0M11 10V6a2 2 0 0 1 4 0v4M15 10V7a2 2 0 0 1 4 0v6a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5v-2a2 2 0 0 1 4 0" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>
     </symbol>
-    <symbol id="icon-key" viewBox="0 0 24 24">
-      <circle cx="7" cy="7" r="4" fill="none" stroke="currentColor" stroke-width="1.6"/>
-      <path d="M10 10 L20 20 M16 16 L19 13 M13.5 18.5 L16.5 15.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+    <symbol id="icon-orb" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M12 4a4 4 0 0 1 0 8a4 4 0 0 0 0 8" fill="none" stroke="currentColor" stroke-width="1.4"/>
+      <circle cx="12" cy="8" r="1.2" fill="currentColor"/><circle cx="12" cy="16" r="1.2" fill="currentColor" opacity=".5"/>
     </symbol>
     <symbol id="icon-monster" viewBox="0 0 24 24">
       <path d="M4 9 L7 4 L9 8 M20 9 L17 4 L15 8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
       <path d="M4 10 a8 7 0 0 1 16 0 v3 a8 7 0 0 1 -16 0 z" fill="none" stroke="currentColor" stroke-width="1.6"/>
-      <circle cx="9" cy="12" r="1.3" fill="currentColor"/>
-      <circle cx="15" cy="12" r="1.3" fill="currentColor"/>
+      <circle cx="9" cy="12" r="1.3" fill="currentColor"/><circle cx="15" cy="12" r="1.3" fill="currentColor"/>
     </symbol>
-    <symbol id="icon-paw" viewBox="0 0 24 24">
-      <circle cx="12" cy="15" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/>
-      <circle cx="6" cy="8" r="2" fill="none" stroke="currentColor" stroke-width="1.4"/>
-      <circle cx="12" cy="5" r="2" fill="none" stroke="currentColor" stroke-width="1.4"/>
-      <circle cx="18" cy="8" r="2" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    <symbol id="icon-spark" viewBox="0 0 24 24"><path d="M12 2 L14 10 L22 12 L14 14 L12 22 L10 14 L2 12 L10 10 Z" fill="currentColor"/></symbol>
+    <symbol id="icon-crown" viewBox="0 0 24 24">
+      <path d="M3 18 L4.5 7 L9 12 L12 5 L15 12 L19.5 7 L21 18 Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+      <line x1="3.5" y1="21" x2="20.5" y2="21" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
     </symbol>
-    <symbol id="icon-ore" viewBox="0 0 24 24">
-      <path d="M4 14 L8 6 L16 6 L20 14 L16 20 L8 20 Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+    <symbol id="icon-scroll" viewBox="0 0 24 24">
+      <path d="M6 4h12v3a2 2 0 0 1 0 4v3a2 2 0 0 1 0 4v2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+      <line x1="7" y1="9" x2="14" y2="9" stroke="currentColor" stroke-width="1.1"/><line x1="7" y1="13" x2="14" y2="13" stroke="currentColor" stroke-width="1.1"/>
     </symbol>
-    <symbol id="icon-heart" viewBox="0 0 24 24">
-      <path d="M12 21 C12 21 3 14.5 3 8.5 C3 5.5 5.5 3 8.5 3 C10.2 3 11.5 3.8 12 5 C12.5 3.8 13.8 3 15.5 3 C18.5 3 21 5.5 21 8.5 C21 14.5 12 21 12 21 Z" fill="currentColor" stroke="none"/>
+    <symbol id="icon-lock" viewBox="0 0 24 24">
+      <rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="1.6"/>
     </symbol>
   </defs>
 </svg>
@@ -216,886 +233,84 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
 </div>
 
 <div id="app">
-  <h1>God Killer</h1>
-  <div class="sub">ปีนบันไดสวรรค์ ฆ่าเทพ ครองบัลลังก์เหนือทวยเทพ</div>
-
-  <div class="panel">
-    <div class="realmRow">
-      <span id="realmSigil"></span>
-      <span class="realmName" id="realmName">-</span>
+  <header class="panel" id="hud">
+    <div class="hudTop">
+      <div class="brand">God Killer</div>
+      <div class="godCount"><svg class="ic" width="14" height="14"><use href="#icon-crown"></use></svg>สังหารเทพ <b id="hudGods">0/0</b></div>
     </div>
-    <div class="statline"><span><svg class="ic" width="14" height="14" style="color:var(--dp)"><use href="#icon-bolt"></use></svg> พลังเทวะ (DP)</span><b id="qiTxt">0</b></div>
-    <div class="bar qbar"><i id="qiBar" class="live"></i></div>
-    <div class="row" style="margin-top:6px">
-      <div class="statline" style="margin:0"><span><svg class="ic" width="13" height="13" style="color:var(--pp)"><use href="#icon-spark"></use></svg> แต้มพลัง</span> <b class="ppTxt" id="ppTxt">0</b></div>
-      <div class="statline" style="margin:0"><span><svg class="ic" width="13" height="13" style="color:var(--gem)"><use href="#icon-gem"></use></svg> เศษแก่นเทพ</span> <b class="gemTxt" id="gemTxt">0</b></div>
+    <div class="hpRow">
+      <svg class="ic" width="13" height="13" style="color:var(--danger)"><use href="#icon-heart"></use></svg>
+      <div class="bar hp"><i id="hudHpBar"></i></div><b id="hudHp">0</b>
     </div>
-  </div>
+    <div class="hudGrid">
+      <div class="chip"><svg class="ic" width="13" height="13" style="color:var(--phys)"><use href="#icon-sword"></use></svg>โจมตี<b id="hudAtk">0</b></div>
+      <div class="chip"><svg class="ic" width="13" height="13" style="color:var(--myst)"><use href="#icon-shield"></use></svg>ป้องกัน<b id="hudDef">0</b></div>
+      <div class="chip"><svg class="ic" width="13" height="13" style="color:var(--dp)"><use href="#icon-bolt"></use></svg>พลังเทวะ<b id="hudDp">0</b></div>
+      <div class="chip"><svg class="ic" width="13" height="13" style="color:var(--gold)"><use href="#icon-clones"></use></svg>ร่างเงา<b id="hudClones">0</b></div>
+    </div>
+  </header>
 
-  <div id="main">
-    <div id="trainZone">
-      <div id="coreWrap">
-        <div id="core" aria-hidden="true">
-          <svg class="heroArt" viewBox="0 0 200 200" aria-hidden="true">
-            <defs>
-              <radialGradient id="haloGrad" cx="50%" cy="42%" r="55%">
-                <stop offset="0%" stop-color="#fff3d0"/>
-                <stop offset="35%" stop-color="#e8c76f"/>
-                <stop offset="70%" stop-color="#8b5cf6" stop-opacity=".55"/>
-                <stop offset="100%" stop-color="#2a1a5c" stop-opacity="0"/>
-              </radialGradient>
-              <linearGradient id="bladeGrad" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stop-color="#fff7e0"/>
-                <stop offset="100%" stop-color="#e8c76f"/>
-              </linearGradient>
-            </defs>
-            <circle cx="100" cy="100" r="92" fill="url(#haloGrad)"/>
-            <g stroke="#f2e6d8" stroke-width="1.4" opacity=".55" fill="none">
-              <circle cx="100" cy="78" r="46"/>
-              <path d="M60 50 66 62M140 50 134 62M100 32 100 44"/>
-            </g>
-            <path d="M0 158 L40 118 L62 140 L92 104 L118 138 L146 112 L176 148 L200 132 L200 200 L0 200 Z" fill="#120f20" opacity=".85"/>
-            <path d="M86 138 L100 112 L114 138 Z" fill="#1c1832"/>
-            <rect x="93" y="138" width="14" height="16" fill="#1c1832"/>
-            <line x1="100" y1="112" x2="100" y2="100" stroke="#1c1832" stroke-width="2"/>
-          </svg>
-          <canvas id="heroPixel" aria-hidden="true"></canvas>
+  <nav class="tabs" id="tabs">
+    <div class="tab" data-tab="train" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-fist"></use></svg>ฝึกกาย</div>
+    <div class="tab" data-tab="skill" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-orb"></use></svg>วิชาเวท</div>
+    <div class="tab" data-tab="mon" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-monster"></use></svg>สนามรบ</div>
+    <div class="tab" data-tab="create" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-spark"></use></svg>สร้าง</div>
+    <div class="tab" data-tab="gods" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-crown"></use></svg>ท้าเทพ</div>
+    <div class="tab" data-tab="log" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-scroll"></use></svg>บันทึก</div>
+  </nav>
+
+  <main id="main">
+    <section id="tab-train" class="panel"></section>
+    <section id="tab-skill" class="panel"></section>
+    <section id="tab-mon" class="panel"></section>
+
+    <section id="tab-create" class="panel">
+      <div class="curCard">
+        <div class="row"><span>กำลังสร้าง</span><b id="cCurName">—</b></div>
+        <div class="bar gold"><i id="cCurBar"></i></div>
+        <div class="note" id="cCurNote"></div>
+        <label class="toggle"><input type="checkbox" id="autoClone"> เติมร่างเงาให้เต็มก่อนเสมอ</label>
+        <div class="note">ความเร็วสร้าง ×<span id="cSpeed">1</span> · ของที่เคยสร้างให้โบนัสถาวร แม้จะถูกใช้เป็นวัตถุดิบไปแล้ว</div>
+      </div>
+      <div class="hint" id="createLock">สร้างได้แค่ร่างเงาก่อน — ปลดล็อกการสร้างสรรพสิ่งเมื่อสังหาร <b id="createLockGod"></b></div>
+      <div id="createList"></div>
+    </section>
+
+    <section id="tab-gods" class="panel">
+      <div id="arenaWrap">
+        <div class="arena" id="arena">
+          <div class="fighter">
+            <div class="portrait"><canvas id="heroPixel" aria-hidden="true"></canvas></div>
+            <div class="fName">ท่าน</div>
+            <div class="bar hp"><i id="aHeroHp"></i></div>
+            <div class="fStat" id="aHeroHpTxt"></div>
+            <div class="fStat">โจมตี <span id="aHeroAtk"></span> · ป้องกัน <span id="aHeroDef"></span></div>
+          </div>
+          <div class="vs">VS</div>
+          <div class="fighter">
+            <div class="portrait godPortrait" id="godArt"></div>
+            <div class="fName" id="aGodName"></div>
+            <div class="bar hp"><i id="aGodHp"></i></div>
+            <div class="fStat" id="aGodHpTxt"></div>
+            <div class="fStat">โจมตี <span id="aGodAtk"></span> · ป้องกัน <span id="aGodDef"></span></div>
+          </div>
+          <canvas id="fx"></canvas>
         </div>
-        <canvas id="fx"></canvas>
+        <div class="predict" id="predict"></div>
+        <button class="b bPrimary" id="fightBtn"><svg class="ic" width="16" height="16"><use href="#icon-sword"></use></svg><span id="fightLabel">ท้าสู้</span></button>
+        <div class="rewardBox" id="godReward"></div>
       </div>
-      <div style="font-size:.75rem;color:var(--sub);text-align:center">พลังไหลเข้าโดยอัตโนมัติ <b style="color:var(--dp)"><span id="autoPow">0</span> DP/วิ</b></div>
-      <button class="b bPrimary" id="breakthroughBtn" style="margin-top:12px;width:100%">
-        <svg class="ic" width="16" height="16"><use href="#icon-sword"></use></svg>
-        <span id="btLabel">突破 ทลายขีดจำกัด</span>
-      </button>
-    </div>
+      <div class="doneBox" id="godsDone">สังหารเทพครบทุกองค์ของเฟส 1 แล้ว!<br>การเกิดใหม่ (Rebirth) และเทพองค์ถัดไปจะมาในเฟส 2</div>
+      <div class="godList" id="godList"></div>
+    </section>
 
-    <div class="tabs">
-      <div class="tab active" data-tab="train" role="button" tabindex="0"><svg class="ic" width="12" height="12"><use href="#icon-fist"></use></svg>บำเพ็ญ</div>
-      <div class="tab" data-tab="alloc" role="button" tabindex="0"><svg class="ic" width="12" height="12"><use href="#icon-alloc"></use></svg>จัดสรร</div>
-      <div class="tab" data-tab="battle" role="button" tabindex="0"><svg class="ic" width="12" height="12"><use href="#icon-monster"></use></svg>สนามรบ</div>
-      <div class="tab" data-tab="gear" role="button" tabindex="0"><svg class="ic" width="12" height="12"><use href="#icon-chest"></use></svg>อุปกรณ์</div>
-      <div class="tab" data-tab="log" role="button" tabindex="0"><svg class="ic" width="12" height="12"><use href="#icon-scroll"></use></svg>บันทึก</div>
-    </div>
-
-    <div id="tab-alloc" class="panel" style="display:none">
-      <div class="ppHead"><svg class="ic" width="15" height="15"><use href="#icon-spark"></use></svg>มีแต้มพลัง <b id="ppHeadTxt">0</b> แต้ม (ได้ใหม่ทุก 6 วิ) — จัดสรรเข้าสายพลังที่ต้องการ</div>
-      <div id="allocList"></div>
-    </div>
-
-    <div id="tab-battle" class="panel" style="display:none">
-      <div class="ppHead"><svg class="ic" width="15" height="15"><use href="#icon-monster"></use></svg>พลังต่อสู้ (CP): <b id="cpTxt">0</b></div>
-      <div class="statline" style="margin:4px 0"><span><svg class="ic" width="13" height="13" style="color:var(--danger)"><use href="#icon-heart"></use></svg> พลังชีวิต (HP)</span> <b id="hpTxt">0/0</b></div>
-      <div class="bar"><i id="hpBar" style="transform:scaleX(1);background:linear-gradient(90deg,#8a3a3a,#ff6b6b)"></i></div>
-      <div id="downedNote" style="font-size:.68rem;color:var(--danger);text-align:center;margin-top:3px;display:none">🩹 บาดเจ็บหนัก กำลังพักฟื้น ต่อสู้ชั่วคราวไม่ได้</div>
-      <div style="text-align:center;margin:6px 0 10px">
-        <svg class="ic" width="30" height="30" style="color:var(--danger)"><use href="#icon-monster"></use></svg>
-        <div id="stageName" style="color:var(--gold);font-weight:bold;margin-top:4px">ด่านที่ 1</div>
-        <div style="font-size:.72rem;color:var(--sub)">พลังศัตรู: <span id="monsterPow">0</span></div>
-      </div>
-      <div class="bar"><i id="battleBar" style="background:linear-gradient(90deg,#8a3a3a,var(--danger))"></i></div>
-      <div style="font-size:.72rem;color:var(--sub);text-align:center;margin-top:4px">ชนะ <span id="stageWins">0</span>/5 เพื่อผ่านด่าน — ต่อสู้อัตโนมัติทุก 4 วิ</div>
-      <div class="row" style="margin-top:10px">
-        <div class="statline" style="margin:0"><span><svg class="ic" width="13" height="13" style="color:#c99a5a"><use href="#icon-ore"></use></svg> เศษโลหะ</span> <b id="oreTxt">0</b></div>
-        <div class="statline" style="margin:0"><span><svg class="ic" width="13" height="13" style="color:var(--gold)"><use href="#icon-key"></use></svg> กุญแจ</span> <b id="keyTxt">0</b></div>
-      </div>
-    </div>
-
-    <div id="tab-gear" class="panel" style="display:none">
-      <div class="ppHead"><svg class="ic" width="15" height="15"><use href="#icon-key"></use></svg>กุญแจ <b id="keyTxt2">0</b> · หีบเทียร์ <b id="chestTierTxt">1</b></div>
-      <button class="b bPrimary" id="openChestBtn" style="width:100%;margin-bottom:8px"><svg class="ic" width="15" height="15"><use href="#icon-chest"></use></svg>เปิดหีบ (1 กุญแจ)</button>
-      <button class="allocBtn" id="upgradeChestBtn" style="width:100%;justify-content:center;margin-bottom:12px"><svg class="ic" width="12" height="12"><use href="#icon-gem"></use></svg>อัพเกรดหีบ: <span id="chestUpCost">0</span> เศษแก่นเทพ</button>
-      <div id="gearGrid" class="gearGrid"></div>
-      <div style="font-size:.78rem;color:var(--gold);margin:12px 0 6px;text-align:center">คู่หูศักดิ์สิทธิ์</div>
-      <div id="compGrid" class="compGrid"></div>
-    </div>
-
-    <div id="tab-log" class="panel logBox" style="display:none"></div>
-  </div>
+    <section id="tab-log" class="panel logBox"></section>
+  </main>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
 
-<script>
-(function(){
-"use strict";
-const REALMS = [
-  "มนุษย์ธรรมดา","ผู้ตื่นพลัง","นักพรตฝึกตน","ผู้เปิดทวารสวรรค์","เซียนจิ๋ว","เซียนแท้",
-  "เทพชั้นรอง","เทพชั้นกลาง","เทพชั้นสูง","เทพประจำธาตุ","จอมเทพ",
-  "ผู้ครองบัลลังก์สวรรค์","ผู้สังหารเทพ (ราชันเหนือทวยเทพ)"
-];
-const GODS = [
-  "เทพสายฟ้า","เทพสงคราม","เทพมรณะ","เทพโชคชะตา","เทพทะเล",
-  "เทพอัคคี","เทพกาลเวลา","เทพจันทรา","เทพสุริยัน","เทพเจ้าสูงสุด"
-];
-const REALM_BASE = 50;
-const REALM_GROWTH = 1.55;
-const PP_INTERVAL_SEC = 6;
-const BATTLE_INTERVAL_SEC = 4;
-const MAX_CATCHUP_SEC = 8*3600;
-const MAX_BATTLE_STEPS = 900;
-const RECOVER_AT = 0.6;
-const SAVE_KEY = 'godKillerSave';
-
-const defaultState = () => ({
-  qi:0, pp:0, gems:0,
-  realm:0,
-  autoBase:2,
-  upgrades:{ fist:0, root:0, sword:0, manual:0, disciple:0 },
-  godsSlain:0,
-  equipment:{ weapon:null, armor:null, ring:null, amulet:null },
-  ore:0, keys:0, companions:[], stage:0, stageWins:0, chestTier:0, hp:40, downed:false,
-  lastSave: Date.now(),
-  totalBreakthroughs:0,
-  log:[]
-});
-let state = defaultState();
-
-const UPG = {
-  fist:    { name:"ปลุกพลังในตน",    desc:"+2 DP/วิ (คงที่) ต่อระดับ",                          base:2, grow:1.35, icon:"icon-fist" },
-  root:    { name:"แท่นบูชาเทวะ",    desc:"+8% พลัง DP/วิ ทั้งหมด ต่อระดับ",                    base:4, grow:1.45, icon:"icon-bolt" },
-  sword:   { name:"พรสวรรค์",        desc:"-2% พลังที่ต้องใช้ทลายขีดจำกัด ต่อระดับ (สูงสุด 60%)", base:3, grow:1.40, icon:"icon-sword", max:30 },
-  manual:  { name:"คัมภีร์ต้องห้าม",  desc:"+1 แต้มพลังทุกรอบ 6 วิ ต่อระดับ",                    base:5, grow:1.50, icon:"icon-scroll" },
-  disciple:{ name:"ผู้ติดตามศรัทธา",  desc:"+20% เศษแก่นเทพ และ +1 แต้มพลังต่อครั้งทลายขีดจำกัด",  base:4, grow:1.40, icon:"icon-disciple" }
-};
-
-const RARITIES = [
-  { key:'common', name:'ธรรมดา', color:'#9c93bd', mult:1 },
-  { key:'rare', name:'หายาก', color:'#7fb0e6', mult:2.5 },
-  { key:'legendary', name:'ตำนาน', color:'#b380ff', mult:6 },
-  { key:'divine', name:'เทพ', color:'#e8c76f', mult:14 }
-];
-const SLOTS = {
-  weapon: { name:'อาวุธ', icon:'icon-sword', statLabel:'พลังต่อสู้', base:5 },
-  armor:  { name:'เกราะ', icon:'icon-shield', statLabel:'% พลังต่อสู้ทั้งหมด', base:3 },
-  ring:   { name:'แหวน', icon:'icon-ring', statLabel:'% เศษโลหะที่ได้', base:5 },
-  amulet: { name:'สร้อย', icon:'icon-amulet', statLabel:'% โอกาสได้กุญแจ', base:4 }
-};
-const BONUS_LABEL = { cp:'พลังต่อสู้', key:'โอกาสกุญแจ', hp:'HP สูงสุด', dp:'DP/วิ', ore:'เศษโลหะ' };
-const COMPANIONS = [
-  { id:'crane', name:'กระเรียนหยก', bonus:'cp', amt:0.05 },
-  { id:'fox', name:'จิ้งจอกเก้าหาง', bonus:'key', amt:0.10 },
-  { id:'turtle', name:'เต่าศักดิ์สิทธิ์', bonus:'hp', amt:0.15 },
-  { id:'tiger', name:'พยัคฆ์เพลิง', bonus:'cp', amt:0.08 },
-  { id:'phoenix', name:'หงส์ไฟ', bonus:'dp', amt:0.10 },
-  { id:'qilin', name:'กิเลนสวรรค์', bonus:'ore', amt:0.12 }
-];
-
-let fx = null;
-let activeTab = 'train';
-let logDirty = true;
-let ppAccumSec = 0;
-let battleAccSec = 0;
-let lastTickAt = Date.now();
-let storageOk = true;
-
-const HERO_PALETTE = {
-  hair:'#241a3d', skin:'#e8c49a', eye:'#1a1420',
-  armor:'#6941b3', armorLight:'#8b5cf6', gold:'#e8c76f',
-  blade:'#fff3d0', dark:'#1c1832'
-};
-const HERO_BLOCKS = [
-  {x:3,y:0,w:4,h:1,c:'hair'},
-  {x:2,y:1,w:6,h:1,c:'hair'},
-  {x:2,y:2,w:1,h:3,c:'hair'},
-  {x:7,y:2,w:1,h:3,c:'hair'},
-  {x:3,y:2,w:4,h:3,c:'skin'},
-  {x:3,y:3,w:1,h:1,c:'eye'},
-  {x:6,y:3,w:1,h:1,c:'eye'},
-  {x:4,y:5,w:2,h:1,c:'skin'},
-  {x:2,y:6,w:6,h:4,c:'armor'},
-  {x:2,y:7,w:1,h:1,c:'armorLight'},
-  {x:4,y:6,w:2,h:1,c:'gold'},
-  {x:2,y:10,w:6,h:1,c:'gold'},
-  {x:2,y:11,w:2,h:4,c:'dark'},
-  {x:6,y:11,w:2,h:4,c:'dark'},
-  {x:2,y:15,w:2,h:1,c:'gold'},
-  {x:6,y:15,w:2,h:1,c:'gold'},
-  {x:1,y:7,w:1,h:3,c:'armor'},
-  {x:1,y:10,w:1,h:1,c:'skin'},
-  {x:8,y:6,w:1,h:2,c:'armor'},
-  {x:8,y:4,w:1,h:2,c:'skin'},
-  {x:7,y:3,w:3,h:1,c:'gold'},
-  {x:8,y:0,w:1,h:3,c:'blade'}
-];
-function drawPixelHero(canvas){
-  const unit = 8, gw = 10, gh = 16;
-  canvas.width = gw*unit; canvas.height = gh*unit;
-  const ctx = canvas.getContext('2d');
-  ctx.imageSmoothingEnabled = false;
-  HERO_BLOCKS.forEach(b=>{
-    ctx.fillStyle = HERO_PALETTE[b.c];
-    ctx.fillRect(b.x*unit, b.y*unit, b.w*unit, b.h*unit);
-  });
-}
-
-function thresholdMult(){ return Math.max(0.4, 1 - state.upgrades.sword*0.02); }
-function realmThreshold(i){ return Math.max(1, Math.floor(REALM_BASE * Math.pow(REALM_GROWTH, i) * thresholdMult())); }
-function realmName(i){ return REALMS[Math.min(i, REALMS.length-1)] + (i>=REALMS.length ? " ("+(i-REALMS.length+2)+"ชั้น)" : ""); }
-function godForKill(n){ return GODS[(n-1) % GODS.length]; }
-
-function companionBonus(kind){
-  let sum = 0;
-  state.companions.forEach(id=>{
-    const c = COMPANIONS.find(x=>x.id===id);
-    if(c && c.bonus===kind) sum += c.amt;
-  });
-  return sum;
-}
-function autoPower(){
-  const flat = state.autoBase + state.upgrades.fist*2;
-  const mult = (1 + state.upgrades.root*0.08) * (1 + companionBonus('dp'));
-  return flat * mult;
-}
-function ppPerTick(){ return 1 + state.upgrades.manual; }
-function gemMult(){ return 1 + state.upgrades.disciple*0.2; }
-function upgCost(key){ const u = UPG[key]; return Math.ceil(u.base * Math.pow(u.grow, state.upgrades[key])); }
-function upgMaxed(key){ const u = UPG[key]; return u.max != null && state.upgrades[key] >= u.max; }
-
-function itemPower(item){
-  if(!item) return 0;
-  const r = RARITIES[item.rarity];
-  return SLOTS[item.slot].base * r.mult * (1 + item.level*0.15);
-}
-function combatPower(){
-  const cpBase = 10 + state.realm*4 + itemPower(state.equipment.weapon);
-  const cpMult = 1 + companionBonus('cp') + itemPower(state.equipment.armor)/100;
-  return Math.max(1, Math.round(cpBase * cpMult));
-}
-function monsterPower(stage){ return Math.round(8 + stage*7); }
-function maxHP(){ return Math.round((40 + state.realm*6) * (1 + companionBonus('hp'))); }
-function stageLabel(stage){ return 'ด่านที่ '+(stage+1); }
-function oreGainMult(){ return (1 + itemPower(state.equipment.ring)/100) * (1 + companionBonus('ore')); }
-function keyLuckMult(){ return (1 + itemPower(state.equipment.amulet)/100) * (1 + companionBonus('key')); }
-
-function forgeCost(item){ return Math.ceil(10 * Math.pow(1.3, item.level)); }
-function forgeChance(item){ return Math.max(0.35, 0.9 - item.level*0.05); }
-function chestUpgradeCost(){ return Math.ceil(5 * Math.pow(1.6, state.chestTier)); }
-function rollRarity(tier){
-  const r = Math.random();
-  const boost = tier*0.05;
-  if(r < 0.03+boost*0.3) return 3;
-  if(r < 0.15+boost*0.6) return 2;
-  if(r < 0.5+boost) return 1;
-  return 0;
-}
-
-function fmt(n){
-  if(!Number.isFinite(n)) return '0';
-  if(n < 1000) return Math.floor(n).toString();
-  const units = ["K","M","B","T","Qa","Qi"];
-  let u = -1;
-  while(n >= 1000 && u < units.length-1){ n/=1000; u++; }
-  return n.toFixed(2) + units[u];
-}
-function pct(x){ return Math.round(x*100)+'%'; }
-
-function sigilSVG(i){
-  const tier = i>=10 ? 3 : i>=7 ? 2 : i>=4 ? 1 : 0;
-  const c = 'var(--gold)';
-  let inner = '';
-  if(tier===0){
-    inner = `<circle cx="18" cy="18" r="13" fill="none" stroke="${c}" stroke-width="1.6"/>`;
-  } else if(tier===1){
-    inner = `<circle cx="18" cy="18" r="14" fill="none" stroke="${c}" stroke-width="1.4"/>
-      <circle cx="18" cy="18" r="9" fill="none" stroke="${c}" stroke-width="1" opacity=".7"/>
-      <circle cx="18" cy="4" r="1.3" fill="${c}"/><circle cx="18" cy="32" r="1.3" fill="${c}"/>
-      <circle cx="4" cy="18" r="1.3" fill="${c}"/><circle cx="32" cy="18" r="1.3" fill="${c}"/>`;
-  } else if(tier===2){
-    inner = `<circle cx="18" cy="18" r="15" fill="none" stroke="${c}" stroke-width="1.4"/>
-      <circle cx="18" cy="18" r="9" fill="none" stroke="${c}" stroke-width="1" opacity=".7"/>
-      <g stroke="${c}" stroke-width="1.1">
-        <line x1="18" y1="1" x2="18" y2="7"/><line x1="18" y1="29" x2="18" y2="35"/>
-        <line x1="1" y1="18" x2="7" y2="18"/><line x1="29" y1="18" x2="35" y2="18"/>
-        <line x1="6" y1="6" x2="10" y2="10"/><line x1="26" y1="26" x2="30" y2="30"/>
-        <line x1="30" y1="6" x2="26" y2="10"/><line x1="10" y1="26" x2="6" y2="30"/>
-      </g>
-      <circle cx="18" cy="18" r="3" fill="${c}" filter="url(#softGlow)"/>`;
-  } else {
-    inner = `<circle cx="18" cy="18" r="15" fill="none" stroke="${c}" stroke-width="1.6"/>
-      <circle cx="18" cy="18" r="9" fill="none" stroke="${c}" stroke-width="1" opacity=".7"/>
-      <g stroke="${c}" stroke-width="1.1">
-        <line x1="18" y1="0" x2="18" y2="7"/><line x1="18" y1="29" x2="18" y2="36"/>
-        <line x1="0" y1="18" x2="7" y2="18"/><line x1="29" y1="18" x2="36" y2="18"/>
-        <line x1="5" y1="5" x2="10" y2="10"/><line x1="26" y1="26" x2="31" y2="31"/>
-        <line x1="31" y1="5" x2="26" y2="10"/><line x1="10" y1="26" x2="5" y2="31"/>
-      </g>
-      <path d="M13 9 L18 2 L23 9 Z" fill="${c}"/>
-      <circle cx="18" cy="18" r="3.4" fill="${c}" filter="url(#softGlow)"/>`;
-  }
-  return `<svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true">${inner}</svg>`;
-}
-
-const $ = id => document.getElementById(id);
-
-// DOM writes are skipped when the value hasn't changed, so a render only costs style/layout work for what actually moved
-function setText(el, v){ v = String(v); if(el._v !== v){ el._v = v; el.textContent = v; } }
-function setDisabled(el, v){ if(el.disabled !== v) el.disabled = v; }
-function setShown(el, v, how){ const d = v ? (how||'block') : 'none'; if(el._d !== d){ el._d = d; el.style.display = d; } }
-function setBar(el, frac){
-  const k = Math.round(Math.max(0, Math.min(1, frac))*1000);
-  if(el._k !== k){ el._k = k; el.style.transform = 'scaleX('+(k/1000)+')'; }
-}
-
-function addLog(msg){
-  state.log.unshift("["+new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})+"] "+msg);
-  if(state.log.length>40) state.log.length=40;
-  logDirty = true;
-  if(activeTab === 'log') renderLog();
-}
-
-function toast(msg){
-  const t = $('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(toast._h);
-  toast._h = setTimeout(()=>t.classList.remove('show'), 1600);
-}
-
-function flashScreen(strong){
-  const app = $('app');
-  app.classList.remove('burstFlash','burstFlashStrong');
-  void app.offsetWidth;
-  app.classList.add(strong ? 'burstFlashStrong' : 'burstFlash');
-}
-
-let lastSigilRealm = -1;
-let E = null; // cached element refs, filled by cacheEls() at boot
-function cacheEls(){
-  E = {};
-  ['realmName','realmSigil','qiTxt','qiBar','ppTxt','ppHeadTxt','gemTxt','autoPow','breakthroughBtn','btLabel',
-   'cpTxt','hpTxt','hpBar','downedNote','stageName','monsterPow','battleBar','stageWins','oreTxt','keyTxt',
-   'keyTxt2','chestTierTxt','openChestBtn','chestUpCost','upgradeChestBtn','gearGrid','compGrid','tab-log'
-  ].forEach(id=>{ E[id] = $(id); });
-}
-// the DP bar is the one thing that moves continuously, so it is updated every animation frame
-function renderQiBar(){ setBar(E.qiBar, state.qi / realmThreshold(state.realm)); }
-function render(){
-  const need = realmThreshold(state.realm);
-  setText(E.realmName, realmName(state.realm));
-  if(state.realm !== lastSigilRealm){ E.realmSigil.innerHTML = sigilSVG(state.realm); lastSigilRealm = state.realm; }
-  setText(E.qiTxt, fmt(state.qi)+" / "+fmt(need));
-  renderQiBar();
-  setText(E.ppTxt, fmt(state.pp));
-  setText(E.gemTxt, fmt(state.gems));
-  setText(E.autoPow, fmt(autoPower()));
-  const ready = state.qi >= need;
-  setDisabled(E.breakthroughBtn, !ready);
-  setText(E.btLabel, ready ? "突破 ทลายขีดจำกัด!" : "突破 ทลายขีดจำกัด (ต้องการ DP เพิ่ม)");
-  // hidden tabs are skipped; selectTab() renders a tab as it is shown
-  if(activeTab === 'alloc') renderAlloc();
-  else if(activeTab === 'battle') renderBattle();
-  else if(activeTab === 'gear') renderGear();
-  else if(activeTab === 'log' && logDirty) renderLog();
-}
-
-let allocRows = [];
-function buildAlloc(){
-  const box = $('allocList');
-  box.innerHTML = Object.keys(UPG).map(key=>{
-    const u = UPG[key];
-    return `<div class="allocItem">
-      <div>
-        <div class="allocName"><svg class="ic" width="15" height="15"><use href="#${u.icon}"></use></svg>${u.name} <span class="lvl" style="color:var(--sub)"></span></div>
-        <div class="allocDesc">${u.desc}</div>
-      </div>
-      <button class="allocBtn" data-key="${key}"><svg class="ic" width="12" height="12"><use href="#icon-spark"></use></svg><span class="cost"></span></button>
-    </div>`;
-  }).join('');
-  allocRows = [...box.querySelectorAll('button[data-key]')].map(btn=>({
-    key: btn.dataset.key, btn, lvl: btn.closest('.allocItem').querySelector('.lvl'), cost: btn.querySelector('.cost')
-  }));
-}
-function renderAlloc(){
-  setText(E.ppHeadTxt, fmt(state.pp));
-  allocRows.forEach(r=>{
-    const maxed = upgMaxed(r.key);
-    const cost = upgCost(r.key);
-    setText(r.lvl, 'Lv.'+state.upgrades[r.key]);
-    setText(r.cost, maxed ? 'สูงสุดแล้ว' : cost+' แต้ม');
-    setDisabled(r.btn, maxed || state.pp < cost);
-  });
-}
-
-function renderLog(){
-  logDirty = false;
-  const box = E['tab-log'];
-  if(!state.log.length){ box.textContent = 'ยังไม่มีบันทึก'; return; }
-  box.replaceChildren(...state.log.map(l=>{ const d = document.createElement('div'); d.textContent = l; return d; }));
-}
-
-function allocate(key){
-  if(upgMaxed(key)) return;
-  const cost = upgCost(key);
-  if(state.pp < cost) return;
-  state.pp -= cost;
-  state.upgrades[key]++;
-  addLog(`จัดสรรพลังเข้า ${UPG[key].name} เป็น Lv.${state.upgrades[key]}`);
-  render();
-  save();
-}
-
-function renderBattle(){
-  setText(E.cpTxt, fmt(combatPower()));
-  const mh = maxHP();
-  setText(E.hpTxt, fmt(state.hp)+' / '+fmt(mh));
-  setBar(E.hpBar, state.hp/mh);
-  setShown(E.downedNote, state.downed);
-  setText(E.stageName, stageLabel(state.stage));
-  setText(E.monsterPow, fmt(monsterPower(state.stage)));
-  setBar(E.battleBar, state.stageWins/5);
-  setText(E.stageWins, state.stageWins);
-  setText(E.oreTxt, fmt(state.ore));
-  setText(E.keyTxt, fmt(state.keys));
-}
-
-function battleStep(quiet){
-  const mh = maxHP();
-  if(state.downed){
-    state.hp = Math.min(mh, state.hp + mh*0.12);
-    if(state.hp >= mh*RECOVER_AT){
-      state.downed = false;
-      if(!quiet){ addLog('ฟื้นตัวจากอาการบาดเจ็บ กลับเข้าสู่สนามรบ!'); toast('ฟื้นตัวแล้ว!'); }
-    }
-    return;
-  }
-  state.hp = Math.min(mh, state.hp + mh*0.05);
-
-  const cp = combatPower();
-  const mp = monsterPower(state.stage);
-  const oreBase = 2 + state.stage*0.5;
-  if(cp >= mp){
-    state.ore += Math.round(oreBase * oreGainMult() * 10) / 10;
-    state.stageWins++;
-    state.hp = Math.max(0, state.hp - mp*0.2*Math.min(1, mp/cp));
-    if(Math.random() < 0.18 * keyLuckMult()) state.keys++;
-    if(state.stageWins >= 5){
-      state.stageWins = 0;
-      const cleared = state.stage;
-      state.stage++;
-      addLog(`ปราบ ${stageLabel(cleared)} สำเร็จ ก้าวสู่ ${stageLabel(state.stage)}`);
-      if(!quiet) toast('⚔ ผ่าน '+stageLabel(cleared)+'!');
-    }
-  } else {
-    state.ore += Math.round(oreBase * 0.4 * 10) / 10;
-    state.hp = Math.max(0, state.hp - mp*0.4);
-  }
-  if(state.hp <= 0){
-    state.hp = 0;
-    state.downed = true;
-    if(!quiet){ addLog('บาดเจ็บหนักเกินกว่าจะสู้ต่อ ต้องล่าถอยพักฟื้น!'); toast('⚠ ต้องล่าถอย!'); }
-  }
-}
-
-const gearSig = {};
-let compSig = null;
-function gearCardHTML(slot){
-  const s = SLOTS[slot];
-  const item = state.equipment[slot];
-  if(!item){
-    return `<svg class="ic" width="20" height="20" style="color:var(--sub)"><use href="#${s.icon}"></use></svg>
-      <div class="gearName">${s.name}</div>
-      <div class="gearStat" style="margin-top:6px">ยังไม่มี — เปิดหีบเพื่อรับ</div>`;
-  }
-  const r = RARITIES[item.rarity];
-  return `<svg class="ic" width="20" height="20" style="color:${r.color}"><use href="#${s.icon}"></use></svg>
-    <div class="gearName">${s.name}</div>
-    <div class="gearRarity" style="color:${r.color}">${r.name} +${item.level}</div>
-    <div class="gearStat">${s.statLabel}: ${fmt(itemPower(item))}</div>
-    <button class="allocBtn" data-slot="${slot}" style="margin-top:6px;width:100%;justify-content:center">
-      <svg class="ic" width="11" height="11"><use href="#icon-ore"></use></svg>${fmt(forgeCost(item))} (${Math.round(forgeChance(item)*100)}%)
-    </button>`;
-}
-const gearCards = {};
-function renderGear(){
-  setText(E.keyTxt2, fmt(state.keys));
-  setText(E.chestTierTxt, state.chestTier+1);
-  setDisabled(E.openChestBtn, state.keys < 1);
-  const upCost = chestUpgradeCost();
-  setText(E.chestUpCost, fmt(upCost));
-  setDisabled(E.upgradeChestBtn, state.gems < upCost);
-
-  const grid = E.gearGrid;
-  if(!grid.children.length){
-    grid.innerHTML = Object.keys(SLOTS).map(slot=>`<div class="gearCard" data-card="${slot}"></div>`).join('');
-    Object.keys(SLOTS).forEach(slot=>{ gearCards[slot] = { card: grid.querySelector(`[data-card="${slot}"]`), btn: null }; });
-  }
-  Object.keys(SLOTS).forEach(slot=>{
-    const item = state.equipment[slot];
-    const sig = item ? item.rarity+'|'+item.level : 'none';
-    const g = gearCards[slot];
-    if(gearSig[slot] !== sig){ g.card.innerHTML = gearCardHTML(slot); g.btn = g.card.querySelector('button'); gearSig[slot] = sig; }
-    if(g.btn) setDisabled(g.btn, state.ore < forgeCost(item));
-  });
-
-  const sig = state.companions.join(',');
-  if(sig !== compSig){
-    compSig = sig;
-    E.compGrid.innerHTML = COMPANIONS.map(c=>{
-      const owned = state.companions.includes(c.id);
-      return `<div class="compCard${owned?' owned':''}">
-        <svg class="ic" width="18" height="18" style="color:${owned?'var(--gold)':'var(--sub)'}"><use href="#icon-paw"></use></svg>
-        <div style="font-size:.62rem;margin-top:3px">${owned?c.name:'???'}</div>
-        ${owned?`<div class="compBonus">+${pct(c.amt)} ${BONUS_LABEL[c.bonus]}</div>`:''}
-      </div>`;
-    }).join('');
-  }
-}
-
-function forgeItem(slot){
-  const item = state.equipment[slot];
-  if(!item) return;
-  const cost = forgeCost(item);
-  if(state.ore < cost) return;
-  state.ore -= cost;
-  if(Math.random() < forgeChance(item)){
-    item.level++;
-    addLog(`ตีเหล็ก ${SLOTS[slot].name} สำเร็จ! ตอนนี้ +${item.level}`);
-    toast('ตีเหล็กสำเร็จ! +'+item.level);
-  } else {
-    addLog(`ตีเหล็ก ${SLOTS[slot].name} ล้มเหลว... เสียเศษโลหะ ${fmt(cost)}`);
-    toast('ตีเหล็กล้มเหลว!');
-  }
-  render();
-  save();
-}
-
-function openChest(){
-  if(state.keys < 1) return;
-  state.keys -= 1;
-  const tier = state.chestTier;
-  const roll = Math.random();
-  if(roll < 0.05){
-    const pool = COMPANIONS.filter(c=>!state.companions.includes(c.id));
-    if(pool.length){
-      const c = pool[Math.floor(Math.random()*pool.length)];
-      state.companions.push(c.id);
-      addLog(`เปิดหีบได้คู่หูใหม่: ${c.name}!`);
-      toast('ได้คู่หูใหม่: '+c.name+'!');
-    } else {
-      const oreGain = 20 + tier*10;
-      state.ore += oreGain;
-      addLog(`เปิดหีบได้เศษโลหะ ${oreGain} (คู่หูครบทุกตัวแล้ว)`);
-    }
-  } else if(roll < 0.75){
-    const slotKeys = Object.keys(SLOTS);
-    const slot = slotKeys[Math.floor(Math.random()*slotKeys.length)];
-    const rarity = rollRarity(tier);
-    const newItem = { slot, rarity, level:0 };
-    const current = state.equipment[slot];
-    if(!current || itemPower(newItem) > itemPower(current)){
-      state.equipment[slot] = newItem;
-      addLog(`เปิดหีบได้ ${SLOTS[slot].name} ระดับ${RARITIES[rarity].name} — สวมใส่ทันที!`);
-      toast('ได้ '+SLOTS[slot].name+' '+RARITIES[rarity].name+'!');
-    } else {
-      const oreGain = Math.round(itemPower(newItem)*2);
-      state.ore += oreGain;
-      addLog(`เปิดหีบได้ ${SLOTS[slot].name} ${RARITIES[rarity].name} (ด้อยกว่าที่สวมอยู่) หลอมเป็นเศษโลหะ ${oreGain}`);
-    }
-  } else {
-    const oreGain = 8 + tier*4;
-    state.ore += oreGain;
-    addLog(`เปิดหีบได้เศษโลหะ ${oreGain}`);
-  }
-  render();
-  save();
-}
-
-function upgradeChestTier(){
-  const cost = chestUpgradeCost();
-  if(state.gems < cost) return;
-  state.gems -= cost;
-  state.chestTier++;
-  addLog(`อัพเกรดหีบเป็นเทียร์ ${state.chestTier+1}`);
-  render();
-  save();
-}
-
-function breakthrough(){
-  const need = realmThreshold(state.realm);
-  if(state.qi < need) return;
-  state.qi -= need;
-  state.realm++;
-  state.totalBreakthroughs++;
-  const ppReward = 2 + Math.floor(state.realm/2) + state.upgrades.disciple;
-  state.pp += ppReward;
-
-  const glow = $('coreWrap');
-  glow.classList.remove('fg'); void glow.offsetWidth; glow.classList.add('fg');
-
-  const rect = $('fx').getBoundingClientRect();
-
-  if(state.realm % 3 === 0){
-    state.godsSlain++;
-    const god = godForKill(state.godsSlain);
-    const gemReward = Math.max(1, Math.round((1 + Math.floor(state.realm/6)) * gemMult()));
-    const bonusPP = 5 + state.godsSlain*2;
-    state.gems += gemReward;
-    state.pp += bonusPP;
-    addLog(`ทลายขีดจำกัดสำเร็จ! สังหาร "${god}" ได้เศษแก่นเทพ ${gemReward} และแต้มพลัง ${ppReward+bonusPP}`);
-    toast('⚔ สังหาร '+god+' สำเร็จ!');
-    if(fx) fx.breakBurst(rect.width/2, rect.height/2, true);
-    flashScreen(true);
-  } else {
-    addLog(`ทลายขีดจำกัดสำเร็จ! ก้าวสู่ "${realmName(state.realm)}" ได้แต้มพลัง ${ppReward}`);
-    toast('突破成功！ ก้าวสู่ '+realmName(state.realm));
-    if(fx) fx.breakBurst(rect.width/2, rect.height/2, false);
-    flashScreen(false);
-  }
-  render();
-  save();
-}
-
-function advance(dt){
-  dt = Math.min(dt, MAX_CATCHUP_SEC);
-  state.qi += autoPower()*dt;
-  ppAccumSec += dt;
-  if(ppAccumSec >= PP_INTERVAL_SEC){
-    const n = Math.floor(ppAccumSec / PP_INTERVAL_SEC);
-    ppAccumSec -= n*PP_INTERVAL_SEC;
-    state.pp += n*ppPerTick();
-  }
-  battleAccSec += dt;
-  let steps = Math.floor(battleAccSec / BATTLE_INTERVAL_SEC);
-  battleAccSec -= steps*BATTLE_INTERVAL_SEC;
-  if(steps > MAX_BATTLE_STEPS){ steps = MAX_BATTLE_STEPS; battleAccSec = 0; }
-  for(let i=0;i<steps;i++) battleStep(steps > 1);
-}
-
-function step(){
-  const now = Date.now();
-  const dt = (now - lastTickAt)/1000;
-  lastTickAt = now;
-  if(dt > 0) advance(dt);
-}
-function tick(){ step(); render(); }
-
-// Main loop: the simulation advances every frame so the DP bar fills smoothly; text/buttons refresh a few times a second.
-// requestAnimationFrame pauses in background tabs, so a 1s interval takes over there (both are wall-clock based).
-const UI_INTERVAL_MS = 200;
-let lastFrameAt = 0, lastUiAt = 0;
-function loop(now){
-  lastFrameAt = now;
-  step();
-  if(now - lastUiAt >= UI_INTERVAL_MS){ lastUiAt = now; render(); }
-  else renderQiBar();
-  requestAnimationFrame(loop);
-}
-function fallbackTick(){ if(performance.now() - lastFrameAt > 1500) tick(); }
-
-function storageGet(){
-  try{ return localStorage.getItem(SAVE_KEY); }catch(e){ storageOk = false; return null; }
-}
-function save(){
-  state.lastSave = Date.now();
-  if(!storageOk) return;
-  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }catch(e){ storageOk = false; }
-}
-
-const isNum = v => typeof v === 'number' && Number.isFinite(v);
-function sanitize(raw){
-  const d = defaultState();
-  if(!raw || typeof raw !== 'object') return d;
-  Object.keys(d).forEach(k=>{
-    if(typeof d[k] === 'number' && isNum(raw[k])) d[k] = Math.max(0, raw[k]);
-    if(typeof d[k] === 'boolean' && typeof raw[k] === 'boolean') d[k] = raw[k];
-  });
-  ['realm','stage','stageWins','chestTier','godsSlain','totalBreakthroughs','keys'].forEach(k=>{ d[k] = Math.floor(d[k]); });
-  if(!(raw.lastSave > 0) || raw.lastSave > Date.now()) d.lastSave = Date.now();
-  if(raw.upgrades && typeof raw.upgrades === 'object'){
-    Object.keys(d.upgrades).forEach(k=>{ if(isNum(raw.upgrades[k])) d.upgrades[k] = Math.max(0, Math.floor(raw.upgrades[k])); });
-  }
-  if(raw.equipment && typeof raw.equipment === 'object'){
-    Object.keys(d.equipment).forEach(slot=>{
-      const it = raw.equipment[slot];
-      if(it && typeof it === 'object' && it.slot === slot && Number.isInteger(it.rarity) && it.rarity >= 0 && it.rarity < RARITIES.length && isNum(it.level)){
-        d.equipment[slot] = { slot, rarity: it.rarity, level: Math.max(0, Math.floor(it.level)) };
-      }
-    });
-  }
-  if(Array.isArray(raw.companions)){
-    d.companions = [...new Set(raw.companions.filter(id => COMPANIONS.some(c=>c.id===id)))];
-  }
-  if(Array.isArray(raw.log)) d.log = raw.log.filter(l => typeof l === 'string').slice(0, 40);
-  if(d.stageWins >= 5) d.stageWins = 0;
-  return d;
-}
-
-function load(){
-  const raw = storageGet();
-  if(!raw) return;
-  let parsed;
-  try{ parsed = JSON.parse(raw); }catch(e){ return; }
-  state = sanitize(parsed);
-  state.hp = Math.min(state.hp, maxHP());
-  const offlineSec = Math.min(Math.max(0, Math.floor((Date.now() - state.lastSave)/1000)), MAX_CATCHUP_SEC);
-  if(offlineSec > 5){
-    const dpGained = offlineSec * autoPower();
-    const ppGained = Math.floor(offlineSec / PP_INTERVAL_SEC) * ppPerTick();
-    state.qi += dpGained;
-    state.pp += ppGained;
-    if(offlineSec >= 60){ state.hp = maxHP(); state.downed = false; }
-    addLog(`ขณะไม่อยู่ (${Math.floor(offlineSec/60)} นาที) ได้ ${fmt(dpGained)} DP และแต้มพลัง ${ppGained}`);
-  }
-}
-
-function selectTab(name){
-  activeTab = name;
-  document.querySelectorAll('.tab').forEach(x=>{
-    const on = x.dataset.tab === name;
-    x.classList.toggle('active', on);
-    x.setAttribute('aria-pressed', on ? 'true' : 'false');
-  });
-  setShown($('trainZone'), name==='train', 'flex');
-  setShown($('tab-alloc'), name==='alloc');
-  setShown($('tab-battle'), name==='battle');
-  setShown($('tab-gear'), name==='gear');
-  setShown(E['tab-log'], name==='log');
-  if(name === 'train' && fx) fx.wake();
-  render();
-}
-
-function initTabs(){
-  document.querySelectorAll('.tab').forEach(t=>{
-    t.addEventListener('click', ()=>selectTab(t.dataset.tab));
-    t.addEventListener('keydown', e=>{
-      if(e.key==='Enter' || e.key===' '){ e.preventDefault(); selectTab(t.dataset.tab); }
-    });
-  });
-}
-
-function initFX(canvas){
-  const ctx = canvas.getContext('2d');
-  const DPR = Math.min(window.devicePixelRatio||1, 2);
-  const MAX_PARTICLES = 90;
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let w = 0, h = 0;
-  // size comes from a ResizeObserver so the frame loop never has to read layout
-  function resize(cw, ch){
-    w = cw; h = ch;
-    if(w > 0 && h > 0){
-      canvas.width = Math.round(w*DPR);
-      canvas.height = Math.round(h*DPR);
-      ctx.setTransform(DPR,0,0,DPR,0,0);
-    }
-    wake();
-  }
-  if(window.ResizeObserver){
-    new ResizeObserver(entries=>{ const r = entries[entries.length-1].contentRect; resize(r.width, r.height); }).observe(canvas);
-  } else {
-    const measure = ()=>{ const r = canvas.getBoundingClientRect(); resize(r.width, r.height); };
-    window.addEventListener('resize', measure); measure();
-  }
-
-  const particles = [];
-  function add(p){ if(particles.length < MAX_PARTICLES) particles.push(p); }
-  function spawnAmbient(){
-    add({
-      x: Math.random()*w, y: h+4, vx:(Math.random()-.5)*6, vy:-(18+Math.random()*22),
-      r: 1+Math.random()*1.8, life:0, maxLife: 2.4+Math.random()*1.8,
-      color: Math.random()<.5 ? '#e6c76f' : '#b39cf0', burst:false
-    });
-  }
-  function burst(x,y,count,strong){
-    for(let i=0;i<count;i++){
-      const a = Math.random()*Math.PI*2;
-      const spd = strong ? 60+Math.random()*90 : 30+Math.random()*40;
-      add({
-        x, y, vx:Math.cos(a)*spd, vy:Math.sin(a)*spd,
-        r: strong ? 1.6+Math.random()*2.4 : 1+Math.random()*1.6,
-        life:0, maxLife: strong ? 0.7+Math.random()*0.5 : 0.4+Math.random()*0.35,
-        color: strong ? '#e8c76f' : '#ece7fb', burst:true
-      });
-    }
-    wake();
-  }
-
-  // the loop only runs while the canvas is on screen and has something to draw
-  const visible = () => w > 0 && h > 0 && !document.hidden;
-  let running = false, last = 0, acc = 0, dirty = false;
-  function wake(){
-    if(running || !visible() || (reduced && !particles.length)) return;
-    running = true; last = performance.now();
-    requestAnimationFrame(frame);
-  }
-  function frame(now){
-    const dt = Math.min(.05, (now-last)/1000); last = now;
-    if(!visible()){ running = false; return; }
-    if(!reduced){
-      acc += dt;
-      if(acc > 0.28){ acc = 0; spawnAmbient(); }
-    }
-    if(dirty || particles.length){ ctx.clearRect(0,0,w,h); dirty = false; }
-    let n = 0;
-    for(let i=0;i<particles.length;i++){
-      const p = particles[i];
-      p.life += dt;
-      if(p.life >= p.maxLife) continue;
-      p.x += p.vx*dt; p.y += p.vy*dt;
-      if(p.burst){ const k = 1-2.2*dt; p.vx *= k; p.vy *= k; }
-      const t = 1 - p.life/p.maxLife;
-      ctx.globalAlpha = t*0.85;
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r*(p.burst ? t+0.3 : 1), 0, 6.2832);
-      ctx.fill();
-      particles[n++] = p;
-    }
-    particles.length = n;
-    ctx.globalAlpha = 1;
-    if(n) dirty = true;
-    if(reduced && !n && !dirty){ running = false; return; }
-    requestAnimationFrame(frame);
-  }
-  document.addEventListener('visibilitychange', wake);
-  wake();
-
-  return {
-    breakBurst(x,y,strong){ burst(x,y, strong?26:14, !!strong); },
-    wake
-  };
-}
-
-function boot(saved){
-  if(saved && typeof saved === 'object' && Object.keys(saved).length){ state = sanitize(saved); }
-  else { load(); }
-
-  cacheEls();
-  buildAlloc();
-  $('allocList').addEventListener('click', e=>{
-    const btn = e.target.closest('button[data-key]');
-    if(btn) allocate(btn.dataset.key);
-  });
-  $('gearGrid').addEventListener('click', e=>{
-    const btn = e.target.closest('button[data-slot]');
-    if(btn) forgeItem(btn.dataset.slot);
-  });
-  $('breakthroughBtn').addEventListener('click', breakthrough);
-  $('openChestBtn').addEventListener('click', openChest);
-  $('upgradeChestBtn').addEventListener('click', upgradeChestTier);
-  initTabs();
-  drawPixelHero($('heroPixel'));
-  fx = initFX($('fx'));
-  selectTab('train');
-
-  if(!state.log.length) addLog('เริ่มต้นเส้นทางสังหารเทพ พลังเทวะจะไหลเข้าตัวท่านเองเรื่อยๆ ขอให้จัดสรรอย่างชาญฉลาด!');
-  if(!storageOk) addLog('เบราว์เซอร์นี้ไม่อนุญาตให้บันทึกเกม — ความคืบหน้าจะหายเมื่อปิดหน้า');
-  renderLog();
-  lastTickAt = Date.now();
-  render();
-
-  requestAnimationFrame(loop);
-  setInterval(fallbackTick, 1000);
-  setInterval(save, 10000);
-  window.addEventListener('pagehide', save);
-  window.addEventListener('beforeunload', save);
-  document.addEventListener('visibilitychange', ()=>{ if(document.hidden) save(); else tick(); });
-
-  try{ window.claude?.hot?.snapshot(() => state); }catch(e){}
-}
-
-if(window.claude?.hot?.ready){ window.claude.hot.ready(data=>boot(data)); }
-else { boot(window.claude?.hot?.data); }
-})();
-</script>
+<script src="god-killer/data.js"></script>
+<script src="god-killer/engine.js"></script>
+<script src="god-killer/ui.js"></script>
 </body>
 </html>
