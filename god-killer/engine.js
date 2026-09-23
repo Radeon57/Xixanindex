@@ -9,7 +9,8 @@ const JOB_KINDS = ['train','skill','mon'];
 // meta survives rebirth; everything else in the state is one run
 function newMeta(){
   return { gp:0, gpTotal:0, rebirths:0, bestGods:0, dpLife:0, up:{}, ach:{},
-           pets:{}, team:[], mats:{}, gear:{}, dgBest:{}, run:null, dgAuto:true };
+           pets:{}, team:[], mats:{}, gear:{}, dgBest:{}, run:null, dgAuto:true,
+           chal:{}, ub:[], mp:0, mpTotal:0, might:{} };
 }
 function newState(meta){
   return {
@@ -25,6 +26,7 @@ function newState(meta){
     own: {}, made: {},
     gen: 0,
     mono: {},
+    challenge: null,
     create: { target:'clone', cur:null, prog:0, autoClone:true },
     gods: 0,
     fight: null,
@@ -38,13 +40,17 @@ function newState(meta){
 
 // ---------- unlocks ----------
 const unlockedBy = (s, what) => s.gods > D.UNLOCK_AT[what];
-const skillsUnlocked = s => unlockedBy(s, 'skills');
-const createUnlocked = s => unlockedBy(s, 'create');
+const inChallenge = (s, key) => s.challenge === key;
+const skillsUnlocked = s => unlockedBy(s, 'skills') && !inChallenge(s, 'nomagic');
+const createUnlocked = s => unlockedBy(s, 'create') && !inChallenge(s, 'nocreate');
 const genUnlocked = s => unlockedBy(s, 'gen');
-const monumentsUnlocked = s => unlockedBy(s, 'monuments');
+const monumentsUnlocked = s => unlockedBy(s, 'monuments') && !inChallenge(s, 'nocreate');
 // rebirth stays available in later runs once the unlocking god has ever fallen
 const rebirthUnlocked = s => s.meta.bestGods > D.UNLOCK_AT.rebirth;
 const petsUnlocked = s => s.meta.bestGods > D.UNLOCK_AT.pets;
+const ubUnlocked = s => s.meta.bestGods >= D.GODS.length;
+const mightUnlocked = s => ubUnlocked(s);
+const mightLv = (s, key) => s.meta.might[key] || 0;
 function rowUnlocked(s, kind, i){
   if(kind === 'mon') return i < monstersUnlocked(s);
   if(kind === 'skill' && !skillsUnlocked(s)) return false;
@@ -73,14 +79,24 @@ function mults(s){
     if(!L) return;
     if(x.add) m[x.stat] += x.per*L; else m[x.stat] *= 1 + x.per*L;
   });
-  apply(D.UPGRADES, u => s.meta.up[u.key] || 0);
+  // the 'mortal' challenge switches off every permanent bonus except achievements
+  const mortal = inChallenge(s, 'mortal');
+  const compound = (defs, levelOf) => defs.forEach(x=>{ const L = levelOf(x); if(L) m[x.stat] *= Math.pow(1 + x.per, L); });
+  if(!mortal){
+    apply(D.UPGRADES, u => s.meta.up[u.key] || 0);
+    compound(D.MIGHT.filter(x=>x.stat), x => mightLv(s, x.key));
+    compound(D.CHALLENGES.filter(c=>c.stat === 'stat'), c => s.meta.chal[c.key] || 0);
+  }
   m.stat *= 1 + D.ACH_BONUS * achCount(s);
   m.phys = m.myst = m.battle = m.stat;
   apply(D.MONUMENTS, mo => s.mono[mo.key] || 0);
   // gear and pet bonuses compound per level, so they stay noticeable on the game's exponential scale
-  const compound = (defs, levelOf) => defs.forEach(x=>{ const L = levelOf(x); if(L) m[x.stat] *= Math.pow(1 + x.per, L); });
-  compound(D.GEAR, g => s.meta.gear[g.key] || 0);
-  compound(D.PETS, p => s.meta.pets[p.key] ? s.meta.pets[p.key].lv - 1 : 0);
+  if(!mortal){
+    compound(D.GEAR, g => s.meta.gear[g.key] || 0);
+    compound(D.PETS, p => s.meta.pets[p.key] ? s.meta.pets[p.key].lv - 1 : 0);
+    compound(D.CHALLENGES.filter(c=>c.stat !== 'stat'), c => s.meta.chal[c.key] || 0);
+  }
+  if(inChallenge(s, 'few')) m.maxClones = Math.min(m.maxClones, D.FEW_CLONES);
   D.CREATIONS.forEach(c=>{
     if(!c.bonus) return;
     // bonuses count every unit ever made, so spending items as ingredients never loses their bonus
@@ -224,6 +240,7 @@ function startDungeon(s, i, depth){
   return true;
 }
 function stopDungeon(s){ s.meta.run = null; }
+const dungeonTime = (s, i) => D.DUNGEONS[i].time * (1 - 0.2*mightLv(s, 'swift'));
 function finishRun(s, ev){
   const run = s.meta.run, dg = D.DUNGEONS[run.i];
   const win = Math.random() < winChance(s, run.i, run.depth);
@@ -247,7 +264,7 @@ function stepDungeon(s, dt, ev){
   if(!run) return;
   if(!s.meta.team.length){ s.meta.run = null; return; }
   run.t += dt;
-  const time = D.DUNGEONS[run.i].time;
+  const time = dungeonTime(s, run.i);
   while(s.meta.run && run.t >= time){
     run.t -= time;
     finishRun(s, ev);
@@ -272,16 +289,53 @@ function forge(s, key){
 // ---------- rebirth ----------
 function rebirthGain(s){ let g = 0; for(let i=0;i<s.gods;i++) g += D.GODS[i].gp; return g; }
 // start a new run: God Power for every god killed this run; meta and the log carry over
-function rebirth(s){
+// start a new run in place: pays God Power for this run's gods; meta and the log carry over
+function resetRun(s, challenge){
   const gain = rebirthGain(s);
-  if(!rebirthUnlocked(s) || !gain) return 0;
   const meta = s.meta, log = s.log;
-  meta.gp += gain; meta.gpTotal += gain; meta.rebirths++;
+  meta.gp += gain; meta.gpTotal += gain;
+  if(gain) meta.rebirths++;
   const fresh = newState(meta);
   fresh.log = log;
+  fresh.challenge = challenge || null;
   for(const k of Object.keys(s)) if(!(k in fresh)) delete s[k];
   Object.assign(s, fresh);
+  const L = mightLv(s, 'legacy');
+  if(L) s.dp = Math.pow(10, L + 3);
+  if(mightLv(s, 'fullArmy')) s.clones = derive(s).maxClones;
   return gain;
+}
+function rebirth(s){
+  if(!rebirthUnlocked(s) || !rebirthGain(s)) return 0;
+  return resetRun(s, null);
+}
+
+// ---------- challenges ----------
+const chalDone = (s, key) => s.meta.chal[key] || 0;
+const chalGoal = (s, key) => Math.min(D.GODS.length - 1, D.CHAL_FIRST_GOAL + chalDone(s, key));
+function startChallenge(s, key){
+  if(!rebirthUnlocked(s) || s.challenge || !D.CHALLENGES.some(c=>c.key===key) || chalDone(s, key) >= D.CHAL_MAX) return false;
+  resetRun(s, key);
+  return true;
+}
+function abandonChallenge(s){ s.challenge = null; }
+
+// ---------- ultimate beings & might ----------
+const ubLevel = (s, i) => s.meta.ub[i] || 0;
+function ubStats(s, i){
+  const last = D.GODS[D.GODS.length-1], u = D.ULTIMATES[i], k = u.mult * Math.pow(D.UB_GROWTH, ubLevel(s, i));
+  return { name:u.name, hp:last.hp*k, atk:last.atk*k, def:last.def*k };
+}
+const ubOpen = (s, i) => ubUnlocked(s) && (i === 0 || ubLevel(s, i-1) >= D.UB_UNLOCK_LV);
+const mightCost = (s, x) => x.flat ? x.cost : x.cost * (mightLv(s, x.key) + 1);
+function buyMight(s, key){
+  const x = D.MIGHT.find(y=>y.key===key);
+  if(!x || !mightUnlocked(s) || mightLv(s, key) >= x.max) return false;
+  const c = mightCost(s, x);
+  if(s.meta.mp < c) return false;
+  s.meta.mp -= c;
+  s.meta.might[key] = mightLv(s, key) + 1;
+  return true;
 }
 
 function levelTime(def, lv){ return def.base * (1 + D.LEVEL_TIME_GROWTH*lv); }
@@ -358,6 +412,10 @@ function step(s, dt, ev){
   if(s.gen){ const g = genRate(s, d) * dt; s.dp += g; s.dpTotal += g; s.meta.dpLife += g; }
   stepCreate(s, dt, d, ev);
   stepFight(s, dt, d, ev);
+  if(!s.fight && mightLv(s, 'autoFight') && s.gods < D.GODS.length){
+    const dd = derive(s), god = D.GODS[s.gods];
+    if(s.hp >= dd.maxHp*0.999 && outlook(s, dd, god, god.hp).win) startFight(s);
+  }
   stepDungeon(s, dt, ev);
   s.achT = (s.achT || 0) + dt;
   if(s.achT >= 1){ s.achT = 0; checkAchievements(s, ev); checkPets(s, ev); }
@@ -410,28 +468,51 @@ function stepFight(s, dt, d, ev){
     s.hp = Math.min(d.maxHp, s.hp + d.maxHp*D.HP_REGEN*dt);
     return;
   }
-  const god = D.GODS[s.gods];
+  const tg = fightTarget(s, f);
   f.t += dt;
   while(f.t >= D.HIT_INTERVAL){
     f.t -= D.HIT_INTERVAL;
-    f.ghp -= blow(d.atk, god.def);
+    f.ghp -= blow(d.atk, tg.def);
     f.hits = (f.hits||0) + 1;
     if(f.ghp <= 0){
       s.fight = null;
-      s.gods++;
-      if(s.gods > s.meta.bestGods) s.meta.bestGods = s.gods;
+      if(f.kind === 'ub') winUltimate(s, f.i, ev);
+      else winGod(s, ev);
       s.hp = derive(s).maxHp;
-      if(ev) ev.push({ type:'godWin', i:s.gods-1 });
       return;
     }
-    s.hp -= blow(god.atk, d.def);
+    s.hp -= blow(tg.atk, d.def);
     if(s.hp <= 0){
       s.hp = 0;
       s.fight = null;
-      if(ev) ev.push({ type:'godLose', i:s.gods });
+      if(ev) ev.push({ type: f.kind === 'ub' ? 'ubLose' : 'godLose', i: f.kind === 'ub' ? f.i : s.gods });
       return;
     }
   }
+}
+const fightTarget = (s, f) => f.kind === 'ub' ? ubStats(s, f.i) : D.GODS[s.gods];
+function winGod(s, ev){
+  s.gods++;
+  if(s.gods > s.meta.bestGods) s.meta.bestGods = s.gods;
+  if(ev) ev.push({ type:'godWin', i:s.gods-1 });
+  const c = s.challenge;
+  if(c && s.gods - 1 >= chalGoal(s, c)){
+    s.meta.chal[c] = chalDone(s, c) + 1;
+    s.challenge = null;
+    if(ev) ev.push({ type:'chalDone', key:c, n:s.meta.chal[c] });
+  }
+}
+function winUltimate(s, i, ev){
+  const mp = D.ULTIMATES[i].mp;
+  s.meta.ub[i] = ubLevel(s, i) + 1;
+  s.meta.mp += mp; s.meta.mpTotal += mp;
+  if(ev) ev.push({ type:'ubWin', i, lv:s.meta.ub[i], mp });
+}
+// can the hero win from the current HP? hits are traded evenly, so compare blows needed on each side
+function outlook(s, d, tg, ghp){
+  const dealt = blow(d.atk, tg.def), taken = blow(tg.atk, d.def);
+  const hitsToKill = Math.ceil(ghp / dealt), hitsToDie = Math.ceil(s.hp / taken);
+  return { win: hitsToKill <= hitsToDie, secs: hitsToKill * D.HIT_INTERVAL, share: Math.min(0.99, hitsToDie*dealt/ghp) };
 }
 
 // advance in chunks so long offline gaps stay accurate (level-ups, deaths and rewards each apply as they happen)
@@ -463,7 +544,12 @@ function setCreateTarget(s, key){
 
 function startFight(s){
   if(s.fight || s.gods >= D.GODS.length) return false;
-  s.fight = { ghp: D.GODS[s.gods].hp, t:0, hits:0 };
+  s.fight = { kind:'god', ghp: D.GODS[s.gods].hp, t:0, hits:0 };
+  return true;
+}
+function startUbFight(s, i){
+  if(s.fight || !ubOpen(s, i)) return false;
+  s.fight = { kind:'ub', i, ghp: ubStats(s, i).hp, t:0, hits:0 };
   return true;
 }
 function flee(s){ s.fight = null; }
@@ -522,6 +608,11 @@ function sanitize(raw){
   if(rm.gear && typeof rm.gear === 'object') D.GEAR.forEach(g=>{ if(isNum(rm.gear[g.key])) m.gear[g.key] = Math.floor(Math.max(0, rm.gear[g.key])); });
   if(rm.dgBest && typeof rm.dgBest === 'object') D.DUNGEONS.forEach(g=>{ if(isNum(rm.dgBest[g.key])) m.dgBest[g.key] = Math.min(D.MAX_DEPTH, Math.floor(Math.max(0, rm.dgBest[g.key]))); });
   if(typeof rm.dgAuto === 'boolean') m.dgAuto = rm.dgAuto;
+  if(rm.chal && typeof rm.chal === 'object') D.CHALLENGES.forEach(c=>{ if(isNum(rm.chal[c.key])) m.chal[c.key] = Math.min(D.CHAL_MAX, Math.floor(Math.max(0, rm.chal[c.key]))); });
+  if(Array.isArray(rm.ub)) m.ub = D.ULTIMATES.map((u,i)=>Math.floor(nonNeg(rm.ub[i], 0)));
+  m.mp = nonNeg(rm.mp, 0); m.mpTotal = nonNeg(rm.mpTotal, 0);
+  if(rm.might && typeof rm.might === 'object') D.MIGHT.forEach(x=>{ if(isNum(rm.might[x.key])) m.might[x.key] = Math.min(x.max, Math.floor(Math.max(0, rm.might[x.key]))); });
+  if(D.CHALLENGES.some(c=>c.key===raw.challenge) && chalDone(d, raw.challenge) < D.CHAL_MAX) d.challenge = raw.challenge;
   const r = rm.run;
   if(r && typeof r === 'object' && Number.isInteger(r.i) && r.i >= 0 && r.i < D.DUNGEONS.length && Number.isInteger(r.depth) && r.depth >= 1 && r.depth <= D.MAX_DEPTH)
     m.run = { i:r.i, depth:r.depth, t: Math.min(nonNeg(r.t, 0), D.DUNGEONS[r.i].time) };
@@ -540,7 +631,9 @@ root.GK = {
   achValue, achCount, genRate, genCost, upgradeGen, monumentCost, canBuild, buildMonument,
   upgradeCost, buyUpgrade, rebirthGain, rebirth,
   petsUnlocked, petDef, petPower, teamPower, petExpNeed, toggleTeam, petConditionMet,
-  dungeonPower, dungeonUnlocked, maxDepth, winChance, startDungeon, stopDungeon, forgeCost, forgeChance, forge,
+  dungeonPower, dungeonUnlocked, maxDepth, winChance, startDungeon, stopDungeon, forgeCost, forgeChance, forge, dungeonTime,
+  chalDone, chalGoal, startChallenge, abandonChallenge, ubUnlocked, ubOpen, ubLevel, ubStats, startUbFight, fightTarget, outlook,
+  mightUnlocked, mightLv, mightCost, buyMight,
   step, advance, assign, unassignKind, setCreateTarget, startFight, flee
 };
 })(typeof window !== 'undefined' ? window : globalThis);

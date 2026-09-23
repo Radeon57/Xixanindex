@@ -262,8 +262,8 @@ function renderCreate(d, full){
 }
 
 // ---------- build: gods ----------
-function godSVG(i){
-  const c = GOD_COLORS[i % GOD_COLORS.length];
+function godSVG(i, color){
+  const c = color || GOD_COLORS[i % GOD_COLORS.length];
   return `<svg width="84" height="84" viewBox="0 0 84 84" aria-hidden="true">
     <defs><radialGradient id="godGlow${i}" cx="50%" cy="45%" r="55%"><stop offset="0%" stop-color="${c}" stop-opacity=".55"/><stop offset="100%" stop-color="${c}" stop-opacity="0"/></radialGradient></defs>
     <circle cx="42" cy="42" r="40" fill="url(#godGlow${i})"/>
@@ -278,39 +278,64 @@ function buildGods(){
   $('godList').innerHTML = D.GODS.map((g,i)=>`<div class="godRow" data-i="${i}"><span class="gMark"></span><span class="gName"></span><span class="gInfo" style="margin-left:auto"></span></div>`).join('');
   R.gods = [...document.querySelectorAll('#godList .godRow')].map(el=>({ el, mark: el.querySelector('.gMark'), name: el.querySelector('.gName'), info: el.querySelector('.gInfo') }));
 }
-let shownGod = -1, lastHits = 0;
-function fightOutlook(d){
-  const god = D.GODS[s.gods];
-  const ghp = s.fight ? s.fight.ghp : god.hp;
-  const dealt = G.blow(d.atk, god.def), taken = G.blow(god.atk, d.def);
-  const hitsToKill = Math.ceil(ghp / dealt), hitsToDie = Math.ceil(s.hp / taken);
-  return { win: hitsToKill <= hitsToDie, secs: hitsToKill * D.HIT_INTERVAL, share: Math.min(0.99, hitsToDie*dealt/ghp) };
+let shownArt = '', lastHits = 0;
+let arenaSel = 'god';   // 'god' or the index of an ultimate being
+// what the arena shows: the current fight, else the chosen opponent
+function arenaTarget(){
+  const f = s.fight;
+  if(f) return f.kind === 'ub' ? ubTarget(f.i) : godTarget();
+  if(arenaSel !== 'god' && G.ubOpen(s, arenaSel)) return ubTarget(arenaSel);
+  if(s.gods < D.GODS.length) return godTarget();
+  if(G.ubUnlocked(s)){ arenaSel = 0; return ubTarget(0); }
+  return null;
+}
+function godTarget(){ const g = D.GODS[s.gods]; return { kind:'god', i:s.gods, name:g.name, hp:g.hp, atk:g.atk, def:g.def, art:'g'+s.gods }; }
+function ubTarget(i){ const u = G.ubStats(s, i); return { kind:'ub', i, name:u.name + ' Lv.' + G.ubLevel(s, i), hp:u.hp, atk:u.atk, def:u.def, art:'u'+i }; }
+function fightOutlook(d, tg){
+  tg = tg || arenaTarget();
+  const ghp = s.fight ? s.fight.ghp : tg.hp;
+  return G.outlook(s, d, tg, ghp);
+}
+function buildUltimates(){
+  $('ubList').innerHTML = D.ULTIMATES.map((u,i)=>`<div class="cItem" data-i="${i}">
+      <div class="jobHead"><span class="jobName"><span class="petDot" style="background:${u.color}"></span>${u.name}</span><span class="jobLv"></span></div>
+      <div class="cDesc"></div>
+      <div class="cFoot"><span class="cCost"></span><button class="selBtn" data-act="ubSel" data-i="${i}">เลือกสู้</button></div>
+      <div class="lockTxt"></div>
+    </div>`).join('');
+  R.ub = [...document.querySelectorAll('#ubList .cItem')].map(el=>({ el, lv: el.querySelector('.jobLv'), desc: el.querySelector('.cDesc'),
+    cost: el.querySelector('.cCost'), btn: el.querySelector('.selBtn'), lock: el.querySelector('.lockTxt') }));
 }
 function renderGods(d, full){
-  const done = s.gods >= D.GODS.length;
-  setShown($('arenaWrap'), !done);
-  setShown($('godsDone'), done);
-  if(!done){
-    const god = D.GODS[s.gods];
+  const tg = arenaTarget();
+  setShown($('arenaWrap'), !!tg);
+  setShown($('godsDone'), !tg);
+  if(tg){
     setBar($('aHeroHp'), s.hp / d.maxHp);
-    setBar($('aGodHp'), s.fight ? s.fight.ghp / god.hp : 1);
+    setBar($('aGodHp'), s.fight ? s.fight.ghp / tg.hp : 1);
     if(s.fight && s.fight.hits !== lastHits){ lastHits = s.fight.hits; hitFx(); }
     if(!s.fight) lastHits = 0;
     if(full){
-      if(shownGod !== s.gods){ shownGod = s.gods; $('godArt').innerHTML = godSVG(s.gods); setHTML($('godReward'), 'รางวัลเมื่อสังหาร: ' + rewardParts(s.gods).join(' · ')); }
-      setText($('aGodName'), god.name);
+      if(shownArt !== tg.art){
+        shownArt = tg.art;
+        $('godArt').innerHTML = tg.kind === 'ub' ? godSVG(100+tg.i, D.ULTIMATES[tg.i].color) : godSVG(tg.i);
+      }
+      setHTML($('godReward'), tg.kind === 'ub'
+        ? 'รางวัลเมื่อชนะ: <b>+' + D.ULTIMATES[tg.i].mp + ' แต้ม Might</b> · เลเวลถัดไปแข็งขึ้น ×' + D.UB_GROWTH
+        : 'รางวัลเมื่อสังหาร: ' + rewardParts(tg.i).join(' · '));
+      setText($('aGodName'), tg.name);
       setText($('aHeroHpTxt'), fmt(s.hp) + ' / ' + fmt(d.maxHp));
-      setText($('aGodHpTxt'), fmt(s.fight ? s.fight.ghp : god.hp) + ' / ' + fmt(god.hp));
+      setText($('aGodHpTxt'), fmt(s.fight ? s.fight.ghp : tg.hp) + ' / ' + fmt(tg.hp));
       setText($('aHeroAtk'), fmt(d.atk)); setText($('aHeroDef'), fmt(d.def));
-      setText($('aGodAtk'), fmt(god.atk)); setText($('aGodDef'), fmt(god.def));
+      setText($('aGodAtk'), fmt(tg.atk)); setText($('aGodDef'), fmt(tg.def));
       setClass($('arena'), 'fighting', !!s.fight);
-      const o = fightOutlook(d);
+      const o = fightOutlook(d, tg);
       const pred = $('predict');
       setClass(pred, 'win', o.win); setClass(pred, 'lose', !o.win);
       let txt = o.win ? 'คาดการณ์: ชนะ ภายในราว ' + fmtTime(o.secs) : 'คาดการณ์: แพ้ — ทำดาเมจได้ราว ' + Math.floor(o.share*100) + '% ก่อนล้ม';
       if(!s.fight && s.hp < d.maxHp*0.999) txt += ' (พลังชีวิตยังฟื้นไม่เต็ม)';
       setText(pred, txt);
-      setText($('fightLabel'), s.fight ? 'ถอยหนี' : 'ท้าสู้ ' + god.name);
+      setText($('fightLabel'), s.fight ? 'ถอยหนี' : 'ท้าสู้ ' + tg.name);
       setClass($('fightBtn'), 'flee', !!s.fight);
     }
   }
@@ -320,8 +345,30 @@ function renderGods(d, full){
     const state = i < s.gods ? 'done' : i === s.gods ? 'next' : 'later';
     setClass(ref.el, 'done', state === 'done'); setClass(ref.el, 'next', state === 'next');
     setText(ref.mark, state === 'done' ? '✓' : state === 'next' ? '⚔' : '🔒');
-    setText(ref.name, state === 'later' ? '???' : g.name);
+    setText(ref.name, state === 'later' && i >= s.meta.bestGods ? '???' : g.name);
     setText(ref.info, state === 'done' ? 'สังหารแล้ว' : state === 'next' ? 'เป้าหมายถัดไป' : '');
+  });
+  const ubOn = G.ubUnlocked(s);
+  setShown($('ubLock'), !ubOn);
+  setShown($('ubList'), ubOn);
+  setShown($('backToGod'), ubOn && arenaSel !== 'god' && s.gods < D.GODS.length && !s.fight, 'inline-block');
+  if(!ubOn) return;
+  let lockedShown = false;
+  D.ULTIMATES.forEach((u,i)=>{
+    const ref = R.ub[i], open = G.ubOpen(s, i);
+    const show = open || !lockedShown;
+    if(!open) lockedShown = true;
+    setShown(ref.el, show);
+    if(!show) return;
+    setClass(ref.el, 'locked', !open);
+    if(!open){ setText(ref.lock, 'ปลดล็อกเมื่อ ' + D.ULTIMATES[i-1].name + ' ถึง Lv.' + D.UB_UNLOCK_LV); return; }
+    const st = G.ubStats(s, i), o = G.outlook(s, d, st, st.hp);
+    setText(ref.lv, 'Lv.' + G.ubLevel(s, i));
+    setText(ref.desc, 'HP ' + fmt(st.hp) + ' · โจมตี ' + fmt(st.atk) + ' · ป้องกัน ' + fmt(st.def));
+    setHTML(ref.cost, '<span class="pow ' + (o.win ? 'safe' : 'deadly') + '">' + (o.win ? 'คาดว่าชนะ' : 'คาดว่าแพ้') + '</span> · ชนะได้ +' + u.mp + ' Might');
+    const sel = arenaSel === i;
+    setText(ref.btn, sel ? 'เลือกอยู่' : 'เลือกสู้');
+    setDisabled(ref.btn, sel || !!s.fight);
   });
 }
 
@@ -377,9 +424,53 @@ function buildRebirth(){
   $('achList').innerHTML = D.ACHIEVEMENTS.map(a=>`<div class="ach" data-key="${a.key}"><b>${a.name}</b><span>${ACH_LABEL[a.type]} ${fmt(a.n)}</span><div class="bar gold"><i></i></div></div>`).join('');
   R.ach = [...document.querySelectorAll('#achList .ach')].map(el=>({ el, bar: el.querySelector('.bar>i') }));
 }
-let rbArmedUntil = 0;
+let rbArmedUntil = 0, rbView = 'main', chalArmed = { key:null, until:0 };
+function buildPhase4(){
+  $('chalList').innerHTML = D.CHALLENGES.map(c=>`<div class="cItem" data-key="${c.key}">
+      <div class="jobHead"><span class="jobName">${c.name}</span><span class="jobLv"></span></div>
+      <div class="note">กฎ: ${c.rule}</div>
+      <div class="cDesc"></div>
+      <div class="cFoot"><span class="cCost"></span><button class="selBtn" data-act="chal" data-key="${c.key}"></button></div>
+    </div>`).join('');
+  R.chal = [...document.querySelectorAll('#chalList .cItem')].map(el=>({ el, lv: el.querySelector('.jobLv'), desc: el.querySelector('.cDesc'),
+    cost: el.querySelector('.cCost'), btn: el.querySelector('.selBtn') }));
+  $('mightList').innerHTML = D.MIGHT.map(x=>`<div class="cItem">
+      <div class="jobHead"><span class="jobName">${x.name}</span><span class="jobLv"></span></div>
+      <div class="cDesc">${x.desc}</div>
+      <div class="cFoot"><span class="cCost"></span><button class="selBtn" data-act="might" data-key="${x.key}">ซื้อ</button></div>
+    </div>`).join('');
+  R.might = [...document.querySelectorAll('#mightList .cItem')].map(el=>({ lv: el.querySelector('.jobLv'), cost: el.querySelector('.cCost'), btn: el.querySelector('.selBtn') }));
+}
+function renderChallenges(){
+  const m = s.meta;
+  D.CHALLENGES.forEach((c,i)=>{
+    const ref = R.chal[i], n = G.chalDone(s, c.key), maxed = n >= D.CHAL_MAX, active = s.challenge === c.key;
+    setClass(ref.el, 'active', active);
+    setText(ref.lv, 'สำเร็จ ' + n + '/' + D.CHAL_MAX);
+    setText(ref.desc, 'รางวัลต่อครั้ง: ' + c.rdesc + (n ? ' · ตอนนี้ ×' + fmt(Math.pow(1+c.per, n)) : ''));
+    setText(ref.cost, maxed ? 'ทำครบแล้ว' : 'เป้าหมาย: สังหาร ' + D.GODS[G.chalGoal(s, c.key)].name);
+    const armed = chalArmed.key === c.key && Date.now() < chalArmed.until;
+    setText(ref.btn, active ? 'ยอมแพ้' : armed ? 'แตะอีกครั้งเพื่อเกิดใหม่' : 'เริ่ม');
+    setDisabled(ref.btn, !active && (maxed || !!s.challenge || !G.rebirthUnlocked(s)));
+  });
+}
+function renderMight(){
+  const m = s.meta, open = G.mightUnlocked(s);
+  setText($('mpTxt'), fmt(m.mp));
+  setShown($('mightLock'), !open);
+  D.MIGHT.forEach((x,i)=>{
+    const ref = R.might[i], L = G.mightLv(s, x.key), maxed = L >= x.max, c = G.mightCost(s, x);
+    setText(ref.lv, x.max === 1 ? (L ? 'มีแล้ว' : '') : 'Lv.' + L + '/' + x.max);
+    setHTML(ref.cost, maxed ? 'สูงสุดแล้ว' : '<span class="' + (m.mp < c ? 'short' : '') + '">' + c + ' Might</span>');
+    setDisabled(ref.btn, !open || maxed || m.mp < c);
+  });
+}
 function renderRebirth(d, full){
   if(!full) return;
+  ['main','chal','might','ach'].forEach(v=>setShown($('rv-'+v), v === rbView));
+  document.querySelectorAll('[data-act="rbView"]').forEach(b=>setClass(b, 'on', b.dataset.v === rbView));
+  if(rbView === 'chal') return renderChallenges();
+  if(rbView === 'might') return renderMight();
   const m = s.meta, gain = G.rebirthGain(s);
   setText($('gpTxt'), fmt(m.gp));
   setText($('rbInfo'), 'เกิดใหม่แล้ว ' + m.rebirths + ' ครั้ง · ถ้าเกิดใหม่ตอนนี้จะได้ +' + gain + ' God Power (จากเทพ ' + s.gods + ' องค์ที่สังหารในรอบนี้)');
@@ -518,6 +609,9 @@ function renderHud(d, full){
   setBar($('hudHpBar'), s.hp / d.maxHp);
   if(!full) return;
   setText($('hudGods'), s.gods + '/' + D.GODS.length);
+  const ch = s.challenge && D.CHALLENGES.find(c=>c.key===s.challenge);
+  setShown($('chalBar'), !!ch);
+  if(ch) setText($('chalBar'), '⚔ ความท้าทาย: ' + ch.name + ' — เป้าหมาย: สังหาร ' + D.GODS[G.chalGoal(s, ch.key)].name);
   setText($('hudHp'), fmt(s.hp) + '/' + fmt(d.maxHp));
   setText($('hudAtk'), fmt(d.atk));
   setText($('hudDef'), fmt(d.def));
@@ -529,7 +623,7 @@ const TAB_LOCK = { skill:['skills', ()=>G.skillsUnlocked(s)], temple:['gen', ()=
 const TAB_NAME = { skill:'วิชาเวท', temple:'เทวาลัย', rebirth:'การเกิดใหม่', pets:'คู่หู' };
 function tabLocked(name){ const l = TAB_LOCK[name]; return !!l && !l[1](); }
 function renderTabs(d){
-  if(s.gods < D.GODS.length && !s.fight && s.hp >= d.maxHp*0.999 && fightOutlook(d).win) alerts.gods = true;
+  if(s.gods < D.GODS.length && !s.fight && s.hp >= d.maxHp*0.999 && fightOutlook(d, godTarget()).win) alerts.gods = true;
   document.querySelectorAll('.tab').forEach(t=>{
     const name = t.dataset.tab;
     setClass(t, 'active', name === activeTab);
@@ -605,6 +699,20 @@ function handleEvents(ev, quiet){
       addLog('ปลดล็อกดันเจี้ยนใหม่: ' + D.DUNGEONS[e.i].name);
       alerts.pets = true;
       if(!quiet) toast('ปลดล็อกดันเจี้ยน: ' + D.DUNGEONS[e.i].name);
+    } else if(e.type === 'chalDone'){
+      const c = D.CHALLENGES.find(x=>x.key===e.key);
+      addLog('🏅 ผ่านความท้าทาย ' + c.name + ' ครั้งที่ ' + e.n + '! ' + c.rdesc + ' ถาวร');
+      if(!quiet){ toast('🏅 ผ่านความท้าทาย: ' + c.name); celebrate(); }
+      save();
+    } else if(e.type === 'ubWin'){
+      const u = D.ULTIMATES[e.i];
+      addLog('💥 ชนะ ' + u.name + ' → Lv.' + e.lv + ' ได้ ' + e.mp + ' แต้ม Might');
+      alerts.rebirth = true;
+      if(!quiet){ toast('💥 ชนะ ' + u.name + '! +' + e.mp + ' Might'); celebrate(); }
+      save();
+    } else if(e.type === 'ubLose'){
+      addLog('พ่ายแพ้ต่อ ' + D.ULTIMATES[e.i].name + ' — ต้องแข็งแกร่งกว่านี้');
+      if(!quiet) toast('พ่ายแพ้... ต้องแข็งแกร่งกว่านี้');
     } else if(e.type === 'godLose'){
       addLog('พ่ายแพ้ต่อ ' + D.GODS[e.i].name + ' — ฝึกให้แข็งแกร่งขึ้นแล้วกลับมาใหม่');
       if(!quiet) toast('พ่ายแพ้... ต้องแข็งแกร่งกว่านี้');
@@ -719,6 +827,26 @@ function onMainClick(e){
   } else if(act === 'build'){
     const mo = D.MONUMENTS.find(x=>x.key===b.dataset.key);
     if(G.buildMonument(s, b.dataset.key)){ addLog('สร้าง ' + mo.name + ' เป็น Lv.' + s.mono[mo.key]); toast(mo.name + ' Lv.' + s.mono[mo.key]); }
+  } else if(act === 'rbView'){
+    rbView = b.dataset.v;
+  } else if(act === 'ubSel'){
+    arenaSel = +b.dataset.i;
+    $('main').scrollTop = 0;
+  } else if(act === 'might'){
+    const x = D.MIGHT.find(y=>y.key===b.dataset.key);
+    if(G.buyMight(s, x.key)){ addLog('Might: ' + x.name + (x.max > 1 ? ' Lv.' + G.mightLv(s, x.key) : '')); save(); }
+  } else if(act === 'chal'){
+    const key = b.dataset.key, c = D.CHALLENGES.find(x=>x.key===key);
+    if(s.challenge === key){ G.abandonChallenge(s); addLog('ยอมแพ้ความท้าทาย ' + c.name + ' — กฎถูกยกเลิก รอบนี้เล่นต่อตามปกติ'); }
+    else if(chalArmed.key === key && Date.now() < chalArmed.until){
+      chalArmed = { key:null, until:0 };
+      const gain = G.rebirthGain(s);
+      if(G.startChallenge(s, key)){
+        lastLost = s.clonesLost; shownArt = ''; arenaSel = 'god';
+        addLog('⚔ เริ่มความท้าทาย ' + c.name + (gain ? ' (ได้ ' + gain + ' God Power)' : ''));
+        toast('เริ่มความท้าทาย: ' + c.name); save();
+      }
+    } else chalArmed = { key, until: Date.now() + 4000 };
   } else if(act === 'petView'){
     petView = b.dataset.v;
   } else if(act === 'depth'){
@@ -750,7 +878,7 @@ function onRebirth(){
   if(Date.now() >= rbArmedUntil){ rbArmedUntil = Date.now() + 4000; render(true); return; }
   rbArmedUntil = 0;
   G.rebirth(s);
-  lastLost = s.clonesLost; shownGod = -1;
+  lastLost = s.clonesLost; shownArt = ''; arenaSel = 'god';
   addLog('🔄 เกิดใหม่ครั้งที่ ' + s.meta.rebirths + ' — ได้รับ ' + gain + ' God Power');
   toast('เกิดใหม่สำเร็จ! +' + gain + ' God Power');
   celebrate();
@@ -758,8 +886,9 @@ function onRebirth(){
   selectTab('rebirth');
 }
 function onFight(){
-  if(s.fight){ G.flee(s); addLog('ถอยหนีจาก ' + D.GODS[s.gods].name); }
-  else if(G.startFight(s)){ addLog('ท้าสู้ ' + D.GODS[s.gods].name + '!'); lastHits = 0; }
+  const tg = arenaTarget();
+  if(s.fight){ G.flee(s); addLog('ถอยหนีจาก ' + (tg ? tg.name : 'การต่อสู้')); }
+  else if(tg && (tg.kind === 'ub' ? G.startUbFight(s, tg.i) : G.startFight(s))){ addLog('ท้าสู้ ' + tg.name + '!'); lastHits = 0; }
   render(true);
 }
 
@@ -816,7 +945,7 @@ function boot(saved){
   lastLost = s.clonesLost;
 
   buildJobs('train'); buildJobs('skill'); buildJobs('mon');
-  buildCreate(); buildGods(); buildTemple(); buildRebirth(); buildPets();
+  buildCreate(); buildGods(); buildTemple(); buildRebirth(); buildPets(); buildUltimates(); buildPhase4();
   renderSteps();
   drawPixelHero($('heroPixel'));
   fx = initFX($('fx'));
@@ -824,6 +953,7 @@ function boot(saved){
   $('main').addEventListener('click', onMainClick);
   $('fightBtn').addEventListener('click', onFight);
   $('genBtn').addEventListener('click', onGen);
+  $('backToGod').addEventListener('click', ()=>{ arenaSel = 'god'; render(true); });
   $('dgStop').addEventListener('click', ()=>{ G.stopDungeon(s); addLog('หยุดสำรวจดันเจี้ยน'); render(true); });
   $('dgAuto').addEventListener('change', e=>{ s.meta.dgAuto = e.target.checked; render(true); });
   $('rbBtn').addEventListener('click', onRebirth);

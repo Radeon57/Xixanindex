@@ -134,6 +134,35 @@ const GEAR = [
 ];
 const FORGE_COST = 5, FORGE_GROWTH = 1.35, FORGE_MIN_CHANCE = 0.3;
 
+// ---------- phase 4: challenges, ultimate beings, might ----------
+// A challenge restarts the run under a rule. Killing the goal god (index CHAL_FIRST_GOAL + completions, capped at the
+// last god) completes it, lifts the rule for the rest of the run and permanently multiplies a stat by (1+per).
+const CHALLENGES = [
+  { key:'few',      name:'กองทัพน้อย',     rule:'ร่างเงาสูงสุดถูกจำกัดไว้ที่ 10 ร่าง',                         stat:'clone', per:0.25, rdesc:'พลังร่างเงา ×1.25' },
+  { key:'nocreate', name:'โลกไร้สรรพสิ่ง',  rule:'สร้างได้แค่ร่างเงา ไม่มีสรรพสิ่งและอนุสรณ์',                   stat:'dp',    per:0.3,  rdesc:'พลังเทวะที่ได้ ×1.3' },
+  { key:'nomagic',  name:'ไร้มนตรา',       rule:'ใช้วิชาเวทไม่ได้',                                        stat:'myst',  per:0.3,  rdesc:'เวท ×1.3' },
+  { key:'mortal',   name:'มนุษย์ธรรมดา',    rule:'ไม่มีผลจากอัปเกรดถาวร Might คู่หู อุปกรณ์ และความท้าทายอื่น',   stat:'stat',  per:0.2,  rdesc:'ค่าสถานะทั้งหมด ×1.2' }
+];
+const CHAL_MAX = 6, CHAL_FIRST_GOAL = 3, FEW_CLONES = 10;
+
+// Ultimate beings: repeatable bosses after the last god. Level L has the last god's stats * mult * UB_GROWTH^L.
+// Each kill raises the level and pays mp Might points. Being i opens once being i-1 reaches UB_UNLOCK_LV.
+const ULTIMATES = [
+  { name:'ผู้พิทักษ์นภา',     mult:2,  mp:1, color:'#9fe7ff' },
+  { name:'อสูรโกลาหล',      mult:6,  mp:2, color:'#c77dff' },
+  { name:'ปฐมกาลผู้ไร้นาม',   mult:20, mp:3, color:'#ffffff' }
+];
+const UB_GROWTH = 1.3, UB_UNLOCK_LV = 5;
+
+// Might perks, bought with Might points; permanent. Level L costs cost*(L+1), or just cost when flat.
+const MIGHT = [
+  { key:'fullArmy',  name:'จุติพร้อมทัพ',       max:1,  cost:1, desc:'เริ่มรอบใหม่พร้อมร่างเงาเต็มทันที' },
+  { key:'autoFight', name:'สัญชาตญาณนักล่า',    max:1,  cost:1, desc:'ท้าสู้เทพองค์ถัดไปเองเมื่อพลังชีวิตเต็มและคาดว่าชนะ' },
+  { key:'legacy',    name:'มรดกศรัทธา',        max:10, cost:1, desc:'เริ่มรอบใหม่พร้อมพลังเทวะ 10^(เลเวล+3)' },
+  { key:'power',     name:'พลังยุทธ์เทพ',       max:200, cost:1, stat:'stat', per:0.2, desc:'ค่าสถานะทั้งหมด ×1.2 ต่อเลเวล (ทบต้น)' },
+  { key:'swift',     name:'ทีมสำรวจว่องไว',     max:3,  cost:2, desc:'เวลาสำรวจดันเจี้ยน -20% ต่อเลเวล' }
+];
+
 // Achievements are permanent and each adds ACH_BONUS to all stats.
 // type: what is measured (see engine.achValue); n: the target.
 const ACH_BONUS = 0.03;
@@ -166,6 +195,7 @@ root.GKDATA = {
   CREATIONS, BASE_MAX_CLONES, HIT_INTERVAL, HP_REGEN, GODS, UNLOCK_AT,
   UPGRADES, GEN_RATE, GEN_GROWTH, GEN_COST, GEN_COST_GROWTH, MONUMENTS, ACH_BONUS, ACHIEVEMENTS,
   PETS, PET_GROWTH, PET_EXP_BASE, PET_EXP_GROWTH, PET_MAX_LV, TEAM_SIZE,
-  DUNGEONS, DEPTH_GROWTH, MAX_DEPTH, DUNGEON_UNLOCK_DEPTH, MATERIALS, GEAR, FORGE_COST, FORGE_GROWTH, FORGE_MIN_CHANCE
+  DUNGEONS, DEPTH_GROWTH, MAX_DEPTH, DUNGEON_UNLOCK_DEPTH, MATERIALS, GEAR, FORGE_COST, FORGE_GROWTH, FORGE_MIN_CHANCE,
+  CHALLENGES, CHAL_MAX, CHAL_FIRST_GOAL, FEW_CLONES, ULTIMATES, UB_GROWTH, UB_UNLOCK_LV, MIGHT
 };
 })(typeof window !== 'undefined' ? window : globalThis);

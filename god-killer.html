@@ -161,13 +161,14 @@ section.panel{display:none}
 .logBtn{background:transparent;border:1px solid var(--border);color:var(--sub);border-radius:8px;padding:3px 6px;margin-left:6px;cursor:pointer;line-height:0}
 .logBtn.on{border-color:var(--gold);color:var(--gold)}
 .subSeg{margin-bottom:8px}
-.subSeg button{flex:1;font-size:.74rem;padding:7px 4px}
+.subSeg button{flex:1;font-size:.72rem;padding:7px 2px}
 .petDot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:0}
 .cItem .bar.thin{margin-top:5px}
 .cItem.locked .dgInfo,.cItem.locked .jobLv{display:none}
 .cItem.inTeam{background:rgba(232,199,111,.07);border-radius:8px}
 .cItem .ctl{margin-right:auto}
 .cItem .ctlN{min-width:44px;font-size:.74rem}
+.chalBar{display:none;font-size:.7rem;color:var(--warn);background:rgba(255,180,84,.08);border:1px solid rgba(255,180,84,.35);border-radius:8px;padding:4px 8px;margin-bottom:6px}
 .doneBox{display:none;text-align:center;font-size:.8rem;color:var(--gold);padding:14px 6px;line-height:1.7}
 
 .logBox{font-size:.72rem;color:var(--sub);line-height:1.5}
@@ -270,6 +271,7 @@ button:focus-visible,.tab:focus-visible,.toggle input:focus-visible{outline:2px 
       <div class="godCount"><svg class="ic" width="14" height="14"><use href="#icon-crown"></use></svg>สังหารเทพ <b id="hudGods">0/0</b>
         <button class="logBtn" id="logBtn" aria-label="เปิดบันทึก"><svg class="ic" width="15" height="15"><use href="#icon-scroll"></use></svg></button></div>
     </div>
+    <div class="chalBar" id="chalBar"></div>
     <div class="hpRow">
       <svg class="ic" width="13" height="13" style="color:var(--danger)"><use href="#icon-heart"></use></svg>
       <div class="bar hp"><i id="hudHpBar"></i></div><b id="hudHp">0</b>
@@ -336,6 +338,10 @@ button:focus-visible,.tab:focus-visible,.toggle input:focus-visible{outline:2px 
       </div>
       <div class="doneBox" id="godsDone">สังหารเทพครบทุกองค์แล้ว! ท่านคือผู้สังหารเทพ<br>เกิดใหม่เพื่อสะสม God Power ต่อ — เนื้อหาใหม่จะมาในเฟสถัดไป</div>
       <div class="godList" id="godList"></div>
+      <div class="secTitle">สิ่งมีชีวิตสูงสุด <span class="secSub">สู้ซ้ำได้ไม่จำกัด ทุกเลเวลแข็งขึ้น ×1.3 · ชนะได้แต้ม Might</span></div>
+      <div class="hint" id="ubLock">ปลดล็อกเมื่อสังหารเทพครบทั้ง 10 องค์ในรอบเดียว</div>
+      <button class="miniBtn" id="backToGod" style="margin:4px 0">กลับไปท้าเทพองค์ถัดไป</button>
+      <div id="ubList"></div>
     </section>
 
     <section id="tab-temple" class="panel">
@@ -350,16 +356,35 @@ button:focus-visible,.tab:focus-visible,.toggle input:focus-visible{outline:2px 
     </section>
 
     <section id="tab-rebirth" class="panel">
-      <div class="curCard">
-        <div class="row"><span>God Power</span><b id="gpTxt">0</b></div>
-        <div class="note" id="rbInfo"></div>
-        <div class="note">เกิดใหม่จะรีเซ็ตรอบนี้ทั้งหมด (การฝึก ร่างเงา พลังเทวะ ของที่สร้าง อนุสรณ์ เครื่องผลิต เทพที่สังหาร) แต่เก็บ God Power อัปเกรดถาวร และความสำเร็จไว้</div>
-        <button class="b bPrimary" id="rbBtn" style="margin-top:8px"></button>
+      <div class="seg subSeg" role="group" aria-label="มุมมอง">
+        <button data-act="rbView" data-v="main">เกิดใหม่</button><button data-act="rbView" data-v="chal">ท้าทาย</button><button data-act="rbView" data-v="might">Might</button><button data-act="rbView" data-v="ach">สำเร็จ</button>
       </div>
-      <div class="secTitle">อัปเกรดถาวร <span class="secSub">ใช้ God Power · อยู่ถาวรข้ามการเกิดใหม่</span></div>
-      <div id="upList"></div>
-      <div class="secTitle">ความสำเร็จ <span class="secSub" id="achSum"></span></div>
-      <div id="achList" class="achGrid"></div>
+      <div id="rv-main">
+        <div class="curCard">
+          <div class="row"><span>God Power</span><b id="gpTxt">0</b></div>
+          <div class="note" id="rbInfo"></div>
+          <div class="note">เกิดใหม่จะรีเซ็ตรอบนี้ทั้งหมด (การฝึก ร่างเงา พลังเทวะ ของที่สร้าง อนุสรณ์ เครื่องผลิต เทพที่สังหาร) แต่เก็บ God Power อัปเกรดถาวร คู่หู อุปกรณ์ และความสำเร็จไว้</div>
+          <button class="b bPrimary" id="rbBtn" style="margin-top:8px"></button>
+        </div>
+        <div class="secTitle">อัปเกรดถาวร <span class="secSub">ใช้ God Power · อยู่ถาวรข้ามการเกิดใหม่</span></div>
+        <div id="upList"></div>
+      </div>
+      <div id="rv-chal">
+        <div class="note" style="margin-bottom:6px">เริ่มความท้าทาย = เกิดใหม่ทันที (ได้ God Power ของรอบนี้ตามปกติ) แล้วเล่นรอบใหม่ภายใต้กฎพิเศษ สังหารเทพเป้าหมายได้เมื่อไหร่ กฎจะหายไปและได้โบนัสถาวร ยิ่งทำสำเร็จมาก เป้าหมายยิ่งไกลขึ้น</div>
+        <div id="chalList"></div>
+      </div>
+      <div id="rv-might">
+        <div class="curCard">
+          <div class="row"><span>แต้ม Might</span><b id="mpTxt">0</b></div>
+          <div class="note">ได้จากการชนะสิ่งมีชีวิตสูงสุดที่แท็บท้าเทพ · ความสามารถทั้งหมดอยู่ถาวร</div>
+        </div>
+        <div class="hint" id="mightLock">ปลดล็อกเมื่อสังหารเทพครบทั้ง 10 องค์ในรอบเดียว</div>
+        <div id="mightList"></div>
+      </div>
+      <div id="rv-ach">
+        <div class="secTitle" style="margin-top:0">ความสำเร็จ <span class="secSub" id="achSum"></span></div>
+        <div id="achList" class="achGrid"></div>
+      </div>
     </section>
 
     <section id="tab-pets" class="panel">
