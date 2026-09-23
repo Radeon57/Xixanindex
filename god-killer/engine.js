@@ -8,7 +8,8 @@ const JOB_KINDS = ['train','skill','mon'];
 
 // meta survives rebirth; everything else in the state is one run
 function newMeta(){
-  return { gp:0, gpTotal:0, rebirths:0, bestGods:0, dpLife:0, up:{}, ach:{} };
+  return { gp:0, gpTotal:0, rebirths:0, bestGods:0, dpLife:0, up:{}, ach:{},
+           pets:{}, team:[], mats:{}, gear:{}, dgBest:{}, run:null, dgAuto:true };
 }
 function newState(meta){
   return {
@@ -43,6 +44,7 @@ const genUnlocked = s => unlockedBy(s, 'gen');
 const monumentsUnlocked = s => unlockedBy(s, 'monuments');
 // rebirth stays available in later runs once the unlocking god has ever fallen
 const rebirthUnlocked = s => s.meta.bestGods > D.UNLOCK_AT.rebirth;
+const petsUnlocked = s => s.meta.bestGods > D.UNLOCK_AT.pets;
 function rowUnlocked(s, kind, i){
   if(kind === 'mon') return i < monstersUnlocked(s);
   if(kind === 'skill' && !skillsUnlocked(s)) return false;
@@ -75,6 +77,10 @@ function mults(s){
   m.stat *= 1 + D.ACH_BONUS * achCount(s);
   m.phys = m.myst = m.battle = m.stat;
   apply(D.MONUMENTS, mo => s.mono[mo.key] || 0);
+  // gear and pet bonuses compound per level, so they stay noticeable on the game's exponential scale
+  const compound = (defs, levelOf) => defs.forEach(x=>{ const L = levelOf(x); if(L) m[x.stat] *= Math.pow(1 + x.per, L); });
+  compound(D.GEAR, g => s.meta.gear[g.key] || 0);
+  compound(D.PETS, p => s.meta.pets[p.key] ? s.meta.pets[p.key].lv - 1 : 0);
   D.CREATIONS.forEach(c=>{
     if(!c.bonus) return;
     // bonuses count every unit ever made, so spending items as ingredients never loses their bonus
@@ -172,6 +178,97 @@ function buyUpgrade(s, key){
   return true;
 }
 
+// ---------- pets & dungeons (kept in meta, so they survive rebirth) ----------
+function petConditionMet(s, p){
+  const u = p.unlock;
+  if(u.type === 'gods') return s.meta.bestGods >= u.n;
+  if(u.type === 'rebirths') return s.meta.rebirths >= u.n;
+  if(u.type === 'ach') return achCount(s) >= u.n;
+  return false;
+}
+function checkPets(s, ev){
+  if(!petsUnlocked(s)) return;
+  for(const p of D.PETS){
+    if(s.meta.pets[p.key] || !petConditionMet(s, p)) continue;
+    s.meta.pets[p.key] = { lv:1, exp:0 };
+    if(s.meta.team.length < D.TEAM_SIZE) s.meta.team.push(p.key);
+    if(ev) ev.push({ type:'pet', key:p.key });
+  }
+}
+const petDef = key => D.PETS.find(p=>p.key===key);
+const petPower = (s, key) => { const st = s.meta.pets[key]; return st ? petDef(key).base * Math.pow(D.PET_GROWTH, st.lv-1) : 0; };
+function teamPower(s){ let t = 0; for(const k of s.meta.team) t += petPower(s, k); return t; }
+const petExpNeed = lv => D.PET_EXP_BASE * Math.pow(D.PET_EXP_GROWTH, lv-1);
+function gainExp(s, key, exp, ev){
+  const st = s.meta.pets[key];
+  st.exp += exp;
+  while(st.lv < D.PET_MAX_LV && st.exp >= petExpNeed(st.lv)){ st.exp -= petExpNeed(st.lv); st.lv++; if(ev) ev.push({ type:'petLv', key, lv:st.lv }); }
+  if(st.lv >= D.PET_MAX_LV) st.exp = 0;
+}
+function toggleTeam(s, key){
+  const t = s.meta.team, i = t.indexOf(key);
+  if(i >= 0){ t.splice(i, 1); return true; }
+  if(!s.meta.pets[key] || t.length >= D.TEAM_SIZE) return false;
+  t.push(key);
+  return true;
+}
+const dungeonPower = (i, depth) => D.DUNGEONS[i].power * Math.pow(D.DEPTH_GROWTH, depth-1);
+function dungeonUnlocked(s, i){
+  return petsUnlocked(s) && (i === 0 || (s.meta.dgBest[D.DUNGEONS[i-1].key] || 0) >= D.DUNGEON_UNLOCK_DEPTH);
+}
+const maxDepth = (s, i) => Math.min(D.MAX_DEPTH, (s.meta.dgBest[D.DUNGEONS[i].key] || 0) + 1);
+function winChance(s, i, depth){ const r = teamPower(s) / dungeonPower(i, depth); return r >= 1 ? 1 : r*r; }
+function startDungeon(s, i, depth){
+  if(!dungeonUnlocked(s, i) || !s.meta.team.length || depth < 1 || depth > maxDepth(s, i)) return false;
+  s.meta.run = { i, depth, t:0 };
+  return true;
+}
+function stopDungeon(s){ s.meta.run = null; }
+function finishRun(s, ev){
+  const run = s.meta.run, dg = D.DUNGEONS[run.i];
+  const win = Math.random() < winChance(s, run.i, run.depth);
+  const exp = dg.exp * run.depth * (win ? 1 : 0.25);
+  for(const k of s.meta.team) gainExp(s, k, exp, ev);
+  let qty = 0;
+  if(win){
+    qty = run.depth + 1;
+    s.meta.mats[dg.mat] = (s.meta.mats[dg.mat] || 0) + qty;
+    const best = s.meta.dgBest[dg.key] || 0;
+    if(run.depth > best){
+      s.meta.dgBest[dg.key] = run.depth;
+      if(ev) ev.push({ type:'dgDepth', i:run.i, depth:run.depth });
+      if(run.depth === D.DUNGEON_UNLOCK_DEPTH && run.i+1 < D.DUNGEONS.length && ev) ev.push({ type:'dgUnlock', i:run.i+1 });
+    }
+  }
+  if(ev) ev.push({ type:'dgRun', win, i:run.i, depth:run.depth, qty });
+}
+function stepDungeon(s, dt, ev){
+  const run = s.meta.run;
+  if(!run) return;
+  if(!s.meta.team.length){ s.meta.run = null; return; }
+  run.t += dt;
+  const time = D.DUNGEONS[run.i].time;
+  while(s.meta.run && run.t >= time){
+    run.t -= time;
+    finishRun(s, ev);
+    if(!s.meta.dgAuto) s.meta.run = null;
+  }
+}
+
+// ---------- gear ----------
+const forgeCost = L => Math.ceil(D.FORGE_COST * Math.pow(D.FORGE_GROWTH, L));
+const forgeChance = L => L === 0 ? 1 : Math.max(D.FORGE_MIN_CHANCE, 0.95 - 0.03*L);
+// returns true on success, false on a failed attempt (materials are spent), null when it can't be tried
+function forge(s, key){
+  const g = D.GEAR.find(x=>x.key===key);
+  if(!g || !petsUnlocked(s)) return null;
+  const L = s.meta.gear[key] || 0, cost = forgeCost(L);
+  if((s.meta.mats[g.mat] || 0) < cost) return null;
+  s.meta.mats[g.mat] -= cost;
+  if(Math.random() < forgeChance(L)){ s.meta.gear[key] = L + 1; return true; }
+  return false;
+}
+
 // ---------- rebirth ----------
 function rebirthGain(s){ let g = 0; for(let i=0;i<s.gods;i++) g += D.GODS[i].gp; return g; }
 // start a new run: God Power for every god killed this run; meta and the log carry over
@@ -261,8 +358,9 @@ function step(s, dt, ev){
   if(s.gen){ const g = genRate(s, d) * dt; s.dp += g; s.dpTotal += g; s.meta.dpLife += g; }
   stepCreate(s, dt, d, ev);
   stepFight(s, dt, d, ev);
+  stepDungeon(s, dt, ev);
   s.achT = (s.achT || 0) + dt;
-  if(s.achT >= 1){ s.achT = 0; checkAchievements(s, ev); }
+  if(s.achT >= 1){ s.achT = 0; checkAchievements(s, ev); checkPets(s, ev); }
 }
 
 // what to make next for `key`: the item itself if affordable, otherwise the first missing ingredient (recursively);
@@ -415,6 +513,18 @@ function sanitize(raw){
   if(rm.up && typeof rm.up === 'object') D.UPGRADES.forEach(u=>{ if(isNum(rm.up[u.key])) m.up[u.key] = Math.floor(Math.max(0, rm.up[u.key])); });
   if(rm.ach && typeof rm.ach === 'object') D.ACHIEVEMENTS.forEach(a=>{ if(rm.ach[a.key]) m.ach[a.key] = 1; });
   if(!rm.dpLife) m.dpLife = d.dpTotal;
+  if(rm.pets && typeof rm.pets === 'object') D.PETS.forEach(p=>{
+    const x = rm.pets[p.key];
+    if(x && typeof x === 'object') m.pets[p.key] = { lv: Math.min(D.PET_MAX_LV, Math.max(1, Math.floor(nonNeg(x.lv, 1)))), exp: nonNeg(x.exp, 0) };
+  });
+  if(Array.isArray(rm.team)) m.team = [...new Set(rm.team.filter(k => m.pets[k]))].slice(0, D.TEAM_SIZE);
+  if(rm.mats && typeof rm.mats === 'object') for(const k in D.MATERIALS) if(isNum(rm.mats[k])) m.mats[k] = Math.floor(Math.max(0, rm.mats[k]));
+  if(rm.gear && typeof rm.gear === 'object') D.GEAR.forEach(g=>{ if(isNum(rm.gear[g.key])) m.gear[g.key] = Math.floor(Math.max(0, rm.gear[g.key])); });
+  if(rm.dgBest && typeof rm.dgBest === 'object') D.DUNGEONS.forEach(g=>{ if(isNum(rm.dgBest[g.key])) m.dgBest[g.key] = Math.min(D.MAX_DEPTH, Math.floor(Math.max(0, rm.dgBest[g.key]))); });
+  if(typeof rm.dgAuto === 'boolean') m.dgAuto = rm.dgAuto;
+  const r = rm.run;
+  if(r && typeof r === 'object' && Number.isInteger(r.i) && r.i >= 0 && r.i < D.DUNGEONS.length && Number.isInteger(r.depth) && r.depth >= 1 && r.depth <= D.MAX_DEPTH)
+    m.run = { i:r.i, depth:r.depth, t: Math.min(nonNeg(r.t, 0), D.DUNGEONS[r.i].time) };
   // never trust more assigned clones than exist
   let over = assigned(d) - d.clones;
   for(const kind of JOB_KINDS){ for(const r of d[kind]){ if(over <= 0) break; const k = Math.min(r.n, over); r.n -= k; over -= k; } }
@@ -429,6 +539,8 @@ root.GK = {
   rowUnlocked, monstersUnlocked, creationUnlocked, canAfford, creationByKey,
   achValue, achCount, genRate, genCost, upgradeGen, monumentCost, canBuild, buildMonument,
   upgradeCost, buyUpgrade, rebirthGain, rebirth,
+  petsUnlocked, petDef, petPower, teamPower, petExpNeed, toggleTeam, petConditionMet,
+  dungeonPower, dungeonUnlocked, maxDepth, winChance, startDungeon, stopDungeon, forgeCost, forgeChance, forge,
   step, advance, assign, unassignKind, setCreateTarget, startFight, flee
 };
 })(typeof window !== 'undefined' ? window : globalThis);

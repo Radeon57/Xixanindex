@@ -77,6 +77,7 @@ function rewardParts(i){
   if(r.unlock === 'gen') out.push('ปลดล็อก <b>เครื่องผลิตพลังเทวะ</b>');
   if(r.unlock === 'monuments') out.push('ปลดล็อก <b>อนุสรณ์</b>');
   if(r.unlock === 'rebirth') out.push('ปลดล็อก <b>การเกิดใหม่</b>');
+  if(r.unlock === 'pets') out.push('ปลดล็อก <b>คู่หูและดันเจี้ยน</b>');
   out.push('<b>' + D.GODS[i].gp + ' God Power</b> เมื่อเกิดใหม่');
   const monBefore = Math.min(D.MONSTERS.length, 2 + 2*i), monAfter = Math.min(D.MONSTERS.length, 2 + 2*(i+1));
   if(monAfter > monBefore) out.push('สนามรบใหม่ <b>'+(monAfter-monBefore)+' แห่ง</b>');
@@ -402,6 +403,116 @@ function renderRebirth(d, full){
   });
 }
 
+// ---------- pets: dungeons, pets, gear ----------
+const STAT_TH = { phys:'กาย', myst:'เวท', dp:'พลังเทวะที่ได้', battle:'ยุทธ์', speed:'ความเร็วฝึก', clone:'พลังร่างเงา' };
+let petView = 'dg';
+const dgDepthSel = {};
+function petUnlockText(p){
+  const u = p.unlock;
+  if(u.type === 'gods') return 'เข้าร่วมเมื่อสังหารเทพได้ ' + u.n + ' องค์ในรอบเดียว';
+  if(u.type === 'rebirths') return 'เข้าร่วมเมื่อเกิดใหม่ ' + u.n + ' ครั้ง';
+  return 'เข้าร่วมเมื่อได้ความสำเร็จ ' + u.n + ' อย่าง';
+}
+function buildPets(){
+  $('dgList').innerHTML = D.DUNGEONS.map((g,i)=>`<div class="cItem" data-i="${i}">
+      <div class="jobHead"><span class="jobName">${g.name}</span><span class="jobLv"></span></div>
+      <div class="cDesc">ได้${D.MATERIALS[g.mat]} + ค่าประสบการณ์ · รอบละ ${fmtTime(g.time)}</div>
+      <div class="cFoot">
+        <div class="ctl"><button class="ctlBtn" data-act="depth" data-i="${i}" data-d="-1" aria-label="ลดชั้น">−</button><b class="ctlN"></b><button class="ctlBtn plus" data-act="depth" data-i="${i}" data-d="1" aria-label="เพิ่มชั้น">+</button></div>
+        <button class="selBtn" data-act="dgGo" data-i="${i}">สำรวจ</button>
+      </div>
+      <div class="note dgInfo"></div>
+      <div class="lockTxt"></div>
+    </div>`).join('');
+  R.dg = [...document.querySelectorAll('#dgList .cItem')].map(el=>({ el, lv: el.querySelector('.jobLv'), n: el.querySelector('.ctlN'),
+    dec: el.querySelector('[data-d="-1"]'), inc: el.querySelector('[data-d="1"]'), go: el.querySelector('[data-act="dgGo"]'),
+    info: el.querySelector('.dgInfo'), lock: el.querySelector('.lockTxt') }));
+  $('petList').innerHTML = D.PETS.map(p=>`<div class="cItem" data-key="${p.key}">
+      <div class="jobHead"><span class="jobName"><span class="petDot" style="background:${p.color}"></span>${p.name}</span><span class="jobLv"></span></div>
+      <div class="bar thin"><i></i></div>
+      <div class="cDesc"></div>
+      <div class="cFoot"><span class="cCost"></span><button class="selBtn" data-act="team" data-key="${p.key}"></button></div>
+      <div class="lockTxt"></div>
+    </div>`).join('');
+  R.pet = [...document.querySelectorAll('#petList .cItem')].map(el=>({ el, lv: el.querySelector('.jobLv'), bar: el.querySelector('.bar>i'),
+    desc: el.querySelector('.cDesc'), cost: el.querySelector('.cCost'), btn: el.querySelector('.selBtn'), lock: el.querySelector('.lockTxt') }));
+  $('gearList').innerHTML = D.GEAR.map(g=>`<div class="cItem">
+      <div class="jobHead"><span class="jobName">${g.name}</span><span class="jobLv"></span></div>
+      <div class="cDesc"></div>
+      <div class="cFoot"><span class="cCost"></span><button class="selBtn" data-act="forge" data-key="${g.key}"></button></div>
+    </div>`).join('');
+  R.gear = [...document.querySelectorAll('#gearList .cItem')].map(el=>({ lv: el.querySelector('.jobLv'), desc: el.querySelector('.cDesc'),
+    cost: el.querySelector('.cCost'), btn: el.querySelector('.selBtn') }));
+}
+function matsText(){
+  return Object.keys(D.MATERIALS).map(k=>D.MATERIALS[k] + ' ' + fmt(s.meta.mats[k] || 0)).join(' · ');
+}
+function renderPets(d, full){
+  const m = s.meta, run = m.run;
+  setBar($('dgBar'), run ? run.t / D.DUNGEONS[run.i].time : 0);
+  if(!full) return;
+  ['dg','pets','gear'].forEach(v=>setShown($('pv-'+v), v === petView));
+  document.querySelectorAll('[data-act="petView"]').forEach(b=>setClass(b, 'on', b.dataset.v === petView));
+  const tp = G.teamPower(s);
+  if(petView === 'dg'){
+    setText($('dgCur'), run ? D.DUNGEONS[run.i].name + ' ชั้น ' + run.depth : '—');
+    setText($('dgNote'), run ? 'เหลือ ' + fmtTime(D.DUNGEONS[run.i].time - run.t) + ' · โอกาสชนะ ' + Math.round(G.winChance(s, run.i, run.depth)*100) + '%'
+      : (m.team.length ? 'เลือกดันเจี้ยนด้านล่างแล้วกดสำรวจ' : 'ยังไม่มีคู่หูในทีม — จัดทีมที่แท็บย่อย "คู่หู"'));
+    if($('dgAuto').checked !== m.dgAuto) $('dgAuto').checked = m.dgAuto;
+    setShown($('dgStop'), !!run);
+    setText($('teamPow'), 'พลังทีม ' + fmt(tp));
+    setText($('matLine'), matsText());
+    let lockedShown = false;
+    D.DUNGEONS.forEach((g,i)=>{
+      const ref = R.dg[i], open = G.dungeonUnlocked(s, i);
+      const show = open || !lockedShown;
+      if(!open) lockedShown = true;
+      setShown(ref.el, show);
+      if(!show) return;
+      setClass(ref.el, 'locked', !open);
+      if(!open){ setText(ref.lock, 'ปลดล็อกเมื่อผ่าน ' + D.DUNGEONS[i-1].name + ' ชั้น ' + D.DUNGEON_UNLOCK_DEPTH); return; }
+      const maxD = G.maxDepth(s, i);
+      let dep = Math.min(dgDepthSel[i] || maxD, maxD);
+      dgDepthSel[i] = dep;
+      const pow = G.dungeonPower(i, dep), wc = G.winChance(s, i, dep);
+      setText(ref.lv, 'ผ่านสูงสุดชั้น ' + (m.dgBest[g.key] || 0) + '/' + D.MAX_DEPTH);
+      setText(ref.n, 'ชั้น ' + dep);
+      setDisabled(ref.dec, dep <= 1); setDisabled(ref.inc, dep >= maxD);
+      setHTML(ref.info, 'พลังศัตรู ' + fmt(pow) + ' · <span class="' + (wc >= 1 ? 'pow safe' : wc >= 0.5 ? 'pow risky' : 'pow deadly') + '">โอกาสชนะ ' + Math.round(wc*100) + '%</span> · ชนะได้ ' + D.MATERIALS[g.mat] + ' ×' + (dep+1) + ', exp ' + fmt(g.exp*dep));
+      const cur = run && run.i === i && run.depth === dep;
+      setText(ref.go, cur ? 'กำลังสำรวจ' : 'สำรวจ');
+      setDisabled(ref.go, cur || !m.team.length);
+    });
+  } else if(petView === 'pets'){
+    setText($('teamLine'), 'ทีม ' + m.team.length + '/' + D.TEAM_SIZE + ' · พลังทีม ' + fmt(tp) + ' · คู่หูทุกตัวที่มีให้โบนัส แม้ไม่ได้อยู่ในทีม');
+    D.PETS.forEach((p,i)=>{
+      const ref = R.pet[i], st = m.pets[p.key];
+      setClass(ref.el, 'locked', !st);
+      if(!st){ setText(ref.lock, petUnlockText(p)); setText(ref.lv, ''); setShown(ref.bar.parentNode, false); setShown(ref.desc, false); setShown(ref.cost.parentNode, false); setShown(ref.lock, true); return; }
+      setShown(ref.bar.parentNode, true); setShown(ref.desc, true); setShown(ref.cost.parentNode, true, 'flex'); setShown(ref.lock, false);
+      const inTeam = m.team.includes(p.key);
+      setClass(ref.el, 'inTeam', inTeam);
+      setText(ref.lv, 'Lv.' + st.lv + (st.lv >= D.PET_MAX_LV ? ' (สูงสุด)' : ''));
+      const need = G.petExpNeed(st.lv);
+      setBar(ref.bar, st.lv >= D.PET_MAX_LV ? 1 : st.exp / need);
+      setText(ref.desc, 'พลัง ' + fmt(G.petPower(s, p.key)) + ' · โบนัส ' + STAT_TH[p.stat] + ' ×' + fmt(Math.pow(1+p.per, st.lv-1)) + ' (ทบ ' + Math.round(p.per*100) + '%/เลเวล)');
+      setText(ref.cost, st.lv >= D.PET_MAX_LV ? 'เลเวลสูงสุดแล้ว' : 'exp ' + fmt(st.exp) + '/' + fmt(need));
+      setText(ref.btn, inTeam ? 'ออกจากทีม' : 'เข้าทีม');
+      setDisabled(ref.btn, !inTeam && m.team.length >= D.TEAM_SIZE);
+    });
+  } else {
+    setText($('matLine2'), matsText());
+    D.GEAR.forEach((g,i)=>{
+      const ref = R.gear[i], L = m.gear[g.key] || 0, cost = G.forgeCost(L), have = m.mats[g.mat] || 0;
+      setText(ref.lv, L ? '+' + L : 'ยังไม่มี');
+      setText(ref.desc, g.desc + ' ต่อเลเวล (ทบต้น)' + (L ? ' · ตอนนี้ ×' + fmt(Math.pow(1+g.per, L)) : ''));
+      setHTML(ref.cost, '<span class="' + (have < cost ? 'short' : '') + '">' + D.MATERIALS[g.mat] + ' ' + fmt(have) + '/' + fmt(cost) + '</span> · โอกาสสำเร็จ ' + Math.round(G.forgeChance(L)*100) + '%');
+      setText(ref.btn, L ? 'ตีบวก' : 'สร้าง');
+      setDisabled(ref.btn, have < cost);
+    });
+  }
+}
+
 // ---------- HUD & tabs ----------
 function renderHud(d, full){
   setBar($('hudHpBar'), s.hp / d.maxHp);
@@ -413,9 +524,9 @@ function renderHud(d, full){
   setText($('hudDp'), fmt(s.dp));
   setText($('hudClones'), fmt(s.clones) + '/' + fmt(d.maxClones));
 }
-const TABS = ['train','skill','mon','create','temple','gods','rebirth','log'];
-const TAB_LOCK = { skill:['skills', ()=>G.skillsUnlocked(s)], temple:['gen', ()=>G.genUnlocked(s)], rebirth:['rebirth', ()=>G.rebirthUnlocked(s)] };
-const TAB_NAME = { skill:'วิชาเวท', temple:'เทวาลัย', rebirth:'การเกิดใหม่' };
+const TABS = ['train','skill','mon','create','temple','pets','gods','rebirth','log'];
+const TAB_LOCK = { skill:['skills', ()=>G.skillsUnlocked(s)], temple:['gen', ()=>G.genUnlocked(s)], rebirth:['rebirth', ()=>G.rebirthUnlocked(s)], pets:['pets', ()=>G.petsUnlocked(s)] };
+const TAB_NAME = { skill:'วิชาเวท', temple:'เทวาลัย', rebirth:'การเกิดใหม่', pets:'คู่หู' };
 function tabLocked(name){ const l = TAB_LOCK[name]; return !!l && !l[1](); }
 function renderTabs(d){
   if(s.gods < D.GODS.length && !s.fight && s.hp >= d.maxHp*0.999 && fightOutlook(d).win) alerts.gods = true;
@@ -448,6 +559,7 @@ function render(full){
   else if(activeTab === 'gods') renderGods(d, full);
   else if(activeTab === 'temple') renderTemple(d, full);
   else if(activeTab === 'rebirth') renderRebirth(d, full);
+  else if(activeTab === 'pets') renderPets(d, full);
   else if(activeTab === 'log' && logDirty) renderLog();
   if(full) renderTabs(d);
 }
@@ -473,6 +585,7 @@ function handleEvents(ev, quiet){
       if(r.unlock === 'create') alerts.create = true;
       if(r.unlock === 'gen' || r.unlock === 'monuments') alerts.temple = true;
       if(r.unlock === 'rebirth') alerts.rebirth = true;
+      if(r.unlock === 'pets') alerts.pets = true;
       alerts.mon = true;
       if(!quiet){ toast('⚔ สังหาร ' + god.name + ' สำเร็จ!'); celebrate(); }
       save();
@@ -481,6 +594,17 @@ function handleEvents(ev, quiet){
       addLog('🏆 ความสำเร็จ: ' + a.name + ' (ค่าสถานะทั้งหมด +' + Math.round(D.ACH_BONUS*100) + '%)');
       alerts.rebirth = G.rebirthUnlocked(s);
       if(!quiet) toast('🏆 ความสำเร็จ: ' + a.name);
+    } else if(e.type === 'pet'){
+      const p = G.petDef(e.key);
+      addLog('🐾 คู่หูใหม่: ' + p.name + ' เข้าร่วมทีม!');
+      alerts.pets = true;
+      if(!quiet) toast('🐾 คู่หูใหม่: ' + p.name);
+    } else if(e.type === 'dgDepth'){
+      addLog('ผ่าน ' + D.DUNGEONS[e.i].name + ' ชั้น ' + e.depth + ' เป็นครั้งแรก');
+    } else if(e.type === 'dgUnlock'){
+      addLog('ปลดล็อกดันเจี้ยนใหม่: ' + D.DUNGEONS[e.i].name);
+      alerts.pets = true;
+      if(!quiet) toast('ปลดล็อกดันเจี้ยน: ' + D.DUNGEONS[e.i].name);
     } else if(e.type === 'godLose'){
       addLog('พ่ายแพ้ต่อ ' + D.GODS[e.i].name + ' — ฝึกให้แข็งแกร่งขึ้นแล้วกลับมาใหม่');
       if(!quiet) toast('พ่ายแพ้... ต้องแข็งแกร่งกว่านี้');
@@ -595,6 +719,22 @@ function onMainClick(e){
   } else if(act === 'build'){
     const mo = D.MONUMENTS.find(x=>x.key===b.dataset.key);
     if(G.buildMonument(s, b.dataset.key)){ addLog('สร้าง ' + mo.name + ' เป็น Lv.' + s.mono[mo.key]); toast(mo.name + ' Lv.' + s.mono[mo.key]); }
+  } else if(act === 'petView'){
+    petView = b.dataset.v;
+  } else if(act === 'depth'){
+    const i = +b.dataset.i;
+    dgDepthSel[i] = Math.max(1, Math.min(G.maxDepth(s, i), (dgDepthSel[i] || G.maxDepth(s, i)) + (+b.dataset.d)));
+  } else if(act === 'dgGo'){
+    const i = +b.dataset.i;
+    if(G.startDungeon(s, i, dgDepthSel[i] || G.maxDepth(s, i))) addLog('ส่งทีมสำรวจ ' + D.DUNGEONS[i].name + ' ชั้น ' + s.meta.run.depth);
+  } else if(act === 'team'){
+    G.toggleTeam(s, b.dataset.key);
+  } else if(act === 'forge'){
+    const g = D.GEAR.find(x=>x.key===b.dataset.key), L = s.meta.gear[g.key] || 0;
+    const ok = G.forge(s, g.key);
+    if(ok === true){ addLog((L ? 'ตีบวก ' : 'สร้าง ') + g.name + ' สำเร็จ! +' + s.meta.gear[g.key]); toast(g.name + ' +' + s.meta.gear[g.key]); }
+    else if(ok === false){ addLog('ตีบวก ' + g.name + ' ล้มเหลว เสียวัตถุดิบ'); toast('ตีบวกล้มเหลว!'); }
+    save();
   } else if(act === 'upgrade'){
     const u = D.UPGRADES.find(x=>x.key===b.dataset.key);
     if(G.buyUpgrade(s, b.dataset.key)){ addLog('อัปเกรดถาวร ' + u.name + ' เป็น Lv.' + s.meta.up[u.key]); save(); }
@@ -676,7 +816,7 @@ function boot(saved){
   lastLost = s.clonesLost;
 
   buildJobs('train'); buildJobs('skill'); buildJobs('mon');
-  buildCreate(); buildGods(); buildTemple(); buildRebirth();
+  buildCreate(); buildGods(); buildTemple(); buildRebirth(); buildPets();
   renderSteps();
   drawPixelHero($('heroPixel'));
   fx = initFX($('fx'));
@@ -684,6 +824,8 @@ function boot(saved){
   $('main').addEventListener('click', onMainClick);
   $('fightBtn').addEventListener('click', onFight);
   $('genBtn').addEventListener('click', onGen);
+  $('dgStop').addEventListener('click', ()=>{ G.stopDungeon(s); addLog('หยุดสำรวจดันเจี้ยน'); render(true); });
+  $('dgAuto').addEventListener('change', e=>{ s.meta.dgAuto = e.target.checked; render(true); });
   $('rbBtn').addEventListener('click', onRebirth);
   $('logBtn').addEventListener('click', ()=>selectTab(activeTab === 'log' ? 'train' : 'log'));
   $('autoClone').addEventListener('change', e=>{ s.create.autoClone = e.target.checked; render(true); });

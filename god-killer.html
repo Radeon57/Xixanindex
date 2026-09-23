@@ -56,8 +56,8 @@ body::before{
 .chip b{margin-left:auto;color:var(--text);white-space:nowrap}
 
 /* tabs */
-.tabs{display:flex;gap:3px;margin:0 0 8px}
-.tab{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 0;border-radius:10px;border:1px solid var(--border);background:var(--panel2);color:var(--sub);font-size:.6rem;white-space:nowrap;cursor:pointer;position:relative}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:0 0 8px}
+.tab{min-width:0;display:flex;align-items:center;justify-content:center;gap:4px;padding:6px 2px;border-radius:10px;border:1px solid var(--border);background:var(--panel2);color:var(--sub);font-size:.68rem;white-space:nowrap;cursor:pointer;position:relative}
 .tab.active{background:var(--violet);color:#fff;border-color:var(--gold)}
 .tab.locked{opacity:.45}
 .tab .dot{position:absolute;top:3px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--gold);display:none}
@@ -160,6 +160,14 @@ section.panel{display:none}
 .ach .bar{margin-top:4px;height:5px}
 .logBtn{background:transparent;border:1px solid var(--border);color:var(--sub);border-radius:8px;padding:3px 6px;margin-left:6px;cursor:pointer;line-height:0}
 .logBtn.on{border-color:var(--gold);color:var(--gold)}
+.subSeg{margin-bottom:8px}
+.subSeg button{flex:1;font-size:.74rem;padding:7px 4px}
+.petDot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:0}
+.cItem .bar.thin{margin-top:5px}
+.cItem.locked .dgInfo,.cItem.locked .jobLv{display:none}
+.cItem.inTeam{background:rgba(232,199,111,.07);border-radius:8px}
+.cItem .ctl{margin-right:auto}
+.cItem .ctlN{min-width:44px;font-size:.74rem}
 .doneBox{display:none;text-align:center;font-size:.8rem;color:var(--gold);padding:14px 6px;line-height:1.7}
 
 .logBox{font-size:.72rem;color:var(--sub);line-height:1.5}
@@ -228,6 +236,11 @@ button:focus-visible,.tab:focus-visible,.toggle input:focus-visible{outline:2px 
       <path d="M19 12a7 7 0 1 1-2.1-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
       <path d="M17.5 3v4.2h-4.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
     </symbol>
+    <symbol id="icon-paw" viewBox="0 0 24 24">
+      <circle cx="12" cy="15" r="4.5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <circle cx="6" cy="9" r="2" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="10" cy="5.5" r="2" fill="none" stroke="currentColor" stroke-width="1.4"/>
+      <circle cx="14" cy="5.5" r="2" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="18" cy="9" r="2" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    </symbol>
     <symbol id="icon-lock" viewBox="0 0 24 24">
       <rect x="5" y="11" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/>
       <path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="1.6"/>
@@ -275,6 +288,7 @@ button:focus-visible,.tab:focus-visible,.toggle input:focus-visible{outline:2px 
     <div class="tab" data-tab="mon" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-monster"></use></svg>สนามรบ</div>
     <div class="tab" data-tab="create" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-spark"></use></svg>สร้าง</div>
     <div class="tab" data-tab="temple" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-temple"></use></svg>เทวาลัย</div>
+    <div class="tab" data-tab="pets" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-paw"></use></svg>คู่หู</div>
     <div class="tab" data-tab="gods" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-crown"></use></svg>ท้าเทพ</div>
     <div class="tab" data-tab="rebirth" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-cycle"></use></svg>เกิดใหม่</div>
   </nav>
@@ -346,6 +360,31 @@ button:focus-visible,.tab:focus-visible,.toggle input:focus-visible{outline:2px 
       <div id="upList"></div>
       <div class="secTitle">ความสำเร็จ <span class="secSub" id="achSum"></span></div>
       <div id="achList" class="achGrid"></div>
+    </section>
+
+    <section id="tab-pets" class="panel">
+      <div class="seg subSeg" role="group" aria-label="มุมมอง">
+        <button data-act="petView" data-v="dg">ดันเจี้ยน</button><button data-act="petView" data-v="pets">คู่หู</button><button data-act="petView" data-v="gear">อุปกรณ์</button>
+      </div>
+      <div id="pv-dg">
+        <div class="curCard">
+          <div class="row"><span>กำลังสำรวจ</span><b id="dgCur">—</b></div>
+          <div class="bar gold"><i id="dgBar"></i></div>
+          <div class="note" id="dgNote"></div>
+          <label class="toggle"><input type="checkbox" id="dgAuto"> สำรวจซ้ำอัตโนมัติเมื่อจบรอบ</label>
+          <button class="b" id="dgStop" style="margin-top:8px">หยุดสำรวจ</button>
+        </div>
+        <div class="summary"><span id="teamPow"></span><span id="matLine"></span></div>
+        <div id="dgList"></div>
+      </div>
+      <div id="pv-pets">
+        <div class="note" id="teamLine" style="margin-bottom:4px"></div>
+        <div id="petList"></div>
+      </div>
+      <div id="pv-gear">
+        <div class="summary"><span>วัตถุดิบ</span><span id="matLine2"></span></div>
+        <div id="gearList"></div>
+      </div>
     </section>
 
     <section id="tab-log" class="panel logBox"></section>
