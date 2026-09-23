@@ -1126,16 +1126,54 @@ function load(){
   s = G.sanitize(parsed);
   return true;
 }
+let welcomeHTML = '';   // built during the load-time catch-up, shown once the page is built
 function catchUp(){
-  const sec = Math.min((Date.now() - s.lastSave)/1000, G.MAX_OFFLINE_SEC);
+  const raw = (Date.now() - s.lastSave)/1000;
+  const sec = Math.min(raw, G.MAX_OFFLINE_SEC);
   if(!(sec >= 10)) return;
-  const d0 = G.derive(s), dp0 = s.dpTotal, lost0 = s.clonesLost;
+  const d0 = G.derive(s), dp0 = s.dpTotal, lost0 = s.clonesLost, mp0 = s.meta.mp;
   const ev = [];
   G.advance(s, sec, ev);
+  // count what happened before handleEvents empties the list
+  const gods = [], dg = { runs:0, wins:0 }; let ach = 0, ubWins = 0;
+  for(const e of ev){
+    if(e.type === 'godWin') gods.push(D.GODS[e.i].name);
+    else if(e.type === 'dgRun'){ dg.runs++; if(e.win) dg.wins++; }
+    else if(e.type === 'ach') ach++;
+    else if(e.type === 'ubWin') ubWins++;
+  }
   handleEvents(ev, true);
   const d1 = G.derive(s);
   addLog('ขณะไม่อยู่ ' + fmtTime(sec) + ': พลังเทวะ +' + fmt(s.dpTotal - dp0) + ' · กาย +' + fmt(d1.phys - d0.phys) + ' · เวท +' + fmt(d1.myst - d0.myst) +
     (s.clonesLost > lost0 ? ' · ร่างเงาตาย ' + fmt(s.clonesLost - lost0) : ''));
+  if(sec < 60) return;
+  const rows = [
+    ['พลังเทวะ', '+' + fmt(s.dpTotal - dp0)],
+    ['กาย', '+' + fmt(d1.phys - d0.phys)],
+    ['เวท', '+' + fmt(d1.myst - d0.myst)],
+    ['โจมตี', fmt(d0.atk) + ' → ' + fmt(d1.atk)]
+  ];
+  if(gods.length) rows.push(['สังหารเทพ', gods.length + ' องค์: ' + gods.join(', ')]);
+  if(s.clonesLost > lost0) rows.push(['ร่างเงาตาย', fmt(s.clonesLost - lost0) + ' ร่าง']);
+  if(dg.runs) rows.push(['ดันเจี้ยน', dg.runs + ' รอบ (ชนะ ' + dg.wins + ')']);
+  if(ubWins) rows.push(['สิ่งมีชีวิตสูงสุด', 'ชนะ ' + ubWins + ' ครั้ง · Might +' + fmt(s.meta.mp - mp0)]);
+  if(ach) rows.push(['ความสำเร็จใหม่', ach + ' อย่าง']);
+  const esc = t => String(t).replace(/[&<>]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' })[c]);
+  welcomeHTML = '<div class="wbCard" role="dialog" aria-label="สรุปขณะไม่อยู่"><div class="wbTitle">ยินดีต้อนรับกลับ!</div>' +
+    '<div class="note">ไม่อยู่ ' + fmtTime(sec) + (raw > G.MAX_OFFLINE_SEC ? ' (นับสูงสุด ' + fmtTime(G.MAX_OFFLINE_SEC) + ')' : '') + '</div>' +
+    rows.map(r=>'<div class="wbRow"><span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b></div>').join('') +
+    '<button class="b bPrimary" id="wbClose" style="margin-top:10px">เล่นต่อ</button></div>';
+}
+function showWelcome(){
+  if(!welcomeHTML) return;
+  const box = document.createElement('div');
+  box.id = 'welcome'; box.className = 'wbWrap';
+  box.innerHTML = welcomeHTML;
+  welcomeHTML = '';
+  document.body.appendChild(box);
+  const close = ()=>box.remove();
+  box.addEventListener('click', e=>{ if(e.target === box || e.target.id === 'wbClose') close(); });
+  $('wbClose').focus();
 }
 
 // ---------- main loop ----------
@@ -1190,6 +1228,7 @@ function boot(saved){
   if(!s.log.length) addLog('เริ่มต้นเส้นทางสังหารเทพ: ร่างเงาจะถูกสร้างขึ้นเองทีละร่าง ส่งไปฝึกกายและสนามรบ แล้วท้าเทพสายฟ้าเมื่อคาดการณ์ว่าชนะ');
   if(!storageOk) addLog('เบราว์เซอร์นี้ไม่อนุญาตให้บันทึกเกม — ความคืบหน้าจะหายเมื่อปิดหน้า');
   selectTab('train');
+  showWelcome();
 
   lastTickAt = Date.now();
   requestAnimationFrame(loop);
