@@ -581,7 +581,7 @@ function renderRebirth(d, full){
   D.UPGRADES.forEach((u,i)=>{
     const ref = R.up[i], L = m.up[u.key] || 0, c = G.upgradeCost(s, u);
     setText(ref.lv, 'Lv.' + L);
-    setText(ref.desc, u.desc + ' ต่อเลเวล (ทบต้น)' + (L ? ' · ตอนนี้ ' + bonusText(u, L, true) : ''));
+    setText(ref.desc, u.desc + ' ต่อเลเวล' + (u.add ? '' : ' (ทบต้น)') + (L ? ' · ตอนนี้ ' + bonusText(u, L, true) : ''));
     setHTML(ref.cost, '<span class="' + (m.gp < c ? 'short' : '') + '">' + c + ' God Power</span>');
     setDisabled(ref.btn, m.gp < c);
   });
