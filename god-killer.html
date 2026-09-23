@@ -2,8 +2,9 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>God Killer</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%230b0a17'/%3E%3Cpath d='M13 3 5 14h6l-1 7 8-11h-6z' fill='%23e8c76f'/%3E%3C/svg%3E">
 <style>
 :root{
   --bg:#0b0a17; --panel:#161428; --panel2:#120f20; --border:#2e2a4a;
@@ -29,7 +30,7 @@ body::before{
 #bgScene svg{position:absolute;bottom:0;left:0;width:100%;height:42%;opacity:.9}
 .star{position:absolute;width:2px;height:2px;border-radius:50%;background:#f2e6d8;opacity:.7;animation:twinkle 3.4s ease-in-out infinite}
 @keyframes twinkle{0%,100%{opacity:.15;transform:scale(1)}50%{opacity:1;transform:scale(1.7)}}
-#app{width:100%;max-width:480px;height:100dvh;display:flex;flex-direction:column;padding:10px 12px;position:relative;overflow:hidden}
+#app{width:100%;max-width:480px;height:100%;display:flex;flex-direction:column;padding:12px 16px;position:relative;overflow:hidden}
 @keyframes flashPulse{0%{box-shadow:inset 0 0 0 rgba(232,199,111,0)}30%{box-shadow:inset 0 0 46px rgba(232,199,111,.32)}100%{box-shadow:inset 0 0 0 rgba(232,199,111,0)}}
 @keyframes flashPulseStrong{0%{box-shadow:inset 0 0 0 rgba(232,199,111,0)}25%{box-shadow:inset 0 0 80px rgba(232,199,111,.5)}100%{box-shadow:inset 0 0 0 rgba(232,199,111,0)}}
 .burstFlash{animation:flashPulse .5s ease}
@@ -38,7 +39,7 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
 .sub{text-align:center;color:var(--sub);font-size:.72rem;margin-bottom:8px}
 .panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:10px 12px;margin-bottom:8px}
 .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.statline{display:flex;justify-content:space-between;font-size:.82rem;margin:3px 0;color:var(--sub)}
+.statline{display:flex;justify-content:space-between;gap:6px;font-size:.82rem;margin:3px 0;color:var(--sub)}
 .statline span{display:inline-flex;align-items:center;gap:4px}
 .statline b{color:var(--text)}
 .bar{height:12px;border-radius:6px;background:var(--bar);overflow:hidden;border:1px solid var(--border);position:relative}
@@ -46,7 +47,8 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
 .qbar{position:relative;overflow:hidden}
 .qbar::after{content:'';position:absolute;top:0;left:-60%;width:42%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.28),transparent);animation:qshine 2.8s ease-in-out infinite;pointer-events:none}
 @keyframes qshine{0%{left:-60%}55%{left:165%}100%{left:165%}}
-#main{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;justify-content:center;gap:2px;padding-bottom:6px}
+#main{flex:1 1 auto;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:2px;padding-bottom:6px}
+#main::before,#main::after{content:'';flex:1 0 0}
 .realmRow{display:flex;align-items:center;justify-content:center;gap:8px;margin:4px 0 8px}
 .realmName{font-size:1.05rem;color:var(--gold);text-align:center;font-weight:bold}
 #trainZone{display:flex;flex-direction:column;align-items:center;padding:14px 0 6px}
@@ -77,8 +79,9 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
 .allocItem:last-child{border-bottom:none}
 .allocName{font-size:.85rem;display:flex;align-items:center;gap:5px}
 .allocDesc{font-size:.68rem;color:var(--sub)}
-.allocBtn{display:inline-flex;align-items:center;gap:4px;padding:7px 10px;border-radius:8px;border:1px solid var(--gold);background:var(--panel2);color:var(--gold);font-size:.75rem;white-space:nowrap}
-.allocBtn:disabled{opacity:.4;color:var(--sub);border-color:var(--border)}
+.allocBtn{display:inline-flex;align-items:center;gap:4px;padding:7px 10px;border-radius:8px;border:1px solid var(--gold);background:var(--panel2);color:var(--gold);font-size:.75rem;font-family:inherit;white-space:nowrap;cursor:pointer}
+.allocBtn:disabled{opacity:.4;color:var(--sub);border-color:var(--border);cursor:default}
+.b:focus-visible,.tab:focus-visible,.allocBtn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .ppHead{text-align:center;font-size:.85rem;color:var(--pp);padding:2px 0 8px;border-bottom:1px solid var(--border);margin-bottom:6px;line-height:1.5}
 .gearGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .gearCard{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:8px;text-align:center}
@@ -88,7 +91,8 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
 .compGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .compCard{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:6px;text-align:center;opacity:.4}
 .compCard.owned{opacity:1;border-color:var(--gold)}
-.logBox{font-size:.72rem;color:var(--sub);max-height:70px;overflow-y:auto;border-top:1px solid var(--border);padding-top:6px}
+.compBonus{font-size:.58rem;color:var(--gold);margin-top:2px}
+.logBox{font-size:.72rem;color:var(--sub);max-height:min(55vh,460px);overflow-y:auto;border-top:1px solid var(--border);padding-top:6px}
 .logBox div{margin:1px 0}
 .ppTxt{color:var(--pp)}
 .gemTxt{color:var(--gem)}
@@ -305,7 +309,7 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
     <div id="tab-log" class="panel logBox" style="display:none"></div>
   </div>
 </div>
-<div id="toast"></div>
+<div id="toast" role="status" aria-live="polite"></div>
 
 <script>
 (function(){
@@ -322,25 +326,30 @@ const GODS = [
 const REALM_BASE = 50;
 const REALM_GROWTH = 1.55;
 const PP_INTERVAL_SEC = 6;
+const BATTLE_INTERVAL_SEC = 4;
+const MAX_CATCHUP_SEC = 8*3600;
+const MAX_BATTLE_STEPS = 900;
+const RECOVER_AT = 0.6;
 const SAVE_KEY = 'godKillerSave';
 
-let state = {
+const defaultState = () => ({
   qi:0, pp:0, gems:0,
   realm:0,
   autoBase:2,
   upgrades:{ fist:0, root:0, sword:0, manual:0, disciple:0 },
   godsSlain:0,
   equipment:{ weapon:null, armor:null, ring:null, amulet:null },
-  ore:0, keys:0, companions:[], stage:0, stageWins:0, chestTier:0, hp:40,
+  ore:0, keys:0, companions:[], stage:0, stageWins:0, chestTier:0, hp:40, downed:false,
   lastSave: Date.now(),
   totalBreakthroughs:0,
   log:[]
-};
+});
+let state = defaultState();
 
 const UPG = {
   fist:    { name:"ปลุกพลังในตน",    desc:"+2 DP/วิ (คงที่) ต่อระดับ",                          base:2, grow:1.35, icon:"icon-fist" },
   root:    { name:"แท่นบูชาเทวะ",    desc:"+8% พลัง DP/วิ ทั้งหมด ต่อระดับ",                    base:4, grow:1.45, icon:"icon-bolt" },
-  sword:   { name:"พรสวรรค์",        desc:"-2% พลังที่ต้องใช้ทลายขีดจำกัด ต่อระดับ (สูงสุด 60%)", base:3, grow:1.40, icon:"icon-sword" },
+  sword:   { name:"พรสวรรค์",        desc:"-2% พลังที่ต้องใช้ทลายขีดจำกัด ต่อระดับ (สูงสุด 60%)", base:3, grow:1.40, icon:"icon-sword", max:30 },
   manual:  { name:"คัมภีร์ต้องห้าม",  desc:"+1 แต้มพลังทุกรอบ 6 วิ ต่อระดับ",                    base:5, grow:1.50, icon:"icon-scroll" },
   disciple:{ name:"ผู้ติดตามศรัทธา",  desc:"+20% เศษแก่นเทพ และ +1 แต้มพลังต่อครั้งทลายขีดจำกัด",  base:4, grow:1.40, icon:"icon-disciple" }
 };
@@ -357,6 +366,7 @@ const SLOTS = {
   ring:   { name:'แหวน', icon:'icon-ring', statLabel:'% เศษโลหะที่ได้', base:5 },
   amulet: { name:'สร้อย', icon:'icon-amulet', statLabel:'% โอกาสได้กุญแจ', base:4 }
 };
+const BONUS_LABEL = { cp:'พลังต่อสู้', key:'โอกาสกุญแจ', hp:'HP สูงสุด', dp:'DP/วิ', ore:'เศษโลหะ' };
 const COMPANIONS = [
   { id:'crane', name:'กระเรียนหยก', bonus:'cp', amt:0.05 },
   { id:'fox', name:'จิ้งจอกเก้าหาง', bonus:'key', amt:0.10 },
@@ -368,6 +378,9 @@ const COMPANIONS = [
 
 let fx = null;
 let ppAccumSec = 0;
+let battleAccSec = 0;
+let lastTickAt = Date.now();
+let storageOk = true;
 
 const HERO_PALETTE = {
   hair:'#241a3d', skin:'#e8c49a', eye:'#1a1420',
@@ -430,6 +443,7 @@ function autoPower(){
 function ppPerTick(){ return 1 + state.upgrades.manual; }
 function gemMult(){ return 1 + state.upgrades.disciple*0.2; }
 function upgCost(key){ const u = UPG[key]; return Math.ceil(u.base * Math.pow(u.grow, state.upgrades[key])); }
+function upgMaxed(key){ const u = UPG[key]; return u.max != null && state.upgrades[key] >= u.max; }
 
 function itemPower(item){
   if(!item) return 0;
@@ -441,7 +455,7 @@ function combatPower(){
   const cpMult = 1 + companionBonus('cp') + itemPower(state.equipment.armor)/100;
   return Math.max(1, Math.round(cpBase * cpMult));
 }
-function monsterPower(stage){ return Math.round(12 + stage*7); }
+function monsterPower(stage){ return Math.round(8 + stage*7); }
 function maxHP(){ return Math.round((40 + state.realm*6) * (1 + companionBonus('hp'))); }
 function stageLabel(stage){ return 'ด่านที่ '+(stage+1); }
 function oreGainMult(){ return (1 + itemPower(state.equipment.ring)/100) * (1 + companionBonus('ore')); }
@@ -460,12 +474,14 @@ function rollRarity(tier){
 }
 
 function fmt(n){
+  if(!Number.isFinite(n)) return '0';
   if(n < 1000) return Math.floor(n).toString();
   const units = ["K","M","B","T","Qa","Qi"];
   let u = -1;
   while(n >= 1000 && u < units.length-1){ n/=1000; u++; }
   return n.toFixed(2) + units[u];
 }
+function pct(x){ return Math.round(x*100)+'%'; }
 
 function sigilSVG(i){
   const tier = i>=10 ? 3 : i>=7 ? 2 : i>=4 ? 1 : 0;
@@ -503,6 +519,8 @@ function sigilSVG(i){
   return `<svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true">${inner}</svg>`;
 }
 
+const $ = id => document.getElementById(id);
+
 function addLog(msg){
   state.log.unshift("["+new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})+"] "+msg);
   if(state.log.length>40) state.log.length=40;
@@ -510,7 +528,7 @@ function addLog(msg){
 }
 
 function toast(msg){
-  const t=document.getElementById('toast');
+  const t = $('toast');
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toast._h);
@@ -518,58 +536,63 @@ function toast(msg){
 }
 
 function flashScreen(strong){
-  const app = document.getElementById('app');
+  const app = $('app');
   app.classList.remove('burstFlash','burstFlashStrong');
   void app.offsetWidth;
   app.classList.add(strong ? 'burstFlashStrong' : 'burstFlash');
 }
 
+let lastSigilRealm = -1;
 function render(){
   const need = realmThreshold(state.realm);
-  document.getElementById('realmName').textContent = realmName(state.realm);
-  document.getElementById('realmSigil').innerHTML = sigilSVG(state.realm);
-  document.getElementById('qiTxt').textContent = fmt(state.qi)+" / "+fmt(need);
-  document.getElementById('qiBar').style.width = Math.min(100, state.qi/need*100)+"%";
-  document.getElementById('ppTxt').textContent = fmt(state.pp);
-  document.getElementById('ppHeadTxt').textContent = fmt(state.pp);
-  document.getElementById('gemTxt').textContent = fmt(state.gems);
-  document.getElementById('autoPow').textContent = fmt(autoPower());
-  const btBtn = document.getElementById('breakthroughBtn');
+  $('realmName').textContent = realmName(state.realm);
+  if(state.realm !== lastSigilRealm){ $('realmSigil').innerHTML = sigilSVG(state.realm); lastSigilRealm = state.realm; }
+  $('qiTxt').textContent = fmt(state.qi)+" / "+fmt(need);
+  $('qiBar').style.width = Math.min(100, state.qi/need*100)+"%";
+  $('ppTxt').textContent = fmt(state.pp);
+  $('ppHeadTxt').textContent = fmt(state.pp);
+  $('gemTxt').textContent = fmt(state.gems);
+  $('autoPow').textContent = fmt(autoPower());
   const ready = state.qi >= need;
-  btBtn.disabled = !ready;
-  document.getElementById('btLabel').textContent = ready ? "突破 ทลายขีดจำกัด!" : "突破 ทลายขีดจำกัด (ต้องการ DP เพิ่ม)";
+  $('breakthroughBtn').disabled = !ready;
+  $('btLabel').textContent = ready ? "突破 ทลายขีดจำกัด!" : "突破 ทลายขีดจำกัด (ต้องการ DP เพิ่ม)";
   renderAlloc();
   renderBattle();
   renderGear();
 }
 
-function renderAlloc(){
-  const box = document.getElementById('allocList');
-  box.innerHTML = '';
-  Object.keys(UPG).forEach(key=>{
+function buildAlloc(){
+  const box = $('allocList');
+  box.innerHTML = Object.keys(UPG).map(key=>{
     const u = UPG[key];
-    const cost = upgCost(key);
-    const lvl = state.upgrades[key];
-    const div = document.createElement('div');
-    div.className = 'allocItem';
-    div.innerHTML = `
+    return `<div class="allocItem">
       <div>
-        <div class="allocName"><svg class="ic" width="15" height="15"><use href="#${u.icon}"></use></svg>${u.name} <span style="color:var(--sub)">Lv.${lvl}</span></div>
+        <div class="allocName"><svg class="ic" width="15" height="15"><use href="#${u.icon}"></use></svg>${u.name} <span class="lvl" style="color:var(--sub)"></span></div>
         <div class="allocDesc">${u.desc}</div>
       </div>
-      <button class="allocBtn" ${state.pp < cost ? 'disabled' : ''}><svg class="ic" width="12" height="12"><use href="#icon-spark"></use></svg>${cost} แต้ม</button>
-    `;
-    div.querySelector('button').addEventListener('click', ()=>allocate(key));
-    box.appendChild(div);
+      <button class="allocBtn" data-key="${key}"><svg class="ic" width="12" height="12"><use href="#icon-spark"></use></svg><span class="cost"></span></button>
+    </div>`;
+  }).join('');
+}
+function renderAlloc(){
+  document.querySelectorAll('#allocList button[data-key]').forEach(btn=>{
+    const key = btn.dataset.key;
+    const maxed = upgMaxed(key);
+    const cost = upgCost(key);
+    btn.closest('.allocItem').querySelector('.lvl').textContent = 'Lv.'+state.upgrades[key];
+    btn.querySelector('.cost').textContent = maxed ? 'สูงสุดแล้ว' : cost+' แต้ม';
+    btn.disabled = maxed || state.pp < cost;
   });
 }
 
 function renderLog(){
-  const box = document.getElementById('tab-log');
-  box.innerHTML = state.log.map(l=>`<div>${l}</div>`).join('') || '<div>ยังไม่มีบันทึก</div>';
+  const box = $('tab-log');
+  if(!state.log.length){ box.textContent = 'ยังไม่มีบันทึก'; return; }
+  box.replaceChildren(...state.log.map(l=>{ const d = document.createElement('div'); d.textContent = l; return d; }));
 }
 
 function allocate(key){
+  if(upgMaxed(key)) return;
   const cost = upgCost(key);
   if(state.pp < cost) return;
   state.pp -= cost;
@@ -580,28 +603,27 @@ function allocate(key){
 }
 
 function renderBattle(){
-  document.getElementById('cpTxt').textContent = fmt(combatPower());
+  $('cpTxt').textContent = fmt(combatPower());
   const mh = maxHP();
-  document.getElementById('hpTxt').textContent = fmt(state.hp)+' / '+fmt(mh);
-  document.getElementById('hpBar').style.width = Math.max(0, state.hp/mh*100)+'%';
-  document.getElementById('downedNote').style.display = state.hp<=0 ? 'block' : 'none';
-  document.getElementById('stageName').textContent = stageLabel(state.stage);
-  document.getElementById('monsterPow').textContent = fmt(monsterPower(state.stage));
-  document.getElementById('battleBar').style.width = (state.stageWins/5*100)+'%';
-  document.getElementById('stageWins').textContent = state.stageWins;
-  document.getElementById('oreTxt').textContent = fmt(state.ore);
-  document.getElementById('keyTxt').textContent = fmt(state.keys);
+  $('hpTxt').textContent = fmt(state.hp)+' / '+fmt(mh);
+  $('hpBar').style.width = Math.max(0, Math.min(100, state.hp/mh*100))+'%';
+  $('downedNote').style.display = state.downed ? 'block' : 'none';
+  $('stageName').textContent = stageLabel(state.stage);
+  $('monsterPow').textContent = fmt(monsterPower(state.stage));
+  $('battleBar').style.width = (state.stageWins/5*100)+'%';
+  $('stageWins').textContent = state.stageWins;
+  $('oreTxt').textContent = fmt(state.ore);
+  $('keyTxt').textContent = fmt(state.keys);
 }
 
-function battleTick(){
+function battleStep(quiet){
   const mh = maxHP();
-  if(state.hp <= 0){
+  if(state.downed){
     state.hp = Math.min(mh, state.hp + mh*0.12);
-    if(state.hp > 0){
-      addLog('ฟื้นตัวจากอาการบาดเจ็บ กลับเข้าสู่สนามรบ!');
-      toast('ฟื้นตัวแล้ว!');
+    if(state.hp >= mh*RECOVER_AT){
+      state.downed = false;
+      if(!quiet){ addLog('ฟื้นตัวจากอาการบาดเจ็บ กลับเข้าสู่สนามรบ!'); toast('ฟื้นตัวแล้ว!'); }
     }
-    renderBattle();
     return;
   }
   state.hp = Math.min(mh, state.hp + mh*0.05);
@@ -612,77 +634,78 @@ function battleTick(){
   if(cp >= mp){
     state.ore += Math.round(oreBase * oreGainMult() * 10) / 10;
     state.stageWins++;
-    state.hp = Math.max(0, state.hp - mp*0.15);
+    state.hp = Math.max(0, state.hp - mp*0.2*Math.min(1, mp/cp));
     if(Math.random() < 0.18 * keyLuckMult()) state.keys++;
     if(state.stageWins >= 5){
       state.stageWins = 0;
       const cleared = state.stage;
       state.stage++;
       addLog(`ปราบ ${stageLabel(cleared)} สำเร็จ ก้าวสู่ ${stageLabel(state.stage)}`);
-      toast('⚔ ผ่าน '+stageLabel(cleared)+'!');
+      if(!quiet) toast('⚔ ผ่าน '+stageLabel(cleared)+'!');
     }
   } else {
     state.ore += Math.round(oreBase * 0.4 * 10) / 10;
     state.hp = Math.max(0, state.hp - mp*0.4);
   }
   if(state.hp <= 0){
-    addLog('บาดเจ็บหนักเกินกว่าจะสู้ต่อ ต้องล่าถอยพักฟื้น!');
-    toast('⚠ ต้องล่าถอย!');
+    state.hp = 0;
+    state.downed = true;
+    if(!quiet){ addLog('บาดเจ็บหนักเกินกว่าจะสู้ต่อ ต้องล่าถอยพักฟื้น!'); toast('⚠ ต้องล่าถอย!'); }
   }
-  renderBattle();
 }
 
+const gearSig = {};
+let compSig = null;
+function gearCardHTML(slot){
+  const s = SLOTS[slot];
+  const item = state.equipment[slot];
+  if(!item){
+    return `<svg class="ic" width="20" height="20" style="color:var(--sub)"><use href="#${s.icon}"></use></svg>
+      <div class="gearName">${s.name}</div>
+      <div class="gearStat" style="margin-top:6px">ยังไม่มี — เปิดหีบเพื่อรับ</div>`;
+  }
+  const r = RARITIES[item.rarity];
+  return `<svg class="ic" width="20" height="20" style="color:${r.color}"><use href="#${s.icon}"></use></svg>
+    <div class="gearName">${s.name}</div>
+    <div class="gearRarity" style="color:${r.color}">${r.name} +${item.level}</div>
+    <div class="gearStat">${s.statLabel}: ${fmt(itemPower(item))}</div>
+    <button class="allocBtn" data-slot="${slot}" style="margin-top:6px;width:100%;justify-content:center">
+      <svg class="ic" width="11" height="11"><use href="#icon-ore"></use></svg>${fmt(forgeCost(item))} (${Math.round(forgeChance(item)*100)}%)
+    </button>`;
+}
 function renderGear(){
-  document.getElementById('keyTxt2').textContent = fmt(state.keys);
-  document.getElementById('chestTierTxt').textContent = state.chestTier+1;
-  document.getElementById('openChestBtn').disabled = state.keys < 1;
+  $('keyTxt2').textContent = fmt(state.keys);
+  $('chestTierTxt').textContent = state.chestTier+1;
+  $('openChestBtn').disabled = state.keys < 1;
   const upCost = chestUpgradeCost();
-  document.getElementById('chestUpCost').textContent = fmt(upCost);
-  document.getElementById('upgradeChestBtn').disabled = state.gems < upCost;
+  $('chestUpCost').textContent = fmt(upCost);
+  $('upgradeChestBtn').disabled = state.gems < upCost;
 
-  const grid = document.getElementById('gearGrid');
-  grid.innerHTML = '';
+  const grid = $('gearGrid');
+  if(!grid.children.length){
+    grid.innerHTML = Object.keys(SLOTS).map(slot=>`<div class="gearCard" data-card="${slot}"></div>`).join('');
+  }
   Object.keys(SLOTS).forEach(slot=>{
-    const s = SLOTS[slot];
     const item = state.equipment[slot];
-    const div = document.createElement('div');
-    div.className = 'gearCard';
-    if(item){
-      const r = RARITIES[item.rarity];
-      const cost = forgeCost(item);
-      const chance = Math.round(forgeChance(item)*100);
-      div.innerHTML = `
-        <svg class="ic" width="20" height="20" style="color:${r.color}"><use href="#${s.icon}"></use></svg>
-        <div class="gearName">${s.name}</div>
-        <div class="gearRarity" style="color:${r.color}">${r.name} +${item.level}</div>
-        <div class="gearStat">${s.statLabel}: ${fmt(itemPower(item))}</div>
-        <button class="allocBtn" style="margin-top:6px;width:100%;justify-content:center" ${state.ore<cost?'disabled':''}>
-          <svg class="ic" width="11" height="11"><use href="#icon-ore"></use></svg>${fmt(cost)} (${chance}%)
-        </button>
-      `;
-      div.querySelector('button').addEventListener('click', ()=>forgeItem(slot));
-    } else {
-      div.innerHTML = `
-        <svg class="ic" width="20" height="20" style="color:var(--sub)"><use href="#${s.icon}"></use></svg>
-        <div class="gearName">${s.name}</div>
-        <div class="gearStat" style="margin-top:6px">ยังไม่มี — เปิดหีบเพื่อรับ</div>
-      `;
-    }
-    grid.appendChild(div);
+    const sig = item ? item.rarity+'|'+item.level : 'none';
+    const card = grid.querySelector(`[data-card="${slot}"]`);
+    if(gearSig[slot] !== sig){ card.innerHTML = gearCardHTML(slot); gearSig[slot] = sig; }
+    const btn = card.querySelector('button');
+    if(btn) btn.disabled = state.ore < forgeCost(item);
   });
 
-  const cg = document.getElementById('compGrid');
-  cg.innerHTML = '';
-  COMPANIONS.forEach(c=>{
-    const owned = state.companions.includes(c.id);
-    const div = document.createElement('div');
-    div.className = 'compCard' + (owned?' owned':'');
-    div.innerHTML = `
-      <svg class="ic" width="18" height="18" style="color:${owned?'var(--gold)':'var(--sub)'}"><use href="#icon-paw"></use></svg>
-      <div style="font-size:.62rem;margin-top:3px">${owned?c.name:'???'}</div>
-    `;
-    cg.appendChild(div);
-  });
+  const sig = state.companions.join(',');
+  if(sig !== compSig){
+    compSig = sig;
+    $('compGrid').innerHTML = COMPANIONS.map(c=>{
+      const owned = state.companions.includes(c.id);
+      return `<div class="compCard${owned?' owned':''}">
+        <svg class="ic" width="18" height="18" style="color:${owned?'var(--gold)':'var(--sub)'}"><use href="#icon-paw"></use></svg>
+        <div style="font-size:.62rem;margin-top:3px">${owned?c.name:'???'}</div>
+        ${owned?`<div class="compBonus">+${pct(c.amt)} ${BONUS_LABEL[c.bonus]}</div>`:''}
+      </div>`;
+    }).join('');
+  }
 }
 
 function forgeItem(slot){
@@ -699,7 +722,6 @@ function forgeItem(slot){
     addLog(`ตีเหล็ก ${SLOTS[slot].name} ล้มเหลว... เสียเศษโลหะ ${fmt(cost)}`);
     toast('ตีเหล็กล้มเหลว!');
   }
-  renderGear();
   render();
   save();
 }
@@ -741,7 +763,6 @@ function openChest(){
     state.ore += oreGain;
     addLog(`เปิดหีบได้เศษโลหะ ${oreGain}`);
   }
-  renderGear();
   render();
   save();
 }
@@ -753,7 +774,6 @@ function upgradeChestTier(){
   state.chestTier++;
   addLog(`อัพเกรดหีบเป็นเทียร์ ${state.chestTier+1}`);
   render();
-  renderGear();
   save();
 }
 
@@ -766,10 +786,10 @@ function breakthrough(){
   const ppReward = 2 + Math.floor(state.realm/2) + state.upgrades.disciple;
   state.pp += ppReward;
 
-  const core = document.getElementById('core');
+  const core = $('core');
   core.classList.remove('fg'); void core.offsetWidth; core.classList.add('fg');
 
-  const rect = document.getElementById('fx') ? document.getElementById('fx').getBoundingClientRect() : null;
+  const rect = $('fx').getBoundingClientRect();
 
   if(state.realm % 3 === 0){
     state.godsSlain++;
@@ -780,67 +800,116 @@ function breakthrough(){
     state.pp += bonusPP;
     addLog(`ทลายขีดจำกัดสำเร็จ! สังหาร "${god}" ได้เศษแก่นเทพ ${gemReward} และแต้มพลัง ${ppReward+bonusPP}`);
     toast('⚔ สังหาร '+god+' สำเร็จ!');
-    if(fx && rect){ fx.breakBurst(rect.width/2, rect.height/2, true); }
+    if(fx) fx.breakBurst(rect.width/2, rect.height/2, true);
     flashScreen(true);
   } else {
     addLog(`ทลายขีดจำกัดสำเร็จ! ก้าวสู่ "${realmName(state.realm)}" ได้แต้มพลัง ${ppReward}`);
     toast('突破成功！ ก้าวสู่ '+realmName(state.realm));
-    if(fx && rect){ fx.breakBurst(rect.width/2, rect.height/2, false); }
+    if(fx) fx.breakBurst(rect.width/2, rect.height/2, false);
     flashScreen(false);
   }
   render();
   save();
 }
 
+function advance(dt){
+  dt = Math.min(dt, MAX_CATCHUP_SEC);
+  state.qi += autoPower()*dt;
+  ppAccumSec += dt;
+  if(ppAccumSec >= PP_INTERVAL_SEC){
+    const n = Math.floor(ppAccumSec / PP_INTERVAL_SEC);
+    ppAccumSec -= n*PP_INTERVAL_SEC;
+    state.pp += n*ppPerTick();
+  }
+  battleAccSec += dt;
+  let steps = Math.floor(battleAccSec / BATTLE_INTERVAL_SEC);
+  battleAccSec -= steps*BATTLE_INTERVAL_SEC;
+  if(steps > MAX_BATTLE_STEPS){ steps = MAX_BATTLE_STEPS; battleAccSec = 0; }
+  for(let i=0;i<steps;i++) battleStep(steps > 1);
+}
+
 function tick(){
-  const auto = autoPower();
-  if(auto>0){ state.qi += auto; }
-  ppAccumSec++;
-  if(ppAccumSec >= PP_INTERVAL_SEC){ ppAccumSec = 0; state.pp += ppPerTick(); }
+  const now = Date.now();
+  const dt = (now - lastTickAt)/1000;
+  lastTickAt = now;
+  if(dt > 0) advance(dt);
   render();
 }
 
+function storageGet(){
+  try{ return localStorage.getItem(SAVE_KEY); }catch(e){ storageOk = false; return null; }
+}
 function save(){
   state.lastSave = Date.now();
-  localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+  if(!storageOk) return;
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }catch(e){ storageOk = false; }
+}
+
+const isNum = v => typeof v === 'number' && Number.isFinite(v);
+function sanitize(raw){
+  const d = defaultState();
+  if(!raw || typeof raw !== 'object') return d;
+  Object.keys(d).forEach(k=>{
+    if(typeof d[k] === 'number' && isNum(raw[k])) d[k] = Math.max(0, raw[k]);
+    if(typeof d[k] === 'boolean' && typeof raw[k] === 'boolean') d[k] = raw[k];
+  });
+  ['realm','stage','stageWins','chestTier','godsSlain','totalBreakthroughs','keys'].forEach(k=>{ d[k] = Math.floor(d[k]); });
+  if(!(raw.lastSave > 0) || raw.lastSave > Date.now()) d.lastSave = Date.now();
+  if(raw.upgrades && typeof raw.upgrades === 'object'){
+    Object.keys(d.upgrades).forEach(k=>{ if(isNum(raw.upgrades[k])) d.upgrades[k] = Math.max(0, Math.floor(raw.upgrades[k])); });
+  }
+  if(raw.equipment && typeof raw.equipment === 'object'){
+    Object.keys(d.equipment).forEach(slot=>{
+      const it = raw.equipment[slot];
+      if(it && typeof it === 'object' && it.slot === slot && Number.isInteger(it.rarity) && it.rarity >= 0 && it.rarity < RARITIES.length && isNum(it.level)){
+        d.equipment[slot] = { slot, rarity: it.rarity, level: Math.max(0, Math.floor(it.level)) };
+      }
+    });
+  }
+  if(Array.isArray(raw.companions)){
+    d.companions = [...new Set(raw.companions.filter(id => COMPANIONS.some(c=>c.id===id)))];
+  }
+  if(Array.isArray(raw.log)) d.log = raw.log.filter(l => typeof l === 'string').slice(0, 40);
+  if(d.stageWins >= 5) d.stageWins = 0;
+  return d;
 }
 
 function load(){
-  const raw = localStorage.getItem(SAVE_KEY);
+  const raw = storageGet();
   if(!raw) return;
-  try{
-    const loaded = JSON.parse(raw);
-    state = Object.assign(state, loaded);
-    state.upgrades = Object.assign({fist:0,root:0,sword:0,manual:0,disciple:0}, loaded.upgrades||{});
-    state.equipment = Object.assign({weapon:null,armor:null,ring:null,amulet:null}, loaded.equipment||{});
-    state.companions = Array.isArray(loaded.companions) ? loaded.companions : [];
-    const offlineSec = Math.min(Math.max(0, Math.floor((Date.now() - (loaded.lastSave||Date.now()))/1000)), 8*3600);
-    if(offlineSec > 5){
-      const auto = autoPower();
-      const dpGained = offlineSec * auto;
-      const ppGained = Math.floor(offlineSec / PP_INTERVAL_SEC) * ppPerTick();
-      if(dpGained > 0) state.qi += dpGained;
-      if(ppGained > 0) state.pp += ppGained;
-      if(dpGained > 0 || ppGained > 0){
-        addLog(`ขณะไม่อยู่ (${Math.floor(offlineSec/60)} นาที) ได้ ${fmt(dpGained)} DP และแต้มพลัง ${ppGained}`);
-      }
-    }
-  }catch(e){}
+  let parsed;
+  try{ parsed = JSON.parse(raw); }catch(e){ return; }
+  state = sanitize(parsed);
+  state.hp = Math.min(state.hp, maxHP());
+  const offlineSec = Math.min(Math.max(0, Math.floor((Date.now() - state.lastSave)/1000)), MAX_CATCHUP_SEC);
+  if(offlineSec > 5){
+    const dpGained = offlineSec * autoPower();
+    const ppGained = Math.floor(offlineSec / PP_INTERVAL_SEC) * ppPerTick();
+    state.qi += dpGained;
+    state.pp += ppGained;
+    if(offlineSec >= 60){ state.hp = maxHP(); state.downed = false; }
+    addLog(`ขณะไม่อยู่ (${Math.floor(offlineSec/60)} นาที) ได้ ${fmt(dpGained)} DP และแต้มพลัง ${ppGained}`);
+  }
+}
+
+function selectTab(name){
+  document.querySelectorAll('.tab').forEach(x=>{
+    const on = x.dataset.tab === name;
+    x.classList.toggle('active', on);
+    x.setAttribute('aria-pressed', on ? 'true' : 'false');
+  });
+  $('trainZone').style.display = name==='train' ? 'flex' : 'none';
+  $('tab-alloc').style.display = name==='alloc' ? 'block' : 'none';
+  $('tab-battle').style.display = name==='battle' ? 'block' : 'none';
+  $('tab-gear').style.display = name==='gear' ? 'block' : 'none';
+  $('tab-log').style.display = name==='log' ? 'block' : 'none';
 }
 
 function initTabs(){
-  const tabs = document.querySelectorAll('.tab');
-  tabs.forEach(t=>{
-    t.addEventListener('click', ()=>{
-      tabs.forEach(x=>x.classList.remove('active'));
-      t.classList.add('active');
-      const name = t.dataset.tab;
-      document.getElementById('trainZone').style.display = name==='train' ? 'flex' : 'none';
-      document.getElementById('breakthroughBtn').style.display = name==='train' ? 'flex' : 'none';
-      document.getElementById('tab-alloc').style.display = name==='alloc' ? 'block' : 'none';
-      document.getElementById('tab-battle').style.display = name==='battle' ? 'block' : 'none';
-      document.getElementById('tab-gear').style.display = name==='gear' ? 'block' : 'none';
-      document.getElementById('tab-log').style.display = name==='log' ? 'block' : 'none';
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.addEventListener('click', ()=>selectTab(t.dataset.tab));
+    t.addEventListener('keydown', e=>{
+      if(e.key==='Enter' || e.key===' '){ e.preventDefault(); selectTab(t.dataset.tab); }
     });
   });
 }
@@ -848,22 +917,16 @@ function initTabs(){
 function initFX(canvas){
   const ctx = canvas.getContext('2d');
   const DPR = Math.min(window.devicePixelRatio||1, 2);
-  function resize(){
-    const r = canvas.getBoundingClientRect();
-    canvas.width = Math.max(1, r.width*DPR);
-    canvas.height = Math.max(1, r.height*DPR);
+  function resize(w, h){
+    canvas.width = Math.max(1, Math.round(w*DPR));
+    canvas.height = Math.max(1, Math.round(h*DPR));
     ctx.setTransform(DPR,0,0,DPR,0,0);
   }
-  resize();
-  window.addEventListener('resize', resize);
 
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let particles = [];
-  const W = ()=>canvas.getBoundingClientRect().width;
-  const H = ()=>canvas.getBoundingClientRect().height;
 
-  function spawnAmbient(){
-    const w=W(), h=H();
+  function spawnAmbient(w, h){
     particles.push({
       x: Math.random()*w, y: h+4, vx:(Math.random()-.5)*6, vy:-(18+Math.random()*22),
       r: 1+Math.random()*1.8, life:0, maxLife: 2.4+Math.random()*1.8,
@@ -886,24 +949,28 @@ function initFX(canvas){
   let last = performance.now(), acc = 0;
   function frame(now){
     const dt = Math.min(.05, (now-last)/1000); last = now;
-    const w=W(), h=H();
-    ctx.clearRect(0,0,w,h);
-    if(!reduced){
-      acc += dt;
-      if(acc > 0.28){ acc = 0; spawnAmbient(); }
+    const r = canvas.getBoundingClientRect();
+    const w = r.width, h = r.height;
+    if(w > 0 && h > 0){
+      if(canvas.width !== Math.max(1, Math.round(w*DPR)) || canvas.height !== Math.max(1, Math.round(h*DPR))) resize(w, h);
+      ctx.clearRect(0,0,w,h);
+      if(!reduced){
+        acc += dt;
+        if(acc > 0.28){ acc = 0; spawnAmbient(w, h); }
+      }
+      particles = particles.filter(p=>{
+        p.life += dt;
+        if(p.life >= p.maxLife) return false;
+        p.x += p.vx*dt; p.y += p.vy*dt;
+        if(p.kind==='burst'){ p.vx *= (1-2.2*dt); p.vy *= (1-2.2*dt); }
+        const t = 1 - p.life/p.maxLife;
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(${p.color},${Math.max(0,(t*0.85)).toFixed(2)})`;
+        ctx.arc(p.x, p.y, p.r*(p.kind==='burst'? t+0.3:1), 0, Math.PI*2);
+        ctx.fill();
+        return true;
+      });
     }
-    particles = particles.filter(p=>{
-      p.life += dt;
-      if(p.life >= p.maxLife) return false;
-      p.x += p.vx*dt; p.y += p.vy*dt;
-      if(p.kind==='burst'){ p.vx *= (1-2.2*dt); p.vy *= (1-2.2*dt); }
-      const t = 1 - p.life/p.maxLife;
-      ctx.beginPath();
-      ctx.fillStyle = `rgba(${p.color},${Math.max(0,(t*0.85)).toFixed(2)})`;
-      ctx.arc(p.x, p.y, p.r*(p.kind==='burst'? t+0.3:1), 0, Math.PI*2);
-      ctx.fill();
-      return true;
-    });
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
@@ -913,21 +980,44 @@ function initFX(canvas){
   };
 }
 
-document.getElementById('breakthroughBtn').addEventListener('click', breakthrough);
-document.getElementById('openChestBtn').addEventListener('click', openChest);
-document.getElementById('upgradeChestBtn').addEventListener('click', upgradeChestTier);
-initTabs();
-drawPixelHero(document.getElementById('heroPixel'));
-fx = initFX(document.getElementById('fx'));
-load();
-render();
-if(state.log.length===0) addLog('เริ่มต้นเส้นทางสังหารเทพ พลังเทวะจะไหลเข้าตัวท่านเองเรื่อยๆ ขอให้จัดสรรอย่างชาญฉลาด!');
-renderLog();
+function boot(saved){
+  if(saved && typeof saved === 'object' && Object.keys(saved).length){ state = sanitize(saved); }
+  else { load(); }
 
-setInterval(tick, 1000);
-setInterval(battleTick, 4000);
-setInterval(save, 10000);
-window.addEventListener('beforeunload', save);
+  buildAlloc();
+  $('allocList').addEventListener('click', e=>{
+    const btn = e.target.closest('button[data-key]');
+    if(btn) allocate(btn.dataset.key);
+  });
+  $('gearGrid').addEventListener('click', e=>{
+    const btn = e.target.closest('button[data-slot]');
+    if(btn) forgeItem(btn.dataset.slot);
+  });
+  $('breakthroughBtn').addEventListener('click', breakthrough);
+  $('openChestBtn').addEventListener('click', openChest);
+  $('upgradeChestBtn').addEventListener('click', upgradeChestTier);
+  initTabs();
+  selectTab('train');
+  drawPixelHero($('heroPixel'));
+  fx = initFX($('fx'));
+
+  if(!state.log.length) addLog('เริ่มต้นเส้นทางสังหารเทพ พลังเทวะจะไหลเข้าตัวท่านเองเรื่อยๆ ขอให้จัดสรรอย่างชาญฉลาด!');
+  if(!storageOk) addLog('เบราว์เซอร์นี้ไม่อนุญาตให้บันทึกเกม — ความคืบหน้าจะหายเมื่อปิดหน้า');
+  renderLog();
+  lastTickAt = Date.now();
+  render();
+
+  setInterval(tick, 1000);
+  setInterval(save, 10000);
+  window.addEventListener('pagehide', save);
+  window.addEventListener('beforeunload', save);
+  document.addEventListener('visibilitychange', ()=>{ if(document.hidden) save(); else tick(); });
+
+  try{ window.claude?.hot?.snapshot(() => state); }catch(e){}
+}
+
+if(window.claude?.hot?.ready){ window.claude.hot.ready(data=>boot(data)); }
+else { boot(window.claude?.hot?.data); }
 })();
 </script>
 </body>
