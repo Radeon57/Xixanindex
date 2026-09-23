@@ -257,7 +257,7 @@ function buildMonument(s, key){
   s.mono[key] = (s.mono[key] || 0) + 1;
   return true;
 }
-const upgradeCost = (s, u) => u.cost * ((s.meta.up[u.key] || 0) + 1);
+const upgradeCost = (s, u) => Math.ceil(u.cost * Math.pow(D.UPGRADE_COST_GROWTH, s.meta.up[u.key] || 0));
 function buyUpgrade(s, key){
   const u = D.UPGRADES.find(x=>x.key===key);
   if(!u) return false;
@@ -332,6 +332,8 @@ function finishRun(s, ev){
     }
   }
   if(ev) ev.push({ type:'dgRun', win, i:run.i, depth:run.depth, qty });
+  // auto-repeat goes one depth deeper whenever the team is sure to win there
+  if(win && s.meta.dgAuto && run.depth < maxDepth(s, run.i) && winChance(s, run.i, run.depth + 1) >= 1) run.depth++;
 }
 function stepDungeon(s, dt, ev){
   const run = s.meta.run;

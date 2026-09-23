@@ -67,16 +67,18 @@ const GODS = [
   { name:'เทพโชคชะตา',  hp:2.9e9, atk:4e7, def:7e7,       gp:9,  reward:{ unlock:'monuments', maxClones:40, stat:1.3, dp:2 } },
   { name:'เทพทะเล',    hp:3.1e11, atk:4.3e9, def:7.4e9,  gp:12,  reward:{ unlock:'pets', maxClones:50, stat:1.3, speed:2 } },
   { name:'เทพอัคคี',    hp:1.3e12, atk:1.7e10, def:3e10,  gp:18,  reward:{ unlock:'rebirth', maxClones:60, stat:1.5 } },
-  { name:'เทพกาลเวลา',  hp:3.8e13, atk:5.3e11, def:9.2e11,  gp:30, reward:{ maxClones:80, stat:1.5, speed:2 } },
-  { name:'เทพจันทรา',   hp:3.6e14, atk:4.9e12, def:8.5e12,gp:45, reward:{ maxClones:100, stat:1.5, dp:3 } },
-  { name:'เทพสุริยัน',   hp:7.5e15, atk:1.1e14, def:1.8e14,  gp:75, reward:{ maxClones:120, stat:1.5, clone:3 } },
-  { name:'เทพเจ้าสูงสุด', hp:4.2e17, atk:6.4e15, def:1e16,gp:120, reward:{ stat:2 } }
+  { name:'เทพกาลเวลา',  hp:8.9e14, atk:1.2e13, def:2.1e13,  gp:30, reward:{ maxClones:80, stat:1.5, speed:2 } },
+  { name:'เทพจันทรา',   hp:5.8e15, atk:7.9e13, def:1.4e14,gp:45, reward:{ maxClones:100, stat:1.5, dp:3 } },
+  { name:'เทพสุริยัน',   hp:2.8e16, atk:3.8e14, def:6.7e14,  gp:75, reward:{ maxClones:120, stat:1.5, clone:3 } },
+  { name:'เทพเจ้าสูงสุด', hp:1.4e17, atk:1.9e15, def:3.3e15,gp:120, reward:{ stat:2 } }
 ];
 // the god whose defeat unlocks each system (index into GODS)
 const UNLOCK_AT = { skills:0, create:1, gen:2, monuments:3, pets:4, rebirth:5 };
 
-// Permanent upgrades bought with God Power; survive rebirth. Level L costs cost*(L+1) GP.
+// Permanent upgrades bought with God Power; survive rebirth. Level L costs cost*UPGRADE_COST_GROWTH^L GP (rounded up),
+// so pouring everything into one upgrade runs into diminishing returns.
 // Multipliers compound per level ((1+per)^L); maxClones adds per*L.
+const UPGRADE_COST_GROWTH = 1.15;
 const UPGRADES = [
   { key:'might',  name:'พลังแห่งเทพ',   stat:'stat',      per:0.25,       cost:1, desc:'ค่าสถานะทั้งหมด ×1.25' },
   { key:'legion', name:'กองทัพเงา',     stat:'maxClones', per:10, add:true, cost:1, desc:'+10 ร่างเงาสูงสุด' },
@@ -204,7 +206,7 @@ root.GKDATA = {
   LEVEL_TIME_GROWTH, ROW_UNLOCK_LEVEL, TRAININGS, SKILLS,
   KILL_RATE, KILL_RATIO_CAP, DEATH_RATE, MONSTERS,
   CREATIONS, BASE_MAX_CLONES, HIT_INTERVAL, HP_REGEN, GODS, UNLOCK_AT,
-  UPGRADES, GEN_RATE, GEN_GROWTH, GEN_COST, GEN_COST_GROWTH, MONUMENTS, ACH_BONUS, ACHIEVEMENTS,
+  UPGRADES, UPGRADE_COST_GROWTH, GEN_RATE, GEN_GROWTH, GEN_COST, GEN_COST_GROWTH, MONUMENTS, ACH_BONUS, ACHIEVEMENTS,
   PETS, PET_GROWTH, PET_EXP_BASE, PET_EXP_GROWTH, PET_MAX_LV, TEAM_SIZE,
   DUNGEONS, DEPTH_GROWTH, MAX_DEPTH, DUNGEON_UNLOCK_DEPTH, MATERIALS, GEAR, FORGE_COST, FORGE_GROWTH, FORGE_MIN_CHANCE,
   CHALLENGES, CHAL_MAX, CHAL_FIRST_GOAL, FEW_CLONES, ULTIMATES, UB_GROWTH, UB_UNLOCK_LV, MIGHT,

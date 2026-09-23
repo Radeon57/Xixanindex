@@ -544,7 +544,7 @@ function renderRebirth(d, full){
 // ---------- pets: dungeons, pets, gear ----------
 const STAT_TH = { phys:'กาย', myst:'เวท', dp:'พลังเทวะที่ได้', battle:'ยุทธ์', speed:'ความเร็วฝึก', clone:'พลังร่างเงา' };
 let petView = 'dg';
-const dgDepthSel = {};
+const dgDepthSel = {}, dgMaxSeen = {};
 function petUnlockText(p){
   const u = p.unlock;
   if(u.type === 'gods') return 'เข้าร่วมเมื่อสังหารเทพได้ ' + u.n + ' องค์ในรอบเดียว';
@@ -610,6 +610,8 @@ function renderPets(d, full){
       setClass(ref.el, 'locked', !open);
       if(!open){ setText(ref.lock, 'ปลดล็อกเมื่อผ่าน ' + D.DUNGEONS[i-1].name + ' ชั้น ' + D.DUNGEON_UNLOCK_DEPTH); return; }
       const maxD = G.maxDepth(s, i);
+      if(dgMaxSeen[i] && dgDepthSel[i] === dgMaxSeen[i] && maxD > dgMaxSeen[i]) dgDepthSel[i] = maxD;
+      dgMaxSeen[i] = maxD;
       let dep = Math.min(dgDepthSel[i] || maxD, maxD);
       dgDepthSel[i] = dep;
       const pow = G.dungeonPower(i, dep), wc = G.winChance(s, i, dep);
@@ -622,6 +624,7 @@ function renderPets(d, full){
       setDisabled(ref.go, cur || !m.team.length);
     });
   } else if(petView === 'pets'){
+    setDisabled($('bestTeam'), Object.keys(m.pets).length === 0);
     setText($('teamLine'), 'ทีม ' + m.team.length + '/' + D.TEAM_SIZE + ' · พลังทีม ' + fmt(tp) + ' · คู่หูทุกตัวที่มีให้โบนัส แม้ไม่ได้อยู่ในทีม');
     D.PETS.forEach((p,i)=>{
       const ref = R.pet[i], st = m.pets[p.key];
@@ -987,7 +990,7 @@ function onMainClick(e){
   } else if(act === 'preset'){
     G.setPlan(s, b.dataset.v); save();
   } else if(act === 'best'){
-    if(!G.moveToBest(s, b.dataset.kind)) toast('ยังไม่มีศัตรูที่ร่างเงาสู้ได้อย่างปลอดภัย');
+    if(!G.moveToBest(s, b.dataset.kind)) toast(b.dataset.kind === 'mon' ? 'ยังไม่มีศัตรูที่ร่างเงาสู้ได้อย่างปลอดภัย' : 'ยังไม่มีขั้นที่ใช้ได้');
   } else if(act === 'rbView'){
     rbView = b.dataset.v;
   } else if(act === 'ubSel'){
@@ -1018,6 +1021,9 @@ function onMainClick(e){
     if(G.startDungeon(s, i, dgDepthSel[i] || G.maxDepth(s, i))) addLog('ส่งทีมสำรวจ ' + D.DUNGEONS[i].name + ' ชั้น ' + s.meta.run.depth);
   } else if(act === 'team'){
     G.toggleTeam(s, b.dataset.key);
+  } else if(act === 'bestTeam'){
+    s.meta.team = Object.keys(s.meta.pets).sort((a,b2)=>G.petPower(s, b2) - G.petPower(s, a)).slice(0, D.TEAM_SIZE);
+    addLog('จัดทีมคู่หูที่แข็งที่สุด: ' + s.meta.team.map(k=>G.petDef(k).name).join(', '));
   } else if(act === 'forge'){
     const g = D.GEAR.find(x=>x.key===b.dataset.key), L = s.meta.gear[g.key] || 0;
     const ok = G.forge(s, g.key);
