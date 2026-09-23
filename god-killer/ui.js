@@ -23,6 +23,8 @@ function setHTML(el, v){ if(el._h !== v){ el._h = v; el.innerHTML = v; } }
 function setDisabled(el, v){ if(el.disabled !== v) el.disabled = v; }
 function setShown(el, v, how){ const d = v ? (how||'block') : 'none'; if(el._d !== d){ el._d = d; el.style.display = d; } }
 function setClass(el, cls, on){ if(el.classList.contains(cls) !== on) el.classList.toggle(cls, on); }
+// 'on' marks the chosen button of a toggle or segmented control; mirror it for screen readers
+function setOn(el, on){ setClass(el, 'on', on); if(el.getAttribute('aria-pressed') !== String(on)) el.setAttribute('aria-pressed', String(on)); }
 function setBar(el, frac){
   const k = Math.round(Math.max(0, Math.min(1, frac || 0))*1000);
   if(el._k !== k){ el._k = k; el.style.transform = 'scaleX('+(k/1000)+')'; }
@@ -140,7 +142,7 @@ function toolbarHTML(kind){
       <button class="miniBtn planBtn" data-act="plan" data-r="planBtn">จัดอัตโนมัติ: ปิด</button>
     </div>
     <div class="planBox" data-r="planBox">
-      <div class="seg planSeg">${D.PLAN_PRESETS.map(p=>`<button data-act="preset" data-v="${p.key}">${p.name}</button>`).join('')}</div>
+      <div class="seg planSeg" role="group" aria-label="แผนจัดร่างเงา">${D.PLAN_PRESETS.map(p=>`<button data-act="preset" data-v="${p.key}">${p.name}</button>`).join('')}</div>
       <div class="note" data-r="planNote"></div>
     </div>
     <div class="summary"><span data-r="sum1"></span><span data-r="sum2"></span></div>
@@ -235,12 +237,12 @@ function renderJobs(kind, d, full){
   setShown(sec.planBar, true, 'flex');
   setShown(sec.planBtn, pu, 'inline-block');
   setText(sec.planBtn, 'จัดอัตโนมัติ: ' + (planOn ? 'เปิด' : 'ปิด'));
-  setClass(sec.planBtn, 'on', planOn);
+  setOn(sec.planBtn, planOn);
   setShown(sec.planBox, planOn);
   sec.seg.forEach(b=>setDisabled(b, planOn));
   setDisabled(sec.planBar.querySelector('[data-act="best"]'), planOn);
   if(planOn){
-    sec.presets.forEach(b=>{ const pr = D.PLAN_PRESETS.find(x=>x.key===b.dataset.v); setClass(b, 'on', pr.train===p.train && pr.skill===p.skill && pr.mon===p.mon); });
+    sec.presets.forEach(b=>{ const pr = D.PLAN_PRESETS.find(x=>x.key===b.dataset.v); setOn(b, pr.train===p.train && pr.skill===p.skill && pr.mon===p.mon); });
     setText(sec.planNote, 'ร่างเงาถูกจัดให้เองทุกวินาที: ฝึกกาย ' + p.train + '% · วิชาเวท ' + p.skill + '% · สนามรบ ' + p.mon +
       '% ไปที่ขั้นสูงสุดและศัตรูสีเขียวที่ดีที่สุด (ส่วนที่ยังใช้ไม่ได้จะย้ายไปฝึกกาย) · จำไว้ข้ามการเกิดใหม่');
   }
@@ -566,7 +568,7 @@ function renderMight(){
 function renderRebirth(d, full){
   if(!full) return;
   ['main','chal','might','ach'].forEach(v=>setShown($('rv-'+v), v === rbView));
-  document.querySelectorAll('[data-act="rbView"]').forEach(b=>setClass(b, 'on', b.dataset.v === rbView));
+  document.querySelectorAll('[data-act="rbView"]').forEach(b=>setOn(b, b.dataset.v === rbView));
   if(rbView === 'chal') return renderChallenges();
   if(rbView === 'might') return renderMight();
   const m = s.meta, gain = G.rebirthGain(s);
@@ -642,7 +644,7 @@ function renderPets(d, full){
   setBar($('dgBar'), run ? run.t / G.dungeonTime(s, run.i) : 0);
   if(!full) return;
   ['dg','pets','gear'].forEach(v=>setShown($('pv-'+v), v === petView));
-  document.querySelectorAll('[data-act="petView"]').forEach(b=>setClass(b, 'on', b.dataset.v === petView));
+  document.querySelectorAll('[data-act="petView"]').forEach(b=>setOn(b, b.dataset.v === petView));
   const tp = G.teamPower(s);
   if(petView === 'dg'){
     setText($('dgCur'), run ? D.DUNGEONS[run.i].name + ' ชั้น ' + run.depth : '—');
@@ -832,12 +834,12 @@ function selectTab(name){
   alerts[name] = false;
   TABS.forEach(t=>setShown($('tab-'+t), t === name));
   document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-pressed', t.dataset.tab === name ? 'true' : 'false'));
-  setClass($('logBtn'), 'on', name === 'log');
+  setOn($('logBtn'), name === 'log');
   if(name === 'log') renderLog();
   render(true);
 }
 function renderSteps(){
-  document.querySelectorAll('[data-act="step"]').forEach(b=>setClass(b, 'on', String(stepSize) === b.dataset.v));
+  document.querySelectorAll('[data-act="step"]').forEach(b=>setOn(b, String(stepSize) === b.dataset.v));
 }
 
 function render(full){
@@ -1177,6 +1179,7 @@ function boot(saved){
   $('tutorBtn').addEventListener('click', ()=>{ s.meta.tut = 999; save(); render(true); });
   $('tabTipBtn').addEventListener('click', ()=>{ s.meta.seen[activeTab] = 1; save(); render(true); });
   initSaveTools();
+  document.querySelectorAll('svg.ic').forEach(i=>i.setAttribute('aria-hidden', 'true'));   // decorative icons next to text
   $('dgStop').addEventListener('click', ()=>{ G.stopDungeon(s); addLog('หยุดสำรวจดันเจี้ยน'); render(true); });
   $('dgAuto').addEventListener('change', e=>{ s.meta.dgAuto = e.target.checked; render(true); });
   $('rbBtn').addEventListener('click', onRebirth);

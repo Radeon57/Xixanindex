@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>God Killer</title>
+<meta name="description" content="God Killer — เกมไอเดิลสายฝึกฝน สร้างร่างเงา ฝึกกายและเวท แล้วท้าสังหารเทพทั้งสิบองค์">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%230b0a17'/%3E%3Cpath d='M13 3 5 14h6l-1 7 8-11h-6z' fill='%23e8c76f'/%3E%3C/svg%3E">
 <style>
 :root{
@@ -204,6 +205,8 @@ textarea{width:100%;background:var(--panel2);color:var(--text);border:1px solid 
 #toast{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:var(--panel);border:1px solid var(--gold);color:var(--text);padding:8px 14px;border-radius:10px;font-size:.8rem;opacity:0;pointer-events:none;transition:opacity .3s ease;z-index:50;max-width:calc(100% - 32px);text-align:center}
 #toast.show{opacity:1}
 button:focus-visible,.tab:focus-visible,.toggle input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.seg button:focus-visible{outline-offset:-2px}
+textarea:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
 ::-webkit-scrollbar{width:5px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 @media (prefers-reduced-motion: reduce){
@@ -311,7 +314,7 @@ button:focus-visible,.tab:focus-visible,.toggle input:focus-visible{outline:2px 
     </div>
   </header>
 
-  <nav class="tabs" id="tabs">
+  <nav class="tabs" id="tabs" aria-label="เมนูหลัก">
     <div class="tab" data-tab="train" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-fist"></use></svg>ฝึกกาย</div>
     <div class="tab" data-tab="skill" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-orb"></use></svg>วิชาเวท</div>
     <div class="tab" data-tab="mon" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-monster"></use></svg>สนามรบ</div>
@@ -364,7 +367,7 @@ button:focus-visible,.tab:focus-visible,.toggle input:focus-visible{outline:2px 
             <div class="fStat" id="aGodHpTxt"></div>
             <div class="fStat">โจมตี <span id="aGodAtk"></span><br>ป้องกัน <span id="aGodDef"></span></div>
           </div>
-          <canvas id="fx"></canvas>
+          <canvas id="fx" aria-hidden="true"></canvas>
         </div>
         <div class="predict" id="predict"></div>
         <button class="b bPrimary" id="fightBtn"><svg class="ic" width="16" height="16"><use href="#icon-sword"></use></svg><span id="fightLabel">ท้าสู้</span></button>
@@ -461,7 +464,7 @@ button:focus-visible,.tab:focus-visible,.toggle input:focus-visible{outline:2px 
         <button class="miniBtn" id="importBtn">โหลดจากโค้ด</button>
         <button class="miniBtn danger" id="wipeBtn">เริ่มใหม่ทั้งหมด</button>
       </div>
-      <div class="note" id="saveMsg"></div>
+      <div class="note" id="saveMsg" role="status"></div>
       <div class="secTitle">บันทึกเหตุการณ์</div>
       <div class="logBox" id="logList"></div>
     </section>
