@@ -1,6 +1,6 @@
 # ⚔ God Killer — สังหารเทพ
-
-เกมไอเดิล (idle) ภาษาไทยบนเว็บ สร้างร่างเงา ฝึกกายและเวท ส่งไปสู้มอนสเตอร์ แล้วไต่ขึ้นไปท้าสังหารเทพทั้ง 10 องค์ ได้แรงบันดาลใจจาก [Idling to Rule the Gods](https://store.steampowered.com/app/466170/Idling_to_Rule_the_Gods/)
+|ได้แรงบันดาลใจจาก| [Idling to Rule the Gods](https://store.steampowered.com/app/466170/Idling_to_Rule_the_Gods/)|
+เกมไอเดิล (idle) ภาษาไทยบนเว็บ สร้างร่างเงา ฝึกกายและเวท ส่งไปสู้มอนสเตอร์ แล้วไต่ขึ้นไปท้าสังหารเทพทั้ง 10 องค์ 
 
 ### ▶ [เล่นเลย](https://radeon57.github.io/Xixanindex/)
 
