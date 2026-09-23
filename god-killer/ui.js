@@ -60,13 +60,23 @@ function renderLog(){
   if(!s.log.length){ box.textContent = 'ยังไม่มีบันทึก'; return; }
   box.replaceChildren(...s.log.map(l=>{ const d = document.createElement('div'); d.textContent = l; return d; }));
 }
-let toastTimer = 0;
-function toast(msg){
+// messages that arrive together (a god kill often brings achievements and unlocks) become one toast
+let toastTimer = 0, toastQ = [], toastFlushT = 0;
+function toast(msg, prio){
+  toastQ.push({ msg, prio: prio || 1 });
+  if(!toastFlushT) toastFlushT = setTimeout(flushToast, 150);
+}
+function flushToast(){
+  toastFlushT = 0;
+  if(!toastQ.length) return;
+  toastQ.sort((a,b)=>b.prio - a.prio);
+  const extra = toastQ.length - 1;
   const t = $('toast');
-  t.textContent = msg;
+  t.textContent = toastQ[0].msg + (extra ? ' (+' + extra + ' เรื่องในบันทึก)' : '');
+  toastQ = [];
   t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=>t.classList.remove('show'), 1800);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), extra ? 2600 : 1800);
 }
 
 // ---------- rewards text ----------
@@ -101,6 +111,14 @@ function toolbarHTML(kind){
       <div class="seg" role="group" aria-label="จำนวนร่างเงาต่อการกด">${steps}</div>
       <button class="miniBtn" data-act="clear" data-kind="${kind}">ถอนทั้งหมด</button>
     </div>
+    <div class="planBar" data-r="planBar">
+      <button class="miniBtn" data-act="best" data-kind="${kind}">ย้ายไปขั้นที่ดีที่สุด</button>
+      <button class="miniBtn planBtn" data-act="plan" data-r="planBtn">จัดอัตโนมัติ: ปิด</button>
+    </div>
+    <div class="planBox" data-r="planBox">
+      <div class="seg planSeg">${D.PLAN_PRESETS.map(p=>`<button data-act="preset" data-v="${p.key}">${p.name}</button>`).join('')}</div>
+      <div class="note" data-r="planNote"></div>
+    </div>
     <div class="summary"><span data-r="sum1"></span><span data-r="sum2"></span></div>
     <div class="hint" data-r="hint"></div>`;
 }
@@ -128,7 +146,10 @@ function buildJobs(kind){
   }).join('');
   sec.innerHTML = toolbarHTML(kind) + rows;
   SEC[kind] = { idle: sec.querySelector('[data-r="idle"]'), sum1: sec.querySelector('[data-r="sum1"]'),
-                sum2: sec.querySelector('[data-r="sum2"]'), hint: sec.querySelector('[data-r="hint"]') };
+                sum2: sec.querySelector('[data-r="sum2"]'), hint: sec.querySelector('[data-r="hint"]'),
+                planBar: sec.querySelector('[data-r="planBar"]'), planBtn: sec.querySelector('[data-r="planBtn"]'),
+                planBox: sec.querySelector('[data-r="planBox"]'), planNote: sec.querySelector('[data-r="planNote"]'),
+                presets: [...sec.querySelectorAll('[data-act="preset"]')], seg: [...sec.querySelectorAll('[data-act="step"]')] };
   R[kind] = [...sec.querySelectorAll('.job')].map(el=>({
     el, lv: el.querySelector('.jobLv'), bar: el.querySelector('.bar>i'), s1: el.querySelector('.s1'), s2: el.querySelector('.s2'),
     n: el.querySelector('.ctlN'), dec: el.querySelector('[data-act="dec"]'), inc: el.querySelector('[data-act="inc"]'),
@@ -143,7 +164,7 @@ function lockReason(kind, i){
 
 function renderJobs(kind, d, full){
   const rows = s[kind], defs = JOB_DEFS[kind], refs = R[kind];
-  const free = G.idle(s);
+  const free = G.idle(s), planOn = s.meta.plan.on && G.planUnlocked(s);
   let lockedShown = false;
   for(let i=0;i<rows.length;i++){
     const r = rows[i], ref = refs[i];
@@ -157,8 +178,8 @@ function renderJobs(kind, d, full){
     if(kind !== 'mon') setBar(ref.bar, r.prog / G.levelTime(defs[i], r.lv));
     if(!full) continue;
     setText(ref.n, fmt(r.n));
-    setDisabled(ref.dec, r.n === 0);
-    setDisabled(ref.inc, free === 0);
+    setDisabled(ref.dec, planOn || r.n === 0);
+    setDisabled(ref.inc, planOn || free === 0);
     if(kind === 'mon'){
       const rt = G.monsterRates(s, i, d);
       setText(ref.lv, 'พลัง ' + fmt(defs[i].power));
@@ -183,8 +204,21 @@ function renderJobs(kind, d, full){
   if(kind === 'train'){ setHTML(sec.sum1, 'กายรวม <b>' + fmt(d.phys) + '</b>'); setText(sec.sum2, 'ความเร็วฝึก ×' + fmt(d.m.speed)); }
   if(kind === 'skill'){ setHTML(sec.sum1, 'เวทรวม <b>' + fmt(d.myst) + '</b>'); setText(sec.sum2, 'ความเร็วฝึก ×' + fmt(d.m.speed)); }
   if(kind === 'mon'){ setHTML(sec.sum1, 'พลังร่างเงา <b>' + fmt(d.clonePower) + '</b>'); setHTML(sec.sum2, 'ยุทธ์รวม <b>' + fmt(d.battle) + '</b>'); }
-  setShown(sec.hint, free > 0);
-  if(free > 0) setText(sec.hint, 'มีร่างเงาว่าง ' + fmt(free) + ' ร่าง — กด + เพื่อส่งมาทำงาน' + (kind==='mon' ? ' (เลือกศัตรูสีเขียวเพื่อไม่ให้ร่างเงาตาย)' : ''));
+  setShown(sec.hint, free > 0 && !planOn);
+  if(free > 0 && !planOn) setText(sec.hint, 'มีร่างเงาว่าง ' + fmt(free) + ' ร่าง — กด + เพื่อส่งมาทำงาน' + (kind==='mon' ? ' (เลือกศัตรูสีเขียวเพื่อไม่ให้ร่างเงาตาย)' : ''));
+  const pu = G.planUnlocked(s), p = s.meta.plan;
+  setShown(sec.planBar, true, 'flex');
+  setShown(sec.planBtn, pu, 'inline-block');
+  setText(sec.planBtn, 'จัดอัตโนมัติ: ' + (planOn ? 'เปิด' : 'ปิด'));
+  setClass(sec.planBtn, 'on', planOn);
+  setShown(sec.planBox, planOn);
+  sec.seg.forEach(b=>setDisabled(b, planOn));
+  setDisabled(sec.planBar.querySelector('[data-act="best"]'), planOn);
+  if(planOn){
+    sec.presets.forEach(b=>{ const pr = D.PLAN_PRESETS.find(x=>x.key===b.dataset.v); setClass(b, 'on', pr.train===p.train && pr.skill===p.skill && pr.mon===p.mon); });
+    setText(sec.planNote, 'ร่างเงาถูกจัดให้เองทุกวินาที: ฝึกกาย ' + p.train + '% · วิชาเวท ' + p.skill + '% · สนามรบ ' + p.mon +
+      '% ไปที่ขั้นสูงสุดและศัตรูสีเขียวที่ดีที่สุด (ส่วนที่ยังใช้ไม่ได้จะย้ายไปฝึกกาย) · จำไว้ข้ามการเกิดใหม่');
+  }
 }
 
 // ---------- build: creation ----------
@@ -242,7 +276,10 @@ function renderCreate(d, full){
   if(box.checked !== c.autoClone) box.checked = c.autoClone;
   const createOpen = G.createUnlocked(s);
   setShown($('createLock'), !createOpen);
-  if(!createOpen) setText($('createLockGod'), D.GODS[1].name);
+  if(!createOpen){
+    if(s.challenge === 'nocreate') setText($('createLock'), 'ความท้าทาย "โลกไร้สรรพสิ่ง" — สร้างได้แค่ร่างเงาจนกว่าจะผ่าน');
+    else setHTML($('createLock'), 'สร้างได้แค่ร่างเงาก่อน — ปลดล็อกการสร้างสรรพสิ่งเมื่อสังหาร <b>' + D.GODS[1].name + '</b>');
+  }
   let lockedShown = false;
   D.CREATIONS.forEach((item, i)=>{
     const ref = R.create[i];
@@ -332,17 +369,25 @@ function renderGods(d, full){
       const o = fightOutlook(d, tg);
       const pred = $('predict');
       setClass(pred, 'win', o.win); setClass(pred, 'lose', !o.win);
-      let txt = o.win ? 'คาดการณ์: ชนะ ภายในราว ' + fmtTime(o.secs) : 'คาดการณ์: แพ้ — ทำดาเมจได้ราว ' + Math.floor(o.share*100) + '% ก่อนล้ม';
+      let txt = o.win ? 'คาดการณ์: ชนะ ภายในราว ' + fmtTime(o.secs)
+        : 'คาดการณ์: แพ้ — ต้องแข็งแกร่งขึ้นอีกราว ×' + fmt(G.neededFactor(s, d, tg)) + ' (ตอนนี้ทำดาเมจได้ ' + Math.floor(o.share*100) + '%)';
       if(!s.fight && s.hp < d.maxHp*0.999) txt += ' (พลังชีวิตยังฟื้นไม่เต็ม)';
       setText(pred, txt);
       setText($('fightLabel'), s.fight ? 'ถอยหนี' : 'ท้าสู้ ' + tg.name);
       setClass($('fightBtn'), 'flee', !!s.fight);
     }
   }
+  if(full){
+    const afOpen = G.autoFightUnlocked(s);
+    setShown($('autoFightRow'), afOpen, 'flex');
+    setShown($('autoFightLock'), !afOpen && s.meta.bestGods >= 1);
+    if($('autoFight').checked !== s.meta.autoFight) $('autoFight').checked = s.meta.autoFight;
+  }
   if(!full) return;
   D.GODS.forEach((g,i)=>{
     const ref = R.gods[i];
     const state = i < s.gods ? 'done' : i === s.gods ? 'next' : 'later';
+    setShown(ref.el, i <= Math.max(s.gods, s.meta.bestGods) + 1, 'flex');   // one unknown god as a teaser, not the whole list
     setClass(ref.el, 'done', state === 'done'); setClass(ref.el, 'next', state === 'next');
     setText(ref.mark, state === 'done' ? '✓' : state === 'next' ? '⚔' : '🔒');
     setText(ref.name, state === 'later' && i >= s.meta.bestGods ? '???' : g.name);
@@ -394,7 +439,8 @@ function renderTemple(d, full){
   setDisabled($('genBtn'), s.dp < cost);
   const open = G.monumentsUnlocked(s);
   setShown($('monoLock'), !open);
-  if(!open) setText($('monoLockGod'), D.GODS[D.UNLOCK_AT.monuments].name);
+  if(!open) setHTML($('monoLock'), s.challenge === 'nocreate' ? 'ความท้าทาย "โลกไร้สรรพสิ่ง" ปิดอนุสรณ์ไว้จนกว่าจะผ่าน'
+    : 'ปลดล็อกอนุสรณ์เมื่อสังหาร <b>' + D.GODS[D.UNLOCK_AT.monuments].name + '</b>');
   setShown($('monoTitle'), open);
   setShown($('monoList'), open);
   if(!open) return;
@@ -439,7 +485,7 @@ function buildPhase4(){
       <div class="cDesc">${x.desc}</div>
       <div class="cFoot"><span class="cCost"></span><button class="selBtn" data-act="might" data-key="${x.key}">ซื้อ</button></div>
     </div>`).join('');
-  R.might = [...document.querySelectorAll('#mightList .cItem')].map(el=>({ lv: el.querySelector('.jobLv'), cost: el.querySelector('.cCost'), btn: el.querySelector('.selBtn') }));
+  R.might = [...document.querySelectorAll('#mightList .cItem')].map(el=>({ lv: el.querySelector('.jobLv'), desc: el.querySelector('.cDesc'), cost: el.querySelector('.cCost'), btn: el.querySelector('.selBtn') }));
 }
 function renderChallenges(){
   const m = s.meta;
@@ -461,6 +507,7 @@ function renderMight(){
   D.MIGHT.forEach((x,i)=>{
     const ref = R.might[i], L = G.mightLv(s, x.key), maxed = L >= x.max, c = G.mightCost(s, x);
     setText(ref.lv, x.max === 1 ? (L ? 'มีแล้ว' : '') : 'Lv.' + L + '/' + x.max);
+    if(x.key === 'legacy') setText(ref.desc, 'เริ่มรอบใหม่พร้อมพลังเทวะ ' + (L ? fmt(Math.pow(10, L+3)) + ' (เลเวลถัดไป ' + fmt(Math.pow(10, L+4)) + ')' : fmt(1e4) + ' ที่เลเวล 1'));
     setHTML(ref.cost, maxed ? 'สูงสุดแล้ว' : '<span class="' + (m.mp < c ? 'short' : '') + '">' + c + ' Might</span>');
     setDisabled(ref.btn, !open || maxed || m.mp < c);
   });
@@ -719,7 +766,13 @@ function renderTabs(d){
   });
 }
 function selectTab(name){
-  if(tabLocked(name)){ toast('ปลดล็อก' + TAB_NAME[name] + 'เมื่อสังหาร ' + D.GODS[D.UNLOCK_AT[TAB_LOCK[name][0]]].name); return; }
+  if(tabLocked(name)){
+    const blocker = s.challenge && (name === 'skill' && s.challenge === 'nomagic');
+    toast(blocker ? 'ความท้าทาย "' + D.CHALLENGES.find(c=>c.key===s.challenge).name + '" ปิดวิชาเวทไว้จนกว่าจะผ่าน'
+                  : 'ปลดล็อก' + TAB_NAME[name] + 'เมื่อสังหาร ' + D.GODS[D.UNLOCK_AT[TAB_LOCK[name][0]]].name);
+    return;
+  }
+  if(name !== activeTab) $('main').scrollTop = 0;
   activeTab = name;
   alerts[name] = false;
   TABS.forEach(t=>setShown($('tab-'+t), t === name));
@@ -768,7 +821,7 @@ function handleEvents(ev, quiet){
       if(r.unlock === 'rebirth') alerts.rebirth = true;
       if(r.unlock === 'pets') alerts.pets = true;
       alerts.mon = true;
-      if(!quiet){ toast('⚔ สังหาร ' + god.name + ' สำเร็จ!'); celebrate(); }
+      if(!quiet){ toast('⚔ สังหาร ' + god.name + ' สำเร็จ!', 3); celebrate(); }
       save();
     } else if(e.type === 'ach'){
       const a = D.ACHIEVEMENTS.find(x=>x.key===e.key);
@@ -779,7 +832,7 @@ function handleEvents(ev, quiet){
       const p = G.petDef(e.key);
       addLog('🐾 คู่หูใหม่: ' + p.name + ' เข้าร่วมทีม!');
       alerts.pets = true;
-      if(!quiet) toast('🐾 คู่หูใหม่: ' + p.name);
+      if(!quiet) toast('🐾 คู่หูใหม่: ' + p.name, 2);
     } else if(e.type === 'dgDepth'){
       addLog('ผ่าน ' + D.DUNGEONS[e.i].name + ' ชั้น ' + e.depth + ' เป็นครั้งแรก');
     } else if(e.type === 'dgUnlock'){
@@ -789,20 +842,20 @@ function handleEvents(ev, quiet){
     } else if(e.type === 'chalDone'){
       const c = D.CHALLENGES.find(x=>x.key===e.key);
       addLog('🏅 ผ่านความท้าทาย ' + c.name + ' ครั้งที่ ' + e.n + '! ' + c.rdesc + ' ถาวร');
-      if(!quiet){ toast('🏅 ผ่านความท้าทาย: ' + c.name); celebrate(); }
+      if(!quiet){ toast('🏅 ผ่านความท้าทาย: ' + c.name, 3); celebrate(); }
       save();
     } else if(e.type === 'ubWin'){
       const u = D.ULTIMATES[e.i];
       addLog('💥 ชนะ ' + u.name + ' → Lv.' + e.lv + ' ได้ ' + e.mp + ' แต้ม Might');
       alerts.rebirth = true;
-      if(!quiet){ toast('💥 ชนะ ' + u.name + '! +' + e.mp + ' Might'); celebrate(); }
+      if(!quiet){ toast('💥 ชนะ ' + u.name + '! +' + e.mp + ' Might', 2); celebrate(); }
       save();
     } else if(e.type === 'ubLose'){
       addLog('พ่ายแพ้ต่อ ' + D.ULTIMATES[e.i].name + ' — ต้องแข็งแกร่งกว่านี้');
-      if(!quiet) toast('พ่ายแพ้... ต้องแข็งแกร่งกว่านี้');
+      if(!quiet) toast('พ่ายแพ้... ต้องแข็งแกร่งกว่านี้', 2);
     } else if(e.type === 'godLose'){
       addLog('พ่ายแพ้ต่อ ' + D.GODS[e.i].name + ' — ฝึกให้แข็งแกร่งขึ้นแล้วกลับมาใหม่');
-      if(!quiet) toast('พ่ายแพ้... ต้องแข็งแกร่งกว่านี้');
+      if(!quiet) toast('พ่ายแพ้... ต้องแข็งแกร่งกว่านี้', 2);
     }
   }
   ev.length = 0;
@@ -885,10 +938,23 @@ function centerOf(el){
   return { x: r.left - a.left + r.width/2, y: r.top - a.top + r.height/2 };
 }
 function hitFx(){
-  if(!fx || activeTab !== 'gods') return;
+  if(!fx || activeTab !== 'gods' || !s.fight) return;
   const g = centerOf($('godArt')), h = centerOf($('heroPixel').parentNode);
   fx.burst(g.x, g.y, 6, '#ece7fb', 70);
   fx.burst(h.x, h.y, 4, '#ff6b6b', 50);
+  const d = G.derive(s), tg = G.fightTarget(s, s.fight);
+  floatDmg(g, G.blow(d.atk, tg.def), 'dealt');
+  floatDmg(h, G.blow(tg.atk, d.def), 'taken');
+}
+// short-lived damage number; transform/opacity animation only, removed when it ends
+function floatDmg(pos, v, cls){
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const el = document.createElement('span');
+  el.className = 'dmg ' + cls;
+  el.textContent = '-' + fmt(v);
+  el.style.left = pos.x + 'px'; el.style.top = (pos.y - 20) + 'px';
+  $('arena').appendChild(el);
+  setTimeout(()=>el.remove(), 800);
 }
 function celebrate(){
   const app = $('app');
@@ -914,6 +980,14 @@ function onMainClick(e){
   } else if(act === 'build'){
     const mo = D.MONUMENTS.find(x=>x.key===b.dataset.key);
     if(G.buildMonument(s, b.dataset.key)){ addLog('สร้าง ' + mo.name + ' เป็น Lv.' + s.mono[mo.key]); toast(mo.name + ' Lv.' + s.mono[mo.key]); }
+  } else if(act === 'plan'){
+    G.togglePlan(s, !s.meta.plan.on);
+    addLog('จัดร่างเงาอัตโนมัติ: ' + (s.meta.plan.on ? 'เปิด' : 'ปิด'));
+    save();
+  } else if(act === 'preset'){
+    G.setPlan(s, b.dataset.v); save();
+  } else if(act === 'best'){
+    if(!G.moveToBest(s, b.dataset.kind)) toast('ยังไม่มีศัตรูที่ร่างเงาสู้ได้อย่างปลอดภัย');
   } else if(act === 'rbView'){
     rbView = b.dataset.v;
   } else if(act === 'ubSel'){
@@ -1041,6 +1115,7 @@ function boot(saved){
   $('fightBtn').addEventListener('click', onFight);
   $('genBtn').addEventListener('click', onGen);
   $('backToGod').addEventListener('click', ()=>{ arenaSel = 'god'; render(true); });
+  $('autoFight').addEventListener('change', e=>{ s.meta.autoFight = e.target.checked; save(); render(true); });
   $('tutorBtn').addEventListener('click', ()=>{ s.meta.tut = 999; save(); render(true); });
   $('tabTipBtn').addEventListener('click', ()=>{ s.meta.seen[activeTab] = 1; save(); render(true); });
   initSaveTools();

@@ -181,6 +181,15 @@ section.panel{display:none}
 .btnPair .miniBtn{flex:1;padding:8px}
 .miniBtn.danger{color:var(--danger);border-color:rgba(255,107,107,.5)}
 textarea{width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 8px;font:inherit;font-size:.68rem;resize:vertical;margin-top:4px}
+.planBar{display:flex;gap:6px;margin:0 0 6px}
+.planBar .miniBtn{flex:1}
+.planBtn.on{border-color:var(--gold);color:var(--gold);background:rgba(232,199,111,.1)}
+.planBox{display:none;margin-bottom:6px}
+.planSeg button{flex:1}
+.dmg{position:absolute;z-index:3;pointer-events:none;font-size:.78rem;font-weight:bold;transform:translate(-50%,0);animation:dmgUp .8s ease-out forwards;text-shadow:0 1px 2px #000}
+.dmg.dealt{color:#fff3d0}
+.dmg.taken{color:var(--danger)}
+@keyframes dmgUp{0%{opacity:0;transform:translate(-50%,6px)}20%{opacity:1}100%{opacity:0;transform:translate(-50%,-26px)}}
 .doneBox{display:none;text-align:center;font-size:.8rem;color:var(--gold);padding:14px 6px;line-height:1.7}
 
 .logBox{font-size:.72rem;color:var(--sub);line-height:1.5}
@@ -353,6 +362,8 @@ button:focus-visible,.tab:focus-visible,.toggle input:focus-visible{outline:2px 
         </div>
         <div class="predict" id="predict"></div>
         <button class="b bPrimary" id="fightBtn"><svg class="ic" width="16" height="16"><use href="#icon-sword"></use></svg><span id="fightLabel">ท้าสู้</span></button>
+        <label class="toggle" id="autoFightRow"><input type="checkbox" id="autoFight"> ท้าเทพองค์ถัดไปอัตโนมัติเมื่อพลังชีวิตเต็มและคาดว่าชนะ</label>
+        <div class="note" id="autoFightLock">ท้าเทพอัตโนมัติจะปลดล็อกหลังเกิดใหม่ครั้งแรก</div>
         <div class="rewardBox" id="godReward"></div>
       </div>
       <div class="doneBox" id="godsDone">สังหารเทพครบทุกองค์แล้ว! ท่านคือผู้สังหารเทพ<br>เกิดใหม่เพื่อสะสม God Power ต่อ — เนื้อหาใหม่จะมาในเฟสถัดไป</div>

@@ -11,7 +11,7 @@ function newMeta(){
   return { gp:0, gpTotal:0, rebirths:0, bestGods:0, dpLife:0, up:{}, ach:{},
            pets:{}, team:[], mats:{}, gear:{}, dgBest:{}, run:null, dgAuto:true,
            chal:{}, ub:[], mp:0, mpTotal:0, might:{},
-           tut:0, seen:{} };
+           tut:0, seen:{}, plan:{ on:false, train:40, skill:30, mon:30 }, autoFight:false };
 }
 function newState(meta){
   return {
@@ -52,6 +52,8 @@ const petsUnlocked = s => s.meta.bestGods > D.UNLOCK_AT.pets;
 const ubUnlocked = s => s.meta.bestGods >= D.GODS.length;
 const mightUnlocked = s => ubUnlocked(s);
 const mightLv = (s, key) => s.meta.might[key] || 0;
+const planUnlocked = s => s.meta.bestGods >= D.PLAN_UNLOCK_GODS;
+const autoFightUnlocked = s => s.meta.rebirths >= D.AUTOFIGHT_UNLOCK_REBIRTHS;
 function rowUnlocked(s, kind, i){
   if(kind === 'mon') return i < monstersUnlocked(s);
   if(kind === 'skill' && !skillsUnlocked(s)) return false;
@@ -161,6 +163,75 @@ function checkAchievements(s, ev){
     s.meta.ach[a.key] = 1;
     if(ev) ev.push({ type:'ach', key:a.key });
   }
+}
+
+// ---------- clone plan ----------
+function topRow(s, kind){ let best = -1; for(let i=0;i<s[kind].length;i++) if(rowUnlocked(s, kind, i)) best = i; return best; }
+// the monster that pays the most DP without killing clones (-1 when every open monster is too strong)
+function bestSafeMonster(s, d){
+  let best = -1, bestV = 0;
+  for(let i=0;i<monstersUnlocked(s);i++){
+    const ratio = d.clonePower / D.MONSTERS[i].power;
+    if(ratio < 1) continue;
+    const v = Math.min(ratio, D.KILL_RATIO_CAP) * D.MONSTERS[i].dp;
+    if(v > bestV){ bestV = v; best = i; }
+  }
+  return best;
+}
+function bestRowFor(s, kind, d){ return kind === 'mon' ? bestSafeMonster(s, d || derive(s)) : topRow(s, kind); }
+// put every clone already working in `kind` on its best row
+function moveToBest(s, kind){
+  const i = bestRowFor(s, kind);
+  if(i < 0) return false;
+  let n = 0;
+  for(const r of s[kind]){ n += r.n; r.n = 0; }
+  s[kind][i].n = n;
+  return true;
+}
+// with the plan on, clones are split by the plan's shares onto the best row of each job; runs every second
+function applyPlan(s){
+  const p = s.meta.plan;
+  if(!p.on || !planUnlocked(s)) return;
+  const d = derive(s);
+  const ti = topRow(s, 'train'), si = skillsUnlocked(s) ? topRow(s, 'skill') : -1, mi = bestSafeMonster(s, d);
+  let wT = p.train, wS = si >= 0 ? p.skill : 0, wM = mi >= 0 ? p.mon : 0;
+  if(ti < 0){ wT = 0; }
+  const sum = wT + wS + wM;
+  JOB_KINDS.forEach(k=>s[k].forEach(r=>{ r.n = 0; }));
+  if(!sum) return;
+  const n = s.clones;
+  const nS = Math.floor(n * wS / sum), nM = Math.floor(n * wM / sum);
+  if(wT){ s.train[ti].n = n - nS - nM; }
+  else if(wS) { s.skill[si].n += n - nS - nM; }
+  else s.mon[mi].n += n - nS - nM;
+  if(nS) s.skill[si].n += nS;
+  if(nM) s.mon[mi].n += nM;
+}
+function setPlan(s, preset){
+  const p = D.PLAN_PRESETS.find(x=>x.key===preset);
+  if(!p) return false;
+  Object.assign(s.meta.plan, { train:p.train, skill:p.skill, mon:p.mon });
+  applyPlan(s);
+  return true;
+}
+function togglePlan(s, on){
+  if(!planUnlocked(s)) return false;
+  s.meta.plan.on = on;
+  applyPlan(s);
+  return true;
+}
+
+// how much stronger (atk, def and HP scaled together) the hero must get to beat target tg from full HP
+function neededFactor(s, d, tg){
+  const wins = f => {
+    const dealt = blow(d.atk*f, tg.def), taken = blow(tg.atk, d.def*f);
+    return Math.ceil(tg.hp / dealt) <= Math.ceil(d.maxHp*f / taken);
+  };
+  if(wins(1)) return 1;
+  let lo = 1, hi = 2;
+  while(!wins(hi) && hi < 1e30) hi *= 2;
+  for(let k=0;k<40;k++){ const mid = Math.sqrt(lo*hi); if(wins(mid)) hi = mid; else lo = mid; }
+  return hi;
 }
 
 // ---------- generator, monuments, upgrades ----------
@@ -415,13 +486,23 @@ function step(s, dt, ev){
   if(s.gen){ const g = genRate(s, d) * dt; s.dp += g; s.dpTotal += g; s.meta.dpLife += g; }
   stepCreate(s, dt, d, ev);
   stepFight(s, dt, d, ev);
-  if(!s.fight && mightLv(s, 'autoFight') && s.gods < D.GODS.length){
-    const dd = derive(s), god = D.GODS[s.gods];
-    if(s.hp >= dd.maxHp*0.999 && outlook(s, dd, god, god.hp).win) startFight(s);
+  if(!s.fight){
+    const dd = derive(s);
+    if(s.hp >= dd.maxHp*0.999){
+      const god = s.gods < D.GODS.length && D.GODS[s.gods];
+      if(god && s.meta.autoFight && autoFightUnlocked(s) && outlook(s, dd, god, god.hp).win) startFight(s);
+      else if(mightLv(s, 'autoUb') && !(god && outlook(s, dd, god, god.hp).win)){
+        for(let i=D.ULTIMATES.length-1;i>=0;i--){
+          if(!ubOpen(s, i)) continue;
+          const st = ubStats(s, i);
+          if(outlook(s, dd, st, st.hp).win){ startUbFight(s, i); break; }
+        }
+      }
+    }
   }
   stepDungeon(s, dt, ev);
   s.achT = (s.achT || 0) + dt;
-  if(s.achT >= 1){ s.achT = 0; checkAchievements(s, ev); checkPets(s, ev); }
+  if(s.achT >= 1){ s.achT = 0; checkAchievements(s, ev); checkPets(s, ev); applyPlan(s); }
 }
 
 // what to make next for `key`: the item itself if affordable, otherwise the first missing ingredient (recursively);
@@ -617,6 +698,12 @@ function sanitize(raw){
   if(rm.might && typeof rm.might === 'object') D.MIGHT.forEach(x=>{ if(isNum(rm.might[x.key])) m.might[x.key] = Math.min(x.max, Math.floor(Math.max(0, rm.might[x.key]))); });
   if(D.CHALLENGES.some(c=>c.key===raw.challenge) && chalDone(d, raw.challenge) < D.CHAL_MAX) d.challenge = raw.challenge;
   // tutorial progress; saves from before the tutorial existed skip it once past the basics
+  if(rm.plan && typeof rm.plan === 'object'){
+    const p = rm.plan;
+    if(typeof p.on === 'boolean') m.plan.on = p.on;
+    ['train','skill','mon'].forEach(k=>{ if(isNum(p[k])) m.plan[k] = Math.min(100, Math.max(0, p[k])); });
+  }
+  m.autoFight = rm.autoFight === true || !!(rm.might && rm.might.autoFight);
   m.tut = isNum(rm.tut) ? Math.floor(Math.max(0, rm.tut)) : (m.bestGods >= 2 || m.rebirths ? 999 : 0);
   if(rm.seen && typeof rm.seen === 'object') for(const k in rm.seen) if(rm.seen[k] === 1) m.seen[k] = 1;
   const r = rm.run;
@@ -640,6 +727,7 @@ root.GK = {
   dungeonPower, dungeonUnlocked, maxDepth, winChance, startDungeon, stopDungeon, forgeCost, forgeChance, forge, dungeonTime,
   chalDone, chalGoal, startChallenge, abandonChallenge, ubUnlocked, ubOpen, ubLevel, ubStats, startUbFight, fightTarget, outlook,
   mightUnlocked, mightLv, mightCost, buyMight,
+  planUnlocked, autoFightUnlocked, topRow, bestSafeMonster, bestRowFor, moveToBest, applyPlan, setPlan, togglePlan, neededFactor,
   step, advance, assign, unassignKind, setCreateTarget, startFight, flee
 };
 })(typeof window !== 'undefined' ? window : globalThis);
