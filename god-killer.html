@@ -186,6 +186,9 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
     <symbol id="icon-ore" viewBox="0 0 24 24">
       <path d="M4 14 L8 6 L16 6 L20 14 L16 20 L8 20 Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
     </symbol>
+    <symbol id="icon-heart" viewBox="0 0 24 24">
+      <path d="M12 21 C12 21 3 14.5 3 8.5 C3 5.5 5.5 3 8.5 3 C10.2 3 11.5 3.8 12 5 C12.5 3.8 13.8 3 15.5 3 C18.5 3 21 5.5 21 8.5 C21 14.5 12 21 12 21 Z" fill="currentColor" stroke="none"/>
+    </symbol>
   </defs>
 </svg>
 
@@ -274,6 +277,9 @@ h1{font-size:1.15rem;margin:0 0 2px;text-align:center;color:var(--gold);letter-s
 
     <div id="tab-battle" class="panel" style="display:none">
       <div class="ppHead"><svg class="ic" width="15" height="15"><use href="#icon-monster"></use></svg>พลังต่อสู้ (CP): <b id="cpTxt">0</b></div>
+      <div class="statline" style="margin:4px 0"><span><svg class="ic" width="13" height="13" style="color:var(--danger)"><use href="#icon-heart"></use></svg> พลังชีวิต (HP)</span> <b id="hpTxt">0/0</b></div>
+      <div class="bar"><i id="hpBar" style="width:100%;background:linear-gradient(90deg,#8a3a3a,#ff6b6b)"></i></div>
+      <div id="downedNote" style="font-size:.68rem;color:var(--danger);text-align:center;margin-top:3px;display:none">🩹 บาดเจ็บหนัก กำลังพักฟื้น ต่อสู้ชั่วคราวไม่ได้</div>
       <div style="text-align:center;margin:6px 0 10px">
         <svg class="ic" width="30" height="30" style="color:var(--danger)"><use href="#icon-monster"></use></svg>
         <div id="stageName" style="color:var(--gold);font-weight:bold;margin-top:4px">ด่านที่ 1</div>
@@ -325,7 +331,7 @@ let state = {
   upgrades:{ fist:0, root:0, sword:0, manual:0, disciple:0 },
   godsSlain:0,
   equipment:{ weapon:null, armor:null, ring:null, amulet:null },
-  ore:0, keys:0, companions:[], stage:0, stageWins:0, chestTier:0,
+  ore:0, keys:0, companions:[], stage:0, stageWins:0, chestTier:0, hp:40,
   lastSave: Date.now(),
   totalBreakthroughs:0,
   log:[]
@@ -353,11 +359,11 @@ const SLOTS = {
 };
 const COMPANIONS = [
   { id:'crane', name:'กระเรียนหยก', bonus:'cp', amt:0.05 },
-  { id:'fox', name:'จิ้งจอกเก้าหาง', bonus:'ore', amt:0.10 },
-  { id:'turtle', name:'เต่าศักดิ์สิทธิ์', bonus:'key', amt:0.10 },
+  { id:'fox', name:'จิ้งจอกเก้าหาง', bonus:'key', amt:0.10 },
+  { id:'turtle', name:'เต่าศักดิ์สิทธิ์', bonus:'hp', amt:0.15 },
   { id:'tiger', name:'พยัคฆ์เพลิง', bonus:'cp', amt:0.08 },
   { id:'phoenix', name:'หงส์ไฟ', bonus:'dp', amt:0.10 },
-  { id:'qilin', name:'กิเลนสวรรค์', bonus:'cp', amt:0.15 }
+  { id:'qilin', name:'กิเลนสวรรค์', bonus:'ore', amt:0.12 }
 ];
 
 let fx = null;
@@ -436,6 +442,7 @@ function combatPower(){
   return Math.max(1, Math.round(cpBase * cpMult));
 }
 function monsterPower(stage){ return Math.round(12 + stage*7); }
+function maxHP(){ return Math.round((40 + state.realm*6) * (1 + companionBonus('hp'))); }
 function stageLabel(stage){ return 'ด่านที่ '+(stage+1); }
 function oreGainMult(){ return (1 + itemPower(state.equipment.ring)/100) * (1 + companionBonus('ore')); }
 function keyLuckMult(){ return (1 + itemPower(state.equipment.amulet)/100) * (1 + companionBonus('key')); }
@@ -574,6 +581,10 @@ function allocate(key){
 
 function renderBattle(){
   document.getElementById('cpTxt').textContent = fmt(combatPower());
+  const mh = maxHP();
+  document.getElementById('hpTxt').textContent = fmt(state.hp)+' / '+fmt(mh);
+  document.getElementById('hpBar').style.width = Math.max(0, state.hp/mh*100)+'%';
+  document.getElementById('downedNote').style.display = state.hp<=0 ? 'block' : 'none';
   document.getElementById('stageName').textContent = stageLabel(state.stage);
   document.getElementById('monsterPow').textContent = fmt(monsterPower(state.stage));
   document.getElementById('battleBar').style.width = (state.stageWins/5*100)+'%';
@@ -583,12 +594,25 @@ function renderBattle(){
 }
 
 function battleTick(){
+  const mh = maxHP();
+  if(state.hp <= 0){
+    state.hp = Math.min(mh, state.hp + mh*0.12);
+    if(state.hp > 0){
+      addLog('ฟื้นตัวจากอาการบาดเจ็บ กลับเข้าสู่สนามรบ!');
+      toast('ฟื้นตัวแล้ว!');
+    }
+    renderBattle();
+    return;
+  }
+  state.hp = Math.min(mh, state.hp + mh*0.05);
+
   const cp = combatPower();
   const mp = monsterPower(state.stage);
   const oreBase = 2 + state.stage*0.5;
   if(cp >= mp){
     state.ore += Math.round(oreBase * oreGainMult() * 10) / 10;
     state.stageWins++;
+    state.hp = Math.max(0, state.hp - mp*0.15);
     if(Math.random() < 0.18 * keyLuckMult()) state.keys++;
     if(state.stageWins >= 5){
       state.stageWins = 0;
@@ -599,6 +623,11 @@ function battleTick(){
     }
   } else {
     state.ore += Math.round(oreBase * 0.4 * 10) / 10;
+    state.hp = Math.max(0, state.hp - mp*0.4);
+  }
+  if(state.hp <= 0){
+    addLog('บาดเจ็บหนักเกินกว่าจะสู้ต่อ ต้องล่าถอยพักฟื้น!');
+    toast('⚠ ต้องล่าถอย!');
   }
   renderBattle();
 }
