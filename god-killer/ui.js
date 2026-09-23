@@ -157,7 +157,7 @@ function buildJobs(kind){
   const sec = $('tab-'+kind);
   const rows = JOB_DEFS[kind].map((d,i)=>{
     const head = kind === 'mon'
-      ? `<span class="jobName">${d.name}</span><span class="jobLv pow"></span>`
+      ? `<span class="jobName">${artHTML('monsters', i, GOD_COLORS[i % GOD_COLORS.length], sigil(d.name))}${d.name}</span><span class="jobLv pow"></span>`
       : `<span class="jobName">${d.name}</span><span class="jobLv"></span>`;
     const info = kind === 'mon'
       ? `<div class="jobSub s1"></div><div class="jobSub s2"></div>`
@@ -169,6 +169,7 @@ function buildJobs(kind){
       </div>`;
   }).join('');
   sec.innerHTML = toolbarHTML(kind) + rows;
+  if(kind === 'mon') loadArt(sec);
   SEC[kind] = { idle: sec.querySelector('[data-r="idle"]'), sum1: sec.querySelector('[data-r="sum1"]'),
                 sum2: sec.querySelector('[data-r="sum2"]'), hint: sec.querySelector('[data-r="hint"]'),
                 planBar: sec.querySelector('[data-r="planBar"]'), planBtn: sec.querySelector('[data-r="planBtn"]'),
@@ -323,6 +324,24 @@ function renderCreate(d, full){
 }
 
 // ---------- build: gods ----------
+// ---------- art ----------
+// Portraits are optional files at god-killer/img/<set>/<NN>.webp (list in god-killer/img/PROMPTS.md).
+// Until a file exists the drawn fallback stays; each path is probed once per page load.
+const artOk = {};   // path -> true once loaded, false once it failed
+function artPath(set, i){ return 'god-killer/img/' + set + '/' + String(i+1).padStart(2,'0') + '.webp'; }
+function sigil(name){ return '<span class="sigil">' + (name.match(/[ก-ฮ]/) || [name[0]])[0] + '</span>'; }
+function artHTML(set, i, color, fallback){ return `<span class="art" style="--c:${color}" data-art="${artPath(set, i)}">${fallback}</span>`; }
+function loadArt(root){
+  root.querySelectorAll('.art[data-art]').forEach(el=>{
+    const p = el.dataset.art;
+    if(artOk[p] === false) return;
+    const img = new Image();
+    img.alt = ''; img.decoding = 'async';
+    img.onload = ()=>{ artOk[p] = true; el.textContent = ''; el.appendChild(img); el.classList.add('hasImg'); };
+    img.onerror = ()=>{ artOk[p] = false; };
+    img.src = p;
+  });
+}
 function godSVG(i, color){
   const c = color || GOD_COLORS[i % GOD_COLORS.length];
   return `<svg width="84" height="84" viewBox="0 0 84 84" aria-hidden="true">
@@ -379,7 +398,10 @@ function renderGods(d, full){
     if(full){
       if(shownArt !== tg.art){
         shownArt = tg.art;
-        $('godArt').innerHTML = tg.kind === 'ub' ? godSVG(100+tg.i, D.ULTIMATES[tg.i].color) : godSVG(tg.i);
+        $('godArt').innerHTML = tg.kind === 'ub'
+          ? artHTML('ultimates', tg.i, D.ULTIMATES[tg.i].color, godSVG(100+tg.i, D.ULTIMATES[tg.i].color))
+          : artHTML('gods', tg.i, GOD_COLORS[tg.i % GOD_COLORS.length], godSVG(tg.i));
+        loadArt($('godArt'));
       }
       setHTML($('godReward'), tg.kind === 'ub'
         ? 'รางวัลเมื่อชนะ: <b>+' + D.ULTIMATES[tg.i].mp + ' แต้ม Might</b> · เลเวลถัดไปแข็งขึ้น ×' + D.UB_GROWTH
@@ -582,7 +604,7 @@ function petUnlockText(p){
 }
 function buildPets(){
   $('dgList').innerHTML = D.DUNGEONS.map((g,i)=>`<div class="cItem" data-i="${i}">
-      <div class="jobHead"><span class="jobName">${g.name}</span><span class="jobLv"></span></div>
+      <div class="jobHead"><span class="jobName">${artHTML('dungeons', i, GOD_COLORS[(i+2) % GOD_COLORS.length], sigil(g.name))}${g.name}</span><span class="jobLv"></span></div>
       <div class="cDesc">ได้${D.MATERIALS[g.mat]} + ค่าประสบการณ์ · รอบละ <span class="dgTime"></span></div>
       <div class="cFoot">
         <div class="ctl"><button class="ctlBtn" data-act="depth" data-i="${i}" data-d="-1" aria-label="ลดชั้น">−</button><b class="ctlN"></b><button class="ctlBtn plus" data-act="depth" data-i="${i}" data-d="1" aria-label="เพิ่มชั้น">+</button></div>
@@ -594,13 +616,14 @@ function buildPets(){
   R.dg = [...document.querySelectorAll('#dgList .cItem')].map(el=>({ el, lv: el.querySelector('.jobLv'), n: el.querySelector('.ctlN'),
     dec: el.querySelector('[data-d="-1"]'), inc: el.querySelector('[data-d="1"]'), go: el.querySelector('[data-act="dgGo"]'),
     info: el.querySelector('.dgInfo'), lock: el.querySelector('.lockTxt'), time: el.querySelector('.dgTime') }));
-  $('petList').innerHTML = D.PETS.map(p=>`<div class="cItem" data-key="${p.key}">
-      <div class="jobHead"><span class="jobName"><span class="petDot" style="background:${p.color}"></span>${p.name}</span><span class="jobLv"></span></div>
+  $('petList').innerHTML = D.PETS.map((p,i)=>`<div class="cItem" data-key="${p.key}">
+      <div class="jobHead"><span class="jobName">${artHTML('pets', i, p.color, sigil(p.name))}${p.name}</span><span class="jobLv"></span></div>
       <div class="bar thin"><i></i></div>
       <div class="cDesc"></div>
       <div class="cFoot"><span class="cCost"></span><button class="selBtn" data-act="team" data-key="${p.key}"></button></div>
       <div class="lockTxt"></div>
     </div>`).join('');
+  loadArt($('dgList')); loadArt($('petList'));
   R.pet = [...document.querySelectorAll('#petList .cItem')].map(el=>({ el, lv: el.querySelector('.jobLv'), bar: el.querySelector('.bar>i'),
     desc: el.querySelector('.cDesc'), cost: el.querySelector('.cCost'), btn: el.querySelector('.selBtn'), lock: el.querySelector('.lockTxt') }));
   $('gearList').innerHTML = D.GEAR.map(g=>`<div class="cItem">
