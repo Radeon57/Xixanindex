@@ -14,6 +14,7 @@ let stepSize = 1;
 let logDirty = true;
 let fx = null;
 const alerts = {};
+function clearAlerts(){ for(const k in alerts) delete alerts[k]; }
 const $ = id => document.getElementById(id);
 
 // ---------- DOM helpers: a write happens only when the value changed ----------
@@ -36,8 +37,14 @@ function fmt(n){
   if(n < 1000) return String(Math.floor(n));
   let x = n, u = -1;
   while(x >= 1000 && u < UNITS.length-1){ x /= 1000; u++; }
+  let str = x.toFixed(x < 100 ? 2 : 1);
+  if(x < 100 && +str >= 100) str = x.toFixed(1);        // 99.999 -> "100.0", not "100.00"
+  if(+str >= 1000){                                     // 999.99 rounds up into the next unit
+    if(u >= UNITS.length-1) return n.toExponential(2).replace('e+','e');
+    x /= 1000; u++; str = x.toFixed(2);
+  }
   if(x >= 1000) return n.toExponential(2).replace('e+','e');
-  return (x < 100 ? x.toFixed(2) : x.toFixed(1)) + UNITS[u];
+  return str + UNITS[u];
 }
 function fmtTime(sec){
   if(!Number.isFinite(sec)) return '—';
@@ -46,6 +53,23 @@ function fmtTime(sec){
   if(sec < 86400) return (sec/3600).toFixed(1) + ' ชม.';
   return (sec/86400).toFixed(1) + ' วัน';
 }
+
+// ---------- two-step confirm for destructive buttons ----------
+// the first tap arms for 4s; the confirming tap only counts 0.4s or more later, so an accidental double-tap never confirms
+const armedAt = {};
+const CONFIRM_WINDOW = 4000, CONFIRM_MIN_GAP = 400;
+function isArmed(id){ const t = armedAt[id]; return !!t && Date.now() - t < CONFIRM_WINDOW; }
+function confirmTap(id){
+  const now = Date.now(), t = armedAt[id];
+  if(t && now - t < CONFIRM_WINDOW){
+    if(now - t < CONFIRM_MIN_GAP) return false;
+    delete armedAt[id];
+    return true;
+  }
+  armedAt[id] = now;
+  return false;
+}
+function disarmAll(){ for(const k in armedAt) delete armedAt[k]; }
 
 // ---------- log & toast ----------
 function addLog(msg){
@@ -277,7 +301,7 @@ function renderCreate(d, full){
   const createOpen = G.createUnlocked(s);
   setShown($('createLock'), !createOpen);
   if(!createOpen){
-    if(s.challenge === 'nocreate') setText($('createLock'), 'ความท้าทาย "โลกไร้สรรพสิ่ง" — สร้างได้แค่ร่างเงาจนกว่าจะผ่าน');
+    if(s.challenge === 'nocreate') setHTML($('createLock'), 'ความท้าทาย "โลกไร้สรรพสิ่ง" — สร้างได้แค่ร่างเงาจนกว่าจะผ่าน');
     else setHTML($('createLock'), 'สร้างได้แค่ร่างเงาก่อน — ปลดล็อกการสร้างสรรพสิ่งเมื่อสังหาร <b>' + D.GODS[1].name + '</b>');
   }
   let lockedShown = false;
@@ -370,7 +394,8 @@ function renderGods(d, full){
       const pred = $('predict');
       setClass(pred, 'win', o.win); setClass(pred, 'lose', !o.win);
       let txt = o.win ? 'คาดการณ์: ชนะ ภายในราว ' + fmtTime(o.secs)
-        : 'คาดการณ์: แพ้ — ต้องแข็งแกร่งขึ้นอีกราว ×' + fmt(G.neededFactor(s, d, tg)) + ' (ตอนนี้ทำดาเมจได้ ' + Math.floor(o.share*100) + '%)';
+        : (G.neededFactor(s, d, tg) <= 1.0001 ? 'คาดการณ์: แพ้ตอนนี้ — รอพลังชีวิตฟื้นเต็มแล้วจะชนะ'
+          : 'คาดการณ์: แพ้ — ต้องแข็งแกร่งขึ้นอีกราว ×' + fmt(G.neededFactor(s, d, tg)) + ' (ตอนนี้ทำดาเมจได้ ' + Math.floor(o.share*100) + '%)');
       if(!s.fight && s.hp < d.maxHp*0.999) txt += ' (พลังชีวิตยังฟื้นไม่เต็ม)';
       setText(pred, txt);
       setText($('fightLabel'), s.fight ? 'ถอยหนี' : 'ท้าสู้ ' + tg.name);
@@ -379,8 +404,9 @@ function renderGods(d, full){
   }
   if(full){
     const afOpen = G.autoFightUnlocked(s);
-    setShown($('autoFightRow'), afOpen, 'flex');
-    setShown($('autoFightLock'), !afOpen && s.meta.bestGods >= 1);
+    const godsLeft = s.gods < D.GODS.length;
+    setShown($('autoFightRow'), afOpen && godsLeft, 'flex');
+    setShown($('autoFightLock'), !afOpen && godsLeft && s.meta.bestGods >= 1);
     if($('autoFight').checked !== s.meta.autoFight) $('autoFight').checked = s.meta.autoFight;
   }
   if(!full) return;
@@ -428,7 +454,10 @@ function buildTemple(){
     el, lv: el.querySelector('.jobLv'), desc: el.querySelector('.cDesc'), cost: el.querySelector('.cCost'), btn: el.querySelector('.selBtn')
   }));
 }
-function bonusText(x, L){ return x.add ? '+' + fmt(x.per*L) + ' ร่างเงาสูงสุด' : '+' + Math.round(x.per*L*100) + '%'; }
+function bonusText(x, L, compound){
+  if(x.add) return '+' + fmt(x.per*L) + ' ร่างเงาสูงสุด';
+  return compound ? '×' + fmt(Math.pow(1 + x.per, L)) : '+' + Math.round(x.per*L*100) + '%';
+}
 function renderTemple(d, full){
   if(!full) return;
   const cost = G.genCost(s);
@@ -470,7 +499,7 @@ function buildRebirth(){
   $('achList').innerHTML = D.ACHIEVEMENTS.map(a=>`<div class="ach" data-key="${a.key}"><b>${a.name}</b><span>${ACH_LABEL[a.type]} ${fmt(a.n)}</span><div class="bar gold"><i></i></div></div>`).join('');
   R.ach = [...document.querySelectorAll('#achList .ach')].map(el=>({ el, bar: el.querySelector('.bar>i') }));
 }
-let rbArmedUntil = 0, rbView = 'main', chalArmed = { key:null, until:0 };
+let rbView = 'main';
 function buildPhase4(){
   $('chalList').innerHTML = D.CHALLENGES.map(c=>`<div class="cItem" data-key="${c.key}">
       <div class="jobHead"><span class="jobName">${c.name}</span><span class="jobLv"></span></div>
@@ -495,8 +524,8 @@ function renderChallenges(){
     setText(ref.lv, 'สำเร็จ ' + n + '/' + D.CHAL_MAX);
     setText(ref.desc, 'รางวัลต่อครั้ง: ' + c.rdesc + (n ? ' · ตอนนี้ ×' + fmt(Math.pow(1+c.per, n)) : ''));
     setText(ref.cost, maxed ? 'ทำครบแล้ว' : 'เป้าหมาย: สังหาร ' + D.GODS[G.chalGoal(s, c.key)].name);
-    const armed = chalArmed.key === c.key && Date.now() < chalArmed.until;
-    setText(ref.btn, active ? 'ยอมแพ้' : armed ? 'แตะอีกครั้งเพื่อเกิดใหม่' : 'เริ่ม');
+    setText(ref.btn, active ? (isArmed('quit:' + c.key) ? 'แตะอีกครั้งเพื่อยอมแพ้' : 'ยอมแพ้')
+                            : (isArmed('chal:' + c.key) ? 'แตะอีกครั้งเพื่อเกิดใหม่' : 'เริ่ม'));
     setDisabled(ref.btn, !active && (maxed || !!s.challenge || !G.rebirthUnlocked(s)));
   });
 }
@@ -521,14 +550,14 @@ function renderRebirth(d, full){
   const m = s.meta, gain = G.rebirthGain(s);
   setText($('gpTxt'), fmt(m.gp));
   setText($('rbInfo'), 'เกิดใหม่แล้ว ' + m.rebirths + ' ครั้ง · ถ้าเกิดใหม่ตอนนี้จะได้ +' + gain + ' God Power (จากเทพ ' + s.gods + ' องค์ที่สังหารในรอบนี้)');
-  const armed = Date.now() < rbArmedUntil;
+  const armed = isArmed('rebirth');
   setText($('rbBtn'), !gain ? 'ต้องสังหารเทพอย่างน้อย 1 องค์ในรอบนี้' : armed ? 'แตะอีกครั้งเพื่อยืนยันการเกิดใหม่' : 'เกิดใหม่ · +' + gain + ' God Power');
   setDisabled($('rbBtn'), !gain);
   setClass($('rbBtn'), 'flee', armed);
   D.UPGRADES.forEach((u,i)=>{
     const ref = R.up[i], L = m.up[u.key] || 0, c = G.upgradeCost(s, u);
     setText(ref.lv, 'Lv.' + L);
-    setText(ref.desc, u.desc + ' ต่อเลเวล' + (L ? ' · ตอนนี้ ' + bonusText(u, L) : ''));
+    setText(ref.desc, u.desc + ' ต่อเลเวล (ทบต้น)' + (L ? ' · ตอนนี้ ' + bonusText(u, L, true) : ''));
     setHTML(ref.cost, '<span class="' + (m.gp < c ? 'short' : '') + '">' + c + ' God Power</span>');
     setDisabled(ref.btn, m.gp < c);
   });
@@ -554,7 +583,7 @@ function petUnlockText(p){
 function buildPets(){
   $('dgList').innerHTML = D.DUNGEONS.map((g,i)=>`<div class="cItem" data-i="${i}">
       <div class="jobHead"><span class="jobName">${g.name}</span><span class="jobLv"></span></div>
-      <div class="cDesc">ได้${D.MATERIALS[g.mat]} + ค่าประสบการณ์ · รอบละ ${fmtTime(g.time)}</div>
+      <div class="cDesc">ได้${D.MATERIALS[g.mat]} + ค่าประสบการณ์ · รอบละ <span class="dgTime"></span></div>
       <div class="cFoot">
         <div class="ctl"><button class="ctlBtn" data-act="depth" data-i="${i}" data-d="-1" aria-label="ลดชั้น">−</button><b class="ctlN"></b><button class="ctlBtn plus" data-act="depth" data-i="${i}" data-d="1" aria-label="เพิ่มชั้น">+</button></div>
         <button class="selBtn" data-act="dgGo" data-i="${i}">สำรวจ</button>
@@ -564,7 +593,7 @@ function buildPets(){
     </div>`).join('');
   R.dg = [...document.querySelectorAll('#dgList .cItem')].map(el=>({ el, lv: el.querySelector('.jobLv'), n: el.querySelector('.ctlN'),
     dec: el.querySelector('[data-d="-1"]'), inc: el.querySelector('[data-d="1"]'), go: el.querySelector('[data-act="dgGo"]'),
-    info: el.querySelector('.dgInfo'), lock: el.querySelector('.lockTxt') }));
+    info: el.querySelector('.dgInfo'), lock: el.querySelector('.lockTxt'), time: el.querySelector('.dgTime') }));
   $('petList').innerHTML = D.PETS.map(p=>`<div class="cItem" data-key="${p.key}">
       <div class="jobHead"><span class="jobName"><span class="petDot" style="background:${p.color}"></span>${p.name}</span><span class="jobLv"></span></div>
       <div class="bar thin"><i></i></div>
@@ -587,14 +616,14 @@ function matsText(){
 }
 function renderPets(d, full){
   const m = s.meta, run = m.run;
-  setBar($('dgBar'), run ? run.t / D.DUNGEONS[run.i].time : 0);
+  setBar($('dgBar'), run ? run.t / G.dungeonTime(s, run.i) : 0);
   if(!full) return;
   ['dg','pets','gear'].forEach(v=>setShown($('pv-'+v), v === petView));
   document.querySelectorAll('[data-act="petView"]').forEach(b=>setClass(b, 'on', b.dataset.v === petView));
   const tp = G.teamPower(s);
   if(petView === 'dg'){
     setText($('dgCur'), run ? D.DUNGEONS[run.i].name + ' ชั้น ' + run.depth : '—');
-    setText($('dgNote'), run ? 'เหลือ ' + fmtTime(D.DUNGEONS[run.i].time - run.t) + ' · โอกาสชนะ ' + Math.round(G.winChance(s, run.i, run.depth)*100) + '%'
+    setText($('dgNote'), run ? 'เหลือ ' + fmtTime(G.dungeonTime(s, run.i) - run.t) + ' · โอกาสชนะ ' + Math.round(G.winChance(s, run.i, run.depth)*100) + '%'
       : (m.team.length ? 'เลือกดันเจี้ยนด้านล่างแล้วกดสำรวจ' : 'ยังไม่มีคู่หูในทีม — จัดทีมที่แท็บย่อย "คู่หู"'));
     if($('dgAuto').checked !== m.dgAuto) $('dgAuto').checked = m.dgAuto;
     setShown($('dgStop'), !!run);
@@ -616,6 +645,7 @@ function renderPets(d, full){
       dgDepthSel[i] = dep;
       const pow = G.dungeonPower(i, dep), wc = G.winChance(s, i, dep);
       setText(ref.lv, 'ผ่านสูงสุดชั้น ' + (m.dgBest[g.key] || 0) + '/' + D.MAX_DEPTH);
+      setText(ref.time, fmtTime(G.dungeonTime(s, i)));
       setText(ref.n, 'ชั้น ' + dep);
       setDisabled(ref.dec, dep <= 1); setDisabled(ref.inc, dep >= maxD);
       setHTML(ref.info, 'พลังศัตรู ' + fmt(pow) + ' · <span class="' + (wc >= 1 ? 'pow safe' : wc >= 0.5 ? 'pow risky' : 'pow deadly') + '">โอกาสชนะ ' + Math.round(wc*100) + '%</span> · ชนะได้ ' + D.MATERIALS[g.mat] + ' ×' + (dep+1) + ', exp ' + fmt(g.exp*dep));
@@ -705,18 +735,19 @@ function decodeSave(code){
 function replaceState(next){
   s = next;
   lastLost = s.clonesLost; shownArt = ''; arenaSel = 'god'; lastHits = 0;
-  rbArmedUntil = 0; logDirty = true;
+  logDirty = true;
+  disarmAll(); clearAlerts();
+  $('exportBox').value = '';
   lastTickAt = Date.now();
   save();
   render(true);
 }
-let wipeArmedUntil = 0;
 function initSaveTools(){
   const msg = t => setText($('saveMsg'), t);
   $('exportBtn').addEventListener('click', ()=>{ save(); $('exportBox').value = exportCode(); msg('สร้างโค้ดแล้ว — คัดลอกไปวางในเครื่องอื่นที่ช่อง "วางโค้ดเซฟ"'); });
   $('copyBtn').addEventListener('click', ()=>{
     const box = $('exportBox');
-    if(!box.value) box.value = exportCode();
+    save(); box.value = exportCode();   // always the current state, never a code made earlier
     const fallback = ()=>{ box.select(); try{ document.execCommand('copy'); msg('คัดลอกแล้ว'); }catch(e){ msg('คัดลอกอัตโนมัติไม่ได้ — กดค้างที่ช่องโค้ดแล้วคัดลอกเอง'); } };
     if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(box.value).then(()=>msg('คัดลอกแล้ว'), fallback);
     else fallback();
@@ -731,9 +762,7 @@ function initSaveTools(){
     toast('โหลดเซฟสำเร็จ!');
   });
   $('wipeBtn').addEventListener('click', ()=>{
-    if(Date.now() >= wipeArmedUntil){ wipeArmedUntil = Date.now() + 4000; setText($('wipeBtn'), 'แตะอีกครั้งเพื่อลบทุกอย่าง'); setTimeout(()=>setText($('wipeBtn'), 'เริ่มใหม่ทั้งหมด'), 4000); return; }
-    wipeArmedUntil = 0;
-    setText($('wipeBtn'), 'เริ่มใหม่ทั้งหมด');
+    if(!confirmTap('wipe')){ render(true); return; }
     replaceState(G.newState());
     addLog('เริ่มเกมใหม่ทั้งหมด — เริ่มต้นเส้นทางสังหารเทพอีกครั้ง');
     msg('ลบเซฟแล้ว เริ่มใหม่ตั้งแต่ต้น');
@@ -765,7 +794,7 @@ function renderTabs(d){
     const name = t.dataset.tab;
     setClass(t, 'active', name === activeTab);
     setClass(t, 'locked', tabLocked(name));
-    setClass(t, 'alert', !!alerts[name] && name !== activeTab);
+    setClass(t, 'alert', !!alerts[name] && name !== activeTab && !tabLocked(name));
   });
 }
 function selectTab(name){
@@ -797,7 +826,7 @@ function render(full){
   else if(activeTab === 'temple') renderTemple(d, full);
   else if(activeTab === 'rebirth') renderRebirth(d, full);
   else if(activeTab === 'pets') renderPets(d, full);
-  else if(activeTab === 'log' && logDirty) renderLog();
+  else if(activeTab === 'log'){ if(logDirty) renderLog(); if(full) setText($('wipeBtn'), isArmed('wipe') ? 'แตะอีกครั้งเพื่อลบทุกอย่าง' : 'เริ่มใหม่ทั้งหมด'); }
   if(full){ renderTabs(d); renderTutor(); }
 }
 
@@ -1001,16 +1030,17 @@ function onMainClick(e){
     if(G.buyMight(s, x.key)){ addLog('Might: ' + x.name + (x.max > 1 ? ' Lv.' + G.mightLv(s, x.key) : '')); save(); }
   } else if(act === 'chal'){
     const key = b.dataset.key, c = D.CHALLENGES.find(x=>x.key===key);
-    if(s.challenge === key){ G.abandonChallenge(s); addLog('ยอมแพ้ความท้าทาย ' + c.name + ' — กฎถูกยกเลิก รอบนี้เล่นต่อตามปกติ'); }
-    else if(chalArmed.key === key && Date.now() < chalArmed.until){
-      chalArmed = { key:null, until:0 };
+    if(s.challenge === key){
+      if(confirmTap('quit:' + key)){ G.abandonChallenge(s); addLog('ยอมแพ้ความท้าทาย ' + c.name + ' — กฎถูกยกเลิก รอบนี้เล่นต่อตามปกติ'); }
+    }
+    else if(confirmTap('chal:' + key)){
       const gain = G.rebirthGain(s);
       if(G.startChallenge(s, key)){
-        lastLost = s.clonesLost; shownArt = ''; arenaSel = 'god';
+        lastLost = s.clonesLost; shownArt = ''; arenaSel = 'god'; clearAlerts();
         addLog('⚔ เริ่มความท้าทาย ' + c.name + (gain ? ' (ได้ ' + gain + ' God Power)' : ''));
         toast('เริ่มความท้าทาย: ' + c.name); save();
       }
-    } else chalArmed = { key, until: Date.now() + 4000 };
+    }
   } else if(act === 'petView'){
     petView = b.dataset.v;
   } else if(act === 'depth'){
@@ -1042,10 +1072,9 @@ function onGen(){
 function onRebirth(){
   const gain = G.rebirthGain(s);
   if(!gain) return;
-  if(Date.now() >= rbArmedUntil){ rbArmedUntil = Date.now() + 4000; render(true); return; }
-  rbArmedUntil = 0;
+  if(!confirmTap('rebirth')){ render(true); return; }
   G.rebirth(s);
-  lastLost = s.clonesLost; shownArt = ''; arenaSel = 'god';
+  lastLost = s.clonesLost; shownArt = ''; arenaSel = 'god'; clearAlerts();
   addLog('🔄 เกิดใหม่ครั้งที่ ' + s.meta.rebirths + ' — ได้รับ ' + gain + ' God Power');
   toast('เกิดใหม่สำเร็จ! +' + gain + ' God Power');
   celebrate();

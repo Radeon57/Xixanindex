@@ -85,7 +85,7 @@ section.panel{display:none}
 .jobLv{font-size:.74rem;color:var(--gold);white-space:nowrap}
 .jobBody{display:flex;align-items:center;gap:10px;margin-top:5px}
 .jobInfo{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
-.jobSub{font-size:.68rem;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jobSub{font-size:.68rem;color:var(--sub);line-height:1.4}
 .ctl{display:flex;align-items:center;gap:4px;flex:none}
 .ctlBtn{width:34px;height:34px;border-radius:9px;border:1px solid var(--border);background:var(--panel2);color:var(--text);font-size:1.05rem;line-height:1;cursor:pointer;font-family:inherit}
 .ctlBtn.plus{border-color:var(--gold);color:var(--gold)}
@@ -132,7 +132,7 @@ section.panel{display:none}
 @keyframes godShake{0%,100%{transform:translateX(0)}60%{transform:translateX(-3px)}}
 .fName{font-size:.82rem;font-weight:bold;color:var(--gold);text-align:center}
 .fighter .bar{width:100%;flex:none}
-.fStat{font-size:.66rem;color:var(--sub);text-align:center;white-space:nowrap}
+.fStat{font-size:.66rem;color:var(--sub);text-align:center;line-height:1.35;overflow-wrap:anywhere}
 .vs{align-self:center;font-weight:bold;color:var(--danger);font-size:.9rem;margin-top:-40px}
 #fx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
 .predict{text-align:center;font-size:.76rem;margin:8px 0}
@@ -348,7 +348,7 @@ button:focus-visible,.tab:focus-visible,.toggle input:focus-visible{outline:2px 
             <div class="fName">ท่าน</div>
             <div class="bar hp"><i id="aHeroHp"></i></div>
             <div class="fStat" id="aHeroHpTxt"></div>
-            <div class="fStat">โจมตี <span id="aHeroAtk"></span> · ป้องกัน <span id="aHeroDef"></span></div>
+            <div class="fStat">โจมตี <span id="aHeroAtk"></span><br>ป้องกัน <span id="aHeroDef"></span></div>
           </div>
           <div class="vs">VS</div>
           <div class="fighter">
@@ -356,7 +356,7 @@ button:focus-visible,.tab:focus-visible,.toggle input:focus-visible{outline:2px 
             <div class="fName" id="aGodName"></div>
             <div class="bar hp"><i id="aGodHp"></i></div>
             <div class="fStat" id="aGodHpTxt"></div>
-            <div class="fStat">โจมตี <span id="aGodAtk"></span> · ป้องกัน <span id="aGodDef"></span></div>
+            <div class="fStat">โจมตี <span id="aGodAtk"></span><br>ป้องกัน <span id="aGodDef"></span></div>
           </div>
           <canvas id="fx"></canvas>
         </div>
@@ -366,7 +366,7 @@ button:focus-visible,.tab:focus-visible,.toggle input:focus-visible{outline:2px 
         <div class="note" id="autoFightLock">ท้าเทพอัตโนมัติจะปลดล็อกหลังเกิดใหม่ครั้งแรก</div>
         <div class="rewardBox" id="godReward"></div>
       </div>
-      <div class="doneBox" id="godsDone">สังหารเทพครบทุกองค์แล้ว! ท่านคือผู้สังหารเทพ<br>เกิดใหม่เพื่อสะสม God Power ต่อ — เนื้อหาใหม่จะมาในเฟสถัดไป</div>
+      <div class="doneBox" id="godsDone">สังหารเทพครบทุกองค์แล้ว! ท่านคือผู้สังหารเทพ<br>ท้าสิ่งมีชีวิตสูงสุดต่อได้ที่ด้านล่าง</div>
       <div class="godList" id="godList"></div>
       <div class="secTitle">สิ่งมีชีวิตสูงสุด <span class="secSub">สู้ซ้ำได้ไม่จำกัด ทุกเลเวลแข็งขึ้น ×1.3 · ชนะได้แต้ม Might</span></div>
       <div class="hint" id="ubLock">ปลดล็อกเมื่อสังหารเทพครบทั้ง 10 องค์ในรอบเดียว</div>

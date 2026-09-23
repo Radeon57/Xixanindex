@@ -175,6 +175,8 @@ const PLAN_PRESETS = [
 ];
 // the clone plan unlocks with the first god; auto-fighting gods with the first rebirth
 const PLAN_UNLOCK_GODS = 1, AUTOFIGHT_UNLOCK_REBIRTHS = 1;
+// MP refunded to saves that bought the old auto-fight Might perk (it is now a free toggle)
+const MIGHT_AUTOFIGHT_REFUND = 1;
 
 // Achievements are permanent and each adds ACH_BONUS to all stats.
 // type: what is measured (see engine.achValue); n: the target.
@@ -210,6 +212,6 @@ root.GKDATA = {
   PETS, PET_GROWTH, PET_EXP_BASE, PET_EXP_GROWTH, PET_MAX_LV, TEAM_SIZE,
   DUNGEONS, DEPTH_GROWTH, MAX_DEPTH, DUNGEON_UNLOCK_DEPTH, MATERIALS, GEAR, FORGE_COST, FORGE_GROWTH, FORGE_MIN_CHANCE,
   CHALLENGES, CHAL_MAX, CHAL_FIRST_GOAL, FEW_CLONES, ULTIMATES, UB_GROWTH, UB_UNLOCK_LV, MIGHT,
-  PLAN_PRESETS, PLAN_UNLOCK_GODS, AUTOFIGHT_UNLOCK_REBIRTHS
+  PLAN_PRESETS, PLAN_UNLOCK_GODS, AUTOFIGHT_UNLOCK_REBIRTHS, MIGHT_AUTOFIGHT_REFUND
 };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -101,7 +101,6 @@ function mults(s){
     compound(D.PETS, p => s.meta.pets[p.key] ? s.meta.pets[p.key].lv - 1 : 0);
     compound(D.CHALLENGES.filter(c=>c.stat !== 'stat'), c => s.meta.chal[c.key] || 0);
   }
-  if(inChallenge(s, 'few')) m.maxClones = Math.min(m.maxClones, D.FEW_CLONES);
   D.CREATIONS.forEach(c=>{
     if(!c.bonus) return;
     // bonuses count every unit ever made, so spending items as ingredients never loses their bonus
@@ -110,6 +109,8 @@ function mults(s){
     if(c.bonus.add) m[c.bonus.stat] += n*c.bonus.per;
     else m[c.bonus.stat] *= 1 + n*c.bonus.per;
   });
+  // applied last so no bonus can lift the challenge's cap
+  if(inChallenge(s, 'few')) m.maxClones = Math.min(m.maxClones, D.FEW_CLONES);
   return m;
 }
 
@@ -364,18 +365,19 @@ function forge(s, key){
 
 // ---------- rebirth ----------
 function rebirthGain(s){ let g = 0; for(let i=0;i<s.gods;i++) g += D.GODS[i].gp; return g; }
-// start a new run: God Power for every god killed this run; meta and the log carry over
-// start a new run in place: pays God Power for this run's gods; meta and the log carry over
+// start a new run in place: pays God Power for this run's gods; meta, the log and the auto-clone choice carry over
 function resetRun(s, challenge){
   const gain = rebirthGain(s);
-  const meta = s.meta, log = s.log;
+  const meta = s.meta, log = s.log, autoClone = s.create.autoClone;
   meta.gp += gain; meta.gpTotal += gain;
   if(gain) meta.rebirths++;
   const fresh = newState(meta);
   fresh.log = log;
   fresh.challenge = challenge || null;
+  fresh.create.autoClone = autoClone;
   for(const k of Object.keys(s)) if(!(k in fresh)) delete s[k];
   Object.assign(s, fresh);
+  if(challenge === 'mortal') return gain;   // 'mortal' runs start with no permanent help at all
   const L = mightLv(s, 'legacy');
   if(L) s.dp = Math.pow(10, L + 3);
   if(mightLv(s, 'fullArmy')) s.clones = derive(s).maxClones;
@@ -416,7 +418,11 @@ function buyMight(s, key){
 
 function levelTime(def, lv){ return def.base * (1 + D.LEVEL_TIME_GROWTH*lv); }
 // blows traded per HIT_INTERVAL: attack squared over (attack + defence) keeps damage positive and rewards stacking attack
-function blow(atk, def){ return atk*atk / (atk + def); }
+function blow(atk, def){
+  if(!(atk > 0)) return 0;
+  const r = def / atk;
+  return atk / (1 + (r === r ? r : 1));   // = atk^2/(atk+def), written so huge values can't produce NaN
+}
 
 function monsterRates(s, i, d){
   const mon = D.MONSTERS[i], n = s.mon[i].n;
@@ -433,9 +439,10 @@ function canAfford(s, c){
   for(const k in c.needs) if((s.own[k]||0) < c.needs[k]) return false;
   return true;
 }
-function pay(s, c, sign){
-  s.dp -= sign*c.dp;
-  for(const k in c.needs) s.own[k] = (s.own[k]||0) - sign*c.needs[k];
+// n units of c (negative n refunds)
+function pay(s, c, n){
+  s.dp -= n*c.dp;
+  for(const k in c.needs) s.own[k] = (s.own[k]||0) - n*c.needs[k];
 }
 const creationByKey = key => D.CREATIONS.find(c=>c.key===key);
 
@@ -509,42 +516,82 @@ function step(s, dt, ev){
 
 // what to make next for `key`: the item itself if affordable, otherwise the first missing ingredient (recursively);
 // null when only DP is short, so the hero waits
-function resolveCreation(s, key, depth){
+// returns { key, want }: want caps how many are worth making in a row (the shortfall for an ingredient)
+function resolveCreation(s, key, depth, want){
   const c = creationByKey(key);
-  if(canAfford(s, c)) return key;
+  if(canAfford(s, c)) return { key, want };
   if(depth > 12) return null;
-  for(const k in c.needs) if((s.own[k]||0) < c.needs[k]) return resolveCreation(s, k, depth+1);
+  for(const k in c.needs){ const short = c.needs[k] - (s.own[k]||0); if(short > 0) return resolveCreation(s, k, depth+1, short); }
   return null;
 }
 function nextCreation(s, d){
-  const c = s.create;
-  if(c.autoClone && s.clones < d.maxClones) return 'clone';
-  if(c.target === 'clone') return s.clones < d.maxClones ? 'clone' : null;
-  return resolveCreation(s, c.target, 0);
+  const c = s.create, room = d.maxClones - s.clones;
+  if(c.autoClone && room > 0) return { key:'clone', want:room };
+  if(c.target === 'clone') return room > 0 ? { key:'clone', want:room } : null;
+  return resolveCreation(s, c.target, 0, Infinity);
+}
+function affordableCount(s, c){
+  let k = c.dp ? Math.floor(s.dp / c.dp) : Infinity;
+  for(const n in c.needs) k = Math.min(k, Math.floor((s.own[n]||0) / c.needs[n]));
+  return k;
+}
+// everything needed to make one `key` from scratch: unit counts per item, total time and DP (static, so cached)
+const treeCache = {};
+function recipeTree(key){
+  if(treeCache[key]) return treeCache[key];
+  const counts = {}; let time = 0, dp = 0;
+  (function add(k, n){
+    const c = creationByKey(k);
+    counts[k] = (counts[k]||0) + n; time += c.time*n; dp += c.dp*n;
+    for(const x in c.needs) add(x, c.needs[x]*n);
+  })(key, 1);
+  return treeCache[key] = { counts, time, dp };
+}
+function finishItems(s, item, k, d, ev){
+  if(item.key === 'clone') s.clones += k;
+  else s.own[item.key] = (s.own[item.key]||0) + k;
+  const first = !s.made[item.key];
+  s.made[item.key] = (s.made[item.key]||0) + k;
+  if(first && item.key !== 'clone' && ev) ev.push({ type:'firstCreate', key:item.key });
+  // only clones and max-clone bonuses change the clone cap; recomputing stats for every item is costly in catch-up
+  if(item.key === 'clone' || (item.bonus && item.bonus.stat === 'maxClones')) d.maxClones = derive(s).maxClones;
 }
 
 function stepCreate(s, dt, d, ev){
   const c = s.create;
   let left = dt * d.m.create, guard = 0;
-  while(left > 0 && guard++ < 10000){
+  while(left > 0 && guard++ < 1000){
     if(!c.cur){
-      const key = nextCreation(s, d);
-      const item = key && creationByKey(key);
+      const next = nextCreation(s, d);
+      // with time for several complete targets (fast creation, offline catch-up), make whole recipe trees at once
+      if(next && next.key !== 'clone' && c.target !== 'clone'){
+        const tree = recipeTree(c.target);
+        const k = Math.min(Math.floor(left / tree.time), tree.dp ? Math.floor(s.dp / tree.dp) : Infinity);
+        if(k >= 2){
+          s.dp -= k * tree.dp; left -= k * tree.time;
+          for(const x in tree.counts){
+            if(x === c.target) continue;
+            if(!s.made[x] && ev) ev.push({ type:'firstCreate', key:x });
+            s.made[x] = (s.made[x]||0) + tree.counts[x] * k;
+          }
+          finishItems(s, creationByKey(c.target), k, d, ev);
+          continue;
+        }
+      }
+      const item = next && creationByKey(next.key);
       if(!item || !canAfford(s, item)) { c.prog = 0; return; }
+      // whole units that fit in the remaining time are finished in one batch, so fast creation stays cheap to simulate
+      const k = Math.min(Math.floor(left / item.time), affordableCount(s, item), next.want);
+      if(k >= 1){ pay(s, item, k); finishItems(s, item, k, d, ev); left -= k * item.time; continue; }
       pay(s, item, 1);
-      c.cur = key; c.prog = 0;
+      c.cur = item.key; c.prog = 0;
     }
     const item = creationByKey(c.cur);
     const need = item.time - c.prog;
     if(left < need){ c.prog += left; return; }
     left -= need;
-    if(item.key === 'clone') s.clones++;
-    else s.own[item.key] = (s.own[item.key]||0) + 1;
-    const first = !s.made[item.key];
-    s.made[item.key] = (s.made[item.key]||0) + 1;
-    if(first && item.key !== 'clone' && ev) ev.push({ type:'firstCreate', key:item.key });
     c.cur = null; c.prog = 0;
-    if(item.key === 'clone') d.maxClones = derive(s).maxClones;
+    finishItems(s, item, 1, d, ev);
   }
 }
 
@@ -623,6 +670,7 @@ function setCreateTarget(s, key){
   const i = D.CREATIONS.findIndex(c=>c.key===key);
   if(i < 0 || !creationUnlocked(s, i)) return false;
   const c = s.create;
+  if(key === c.target) return true;   // re-selecting keeps the ingredient already in progress
   if(c.cur && c.cur !== key){ pay(s, creationByKey(c.cur), -1); c.cur = null; c.prog = 0; }
   c.target = key;
   return true;
@@ -643,11 +691,12 @@ function flee(s){ s.fight = null; }
 // ---------- saves ----------
 const isNum = v => typeof v === 'number' && Number.isFinite(v);
 const nonNeg = (v, dflt) => isNum(v) ? Math.max(0, v) : dflt;
+const capped = (v, max) => Math.min(max, nonNeg(v, 0));   // counts and levels from a save stay in a sane range
 function sanitize(raw){
   const d = newState();
   if(!raw || typeof raw !== 'object' || raw.v !== SAVE_VERSION) return d;
   ['dp','dpTotal','battleRaw','clonesLost','playTime','hp'].forEach(k=>{ d[k] = nonNeg(raw[k], d[k]); });
-  d.clones = Math.floor(nonNeg(raw.clones, 0));
+  d.clones = Math.floor(capped(raw.clones, 1e9));
   d.gods = Math.min(D.GODS.length, Math.floor(nonNeg(raw.gods, 0)));
   d.lastSave = isNum(raw.lastSave) && raw.lastSave > 0 && raw.lastSave <= Date.now() ? raw.lastSave : Date.now();
   ['train','skill'].forEach(kind=>{
@@ -655,18 +704,18 @@ function sanitize(raw){
     d[kind].forEach((r,i)=>{
       const x = raw[kind][i];
       if(!x || typeof x !== 'object') return;
-      r.lv = Math.floor(nonNeg(x.lv, 0)); r.prog = nonNeg(x.prog, 0); r.n = Math.floor(nonNeg(x.n, 0));
+      r.lv = Math.floor(capped(x.lv, 1e6)); r.prog = nonNeg(x.prog, 0); r.n = Math.floor(capped(x.n, 1e9));
     });
   });
   if(Array.isArray(raw.mon)) d.mon.forEach((r,i)=>{
     const x = raw.mon[i];
     if(!x || typeof x !== 'object') return;
-    r.n = Math.floor(nonNeg(x.n, 0)); r.kills = Math.floor(nonNeg(x.kills, 0));
+    r.n = Math.floor(capped(x.n, 1e9)); r.kills = Math.floor(nonNeg(x.kills, 0));
     r.acc = Math.min(1, nonNeg(x.acc, 0)); r.dacc = Math.min(1, nonNeg(x.dacc, 0));
   });
   ['own','made'].forEach(k=>{
     if(!raw[k] || typeof raw[k] !== 'object') return;
-    D.CREATIONS.forEach(c=>{ if(isNum(raw[k][c.key])) d[k][c.key] = Math.floor(Math.max(0, raw[k][c.key])); });
+    D.CREATIONS.forEach(c=>{ if(isNum(raw[k][c.key])) d[k][c.key] = Math.floor(capped(raw[k][c.key], 1e15)); });
   });
   if(raw.create && typeof raw.create === 'object'){
     if(creationByKey(raw.create.target)) d.create.target = raw.create.target;
@@ -674,28 +723,28 @@ function sanitize(raw){
     if(typeof raw.create.autoClone === 'boolean') d.create.autoClone = raw.create.autoClone;
   }
   if(Array.isArray(raw.log)) d.log = raw.log.filter(l => typeof l === 'string').slice(0, 60);
-  d.gen = Math.floor(nonNeg(raw.gen, 0));
-  if(raw.mono && typeof raw.mono === 'object') D.MONUMENTS.forEach(mo=>{ if(isNum(raw.mono[mo.key])) d.mono[mo.key] = Math.floor(Math.max(0, raw.mono[mo.key])); });
+  d.gen = Math.floor(capped(raw.gen, 300));
+  if(raw.mono && typeof raw.mono === 'object') D.MONUMENTS.forEach(mo=>{ if(isNum(raw.mono[mo.key])) d.mono[mo.key] = Math.floor(capped(raw.mono[mo.key], 300)); });
   const rm = raw.meta && typeof raw.meta === 'object' ? raw.meta : {};
   const m = d.meta;
   ['gp','gpTotal','rebirths','dpLife'].forEach(k=>{ m[k] = nonNeg(rm[k], 0); });
   m.rebirths = Math.floor(m.rebirths);
   // a phase-1 save has no meta: its current run is the best so far
   m.bestGods = Math.min(D.GODS.length, Math.floor(Math.max(nonNeg(rm.bestGods, 0), d.gods)));
-  if(rm.up && typeof rm.up === 'object') D.UPGRADES.forEach(u=>{ if(isNum(rm.up[u.key])) m.up[u.key] = Math.floor(Math.max(0, rm.up[u.key])); });
+  if(rm.up && typeof rm.up === 'object') D.UPGRADES.forEach(u=>{ if(isNum(rm.up[u.key])) m.up[u.key] = Math.floor(capped(rm.up[u.key], 2000)); });
   if(rm.ach && typeof rm.ach === 'object') D.ACHIEVEMENTS.forEach(a=>{ if(rm.ach[a.key]) m.ach[a.key] = 1; });
   if(!rm.dpLife) m.dpLife = d.dpTotal;
   if(rm.pets && typeof rm.pets === 'object') D.PETS.forEach(p=>{
     const x = rm.pets[p.key];
     if(x && typeof x === 'object') m.pets[p.key] = { lv: Math.min(D.PET_MAX_LV, Math.max(1, Math.floor(nonNeg(x.lv, 1)))), exp: nonNeg(x.exp, 0) };
   });
-  if(Array.isArray(rm.team)) m.team = [...new Set(rm.team.filter(k => m.pets[k]))].slice(0, D.TEAM_SIZE);
+  if(Array.isArray(rm.team)) m.team = [...new Set(rm.team.filter(k => D.PETS.some(p=>p.key===k) && Object.prototype.hasOwnProperty.call(m.pets, k)))].slice(0, D.TEAM_SIZE);
   if(rm.mats && typeof rm.mats === 'object') for(const k in D.MATERIALS) if(isNum(rm.mats[k])) m.mats[k] = Math.floor(Math.max(0, rm.mats[k]));
-  if(rm.gear && typeof rm.gear === 'object') D.GEAR.forEach(g=>{ if(isNum(rm.gear[g.key])) m.gear[g.key] = Math.floor(Math.max(0, rm.gear[g.key])); });
+  if(rm.gear && typeof rm.gear === 'object') D.GEAR.forEach(g=>{ if(isNum(rm.gear[g.key])) m.gear[g.key] = Math.floor(capped(rm.gear[g.key], 1000)); });
   if(rm.dgBest && typeof rm.dgBest === 'object') D.DUNGEONS.forEach(g=>{ if(isNum(rm.dgBest[g.key])) m.dgBest[g.key] = Math.min(D.MAX_DEPTH, Math.floor(Math.max(0, rm.dgBest[g.key]))); });
   if(typeof rm.dgAuto === 'boolean') m.dgAuto = rm.dgAuto;
   if(rm.chal && typeof rm.chal === 'object') D.CHALLENGES.forEach(c=>{ if(isNum(rm.chal[c.key])) m.chal[c.key] = Math.min(D.CHAL_MAX, Math.floor(Math.max(0, rm.chal[c.key]))); });
-  if(Array.isArray(rm.ub)) m.ub = D.ULTIMATES.map((u,i)=>Math.floor(nonNeg(rm.ub[i], 0)));
+  if(Array.isArray(rm.ub)) m.ub = D.ULTIMATES.map((u,i)=>Math.floor(capped(rm.ub[i], 1e5)));
   m.mp = nonNeg(rm.mp, 0); m.mpTotal = nonNeg(rm.mpTotal, 0);
   if(rm.might && typeof rm.might === 'object') D.MIGHT.forEach(x=>{ if(isNum(rm.might[x.key])) m.might[x.key] = Math.min(x.max, Math.floor(Math.max(0, rm.might[x.key]))); });
   if(D.CHALLENGES.some(c=>c.key===raw.challenge) && chalDone(d, raw.challenge) < D.CHAL_MAX) d.challenge = raw.challenge;
@@ -706,6 +755,7 @@ function sanitize(raw){
     ['train','skill','mon'].forEach(k=>{ if(isNum(p[k])) m.plan[k] = Math.min(100, Math.max(0, p[k])); });
   }
   m.autoFight = rm.autoFight === true || !!(rm.might && rm.might.autoFight);
+  if(rm.might && rm.might.autoFight) m.mp += D.MIGHT_AUTOFIGHT_REFUND;   // that perk became a free toggle: give its cost back once
   m.tut = isNum(rm.tut) ? Math.floor(Math.max(0, rm.tut)) : (m.bestGods >= 2 || m.rebirths ? 999 : 0);
   if(rm.seen && typeof rm.seen === 'object') for(const k in rm.seen) if(rm.seen[k] === 1) m.seen[k] = 1;
   const r = rm.run;
@@ -714,7 +764,11 @@ function sanitize(raw){
   // never trust more assigned clones than exist
   let over = assigned(d) - d.clones;
   for(const kind of JOB_KINDS){ for(const r of d[kind]){ if(over <= 0) break; const k = Math.min(r.n, over); r.n -= k; over -= k; } }
-  d.hp = Math.min(d.hp, derive(d).maxHp);
+  const dd = derive(d);
+  d.clones = Math.min(d.clones, dd.maxClones);
+  over = assigned(d) - d.clones;
+  for(const kind of JOB_KINDS){ for(const r of d[kind]){ if(over <= 0) break; const k = Math.min(r.n, over); r.n -= k; over -= k; } }
+  d.hp = Math.min(d.hp, dd.maxHp);
   return d;
 }
 
