@@ -168,7 +168,7 @@ function buildJobs(kind){
         <div class="lockTxt"></div>
       </div>`;
   }).join('');
-  sec.innerHTML = toolbarHTML(kind) + rows;
+  sec.innerHTML = toolbarHTML(kind) + '<div class="jobList">' + rows + '</div>';
   if(kind === 'mon') loadArt(sec);
   SEC[kind] = { idle: sec.querySelector('[data-r="idle"]'), sum1: sec.querySelector('[data-r="sum1"]'),
                 sum2: sec.querySelector('[data-r="sum2"]'), hint: sec.querySelector('[data-r="hint"]'),
@@ -443,7 +443,7 @@ function renderGods(d, full){
   });
   const ubOn = G.ubUnlocked(s);
   setShown($('ubLock'), !ubOn);
-  setShown($('ubList'), ubOn);
+  setShown($('ubList'), ubOn, 'grid');
   setShown($('backToGod'), ubOn && arenaSel !== 'god' && s.gods < D.GODS.length && !s.fight, 'inline-block');
   if(!ubOn) return;
   let lockedShown = false;
@@ -493,7 +493,7 @@ function renderTemple(d, full){
   if(!open) setHTML($('monoLock'), s.challenge === 'nocreate' ? 'ความท้าทาย "โลกไร้สรรพสิ่ง" ปิดอนุสรณ์ไว้จนกว่าจะผ่าน'
     : 'ปลดล็อกอนุสรณ์เมื่อสังหาร <b>' + D.GODS[D.UNLOCK_AT.monuments].name + '</b>');
   setShown($('monoTitle'), open);
-  setShown($('monoList'), open);
+  setShown($('monoList'), open, 'grid');
   if(!open) return;
   D.MONUMENTS.forEach((mo,i)=>{
     const ref = R.mono[i], L = s.mono[mo.key] || 0, c = G.monumentCost(mo, L);
@@ -1111,6 +1111,106 @@ function onFight(){
   render(true);
 }
 
+// ---------- keyboard & mouse (desktop / tablet) ----------
+let tabBeforeLog = 'train';
+function toggleLog(){
+  if(activeTab === 'log') return selectTab(tabLocked(tabBeforeLog) ? 'train' : tabBeforeLog);
+  tabBeforeLog = activeTab;
+  selectTab('log');
+}
+const HUD_TIPS = {
+  hudHp:'พลังชีวิต — ลดลงระหว่างสู้กับเทพ และฟื้นเองเมื่อไม่ได้สู้ · เพิ่มได้จากกาย เวท และยุทธ์',
+  hudAtk:'พลังโจมตี — ดาเมจที่ทำใส่เทพต่อครั้ง · มาจากกาย (ฝึกกาย) และยุทธ์ (สนามรบ)',
+  hudDef:'พลังป้องกัน — ลดดาเมจที่ได้รับจากเทพ · มาจากเวท (วิชาเวท) และยุทธ์ (สนามรบ)',
+  hudDp:'พลังเทวะ (DP) — ได้จากสนามรบและเครื่องผลิต · ใช้สร้างสรรพสิ่ง อัปเกรดเครื่องผลิต และสร้างอนุสรณ์',
+  hudClones:'ร่างเงาที่มี / สูงสุด — ส่งร่างเงาไปฝึกกาย วิชาเวท และสนามรบ · สร้างเพิ่มได้ที่แท็บสร้าง',
+  hudGods:'จำนวนเทพที่สังหารในรอบนี้ / ทั้งหมด'
+};
+const KEY_HELP = [
+  ['1 – 8', 'เปิดแท็บตามลำดับ (ฝึกกาย … เกิดใหม่)'],
+  ['L', 'เปิด/ปิดบันทึกและเซฟ'],
+  ['F / Space', 'ท้าสู้หรือถอยหนี (ในแท็บท้าเทพ)'],
+  ['[ ]', 'สลับมุมมองย่อย (คู่หู · เกิดใหม่)'],
+  ['Esc', 'ยกเลิกการยืนยันที่ค้างอยู่ / ปิดบันทึก'],
+  ['?', 'เปิด/ปิดหน้านี้']
+];
+function kbd(k){ const e = document.createElement('kbd'); e.className = 'kHint'; e.textContent = k; e.setAttribute('aria-hidden', 'true'); return e; }
+function helpOpen(){ return $('keyHelp').classList.contains('open'); }
+function showHelp(on){
+  const box = $('keyHelp');
+  setClass(box, 'open', on);
+  if(on){ box._ret = document.activeElement; box.querySelector('.khBox').focus(); }
+  else if(box._ret && box._ret.focus) box._ret.focus();
+}
+function buildHelp(){
+  const box = document.createElement('div');
+  box.id = 'keyHelp';
+  box.innerHTML = `<div class="khBox" role="dialog" aria-modal="true" aria-labelledby="khTitle" tabindex="-1">
+      <div class="row"><b id="khTitle">ปุ่มลัดคีย์บอร์ด</b><button class="miniBtn" id="khClose">ปิด</button></div>
+      <div class="khList">${KEY_HELP.map(([k,t])=>`<div class="khRow"><span class="khKeys">${k.split(' ').map(x=>/^[–\/]$/.test(x) ? x : '<kbd>'+x+'</kbd>').join(' ')}</span><span>${t}</span></div>`).join('')}</div>
+      <div class="note">ปุ่มลัดไม่ทำงานขณะพิมพ์ในช่องข้อความ</div>
+    </div>`;
+  document.body.appendChild(box);
+  box.addEventListener('click', e=>{ if(e.target === box || e.target.id === 'khClose') showHelp(false); });
+}
+function cycleSubView(dir){
+  const seg = document.querySelector('#tab-' + activeTab + ' .subSeg');
+  if(!seg) return false;
+  const btns = [...seg.querySelectorAll('button')].filter(b=>!b.disabled && b.offsetParent);
+  if(!btns.length) return false;
+  const cur = btns.findIndex(b=>b.classList.contains('on'));
+  btns[((cur < 0 ? 0 : cur) + dir + btns.length) % btns.length].click();
+  return true;
+}
+function onKey(e){
+  if(e.ctrlKey || e.metaKey || e.altKey || e.isComposing) return;
+  const t = e.target;
+  if(t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+  const help = e.key === '?' || (e.code === 'Slash' && e.shiftKey);
+  if(help){ e.preventDefault(); showHelp(!helpOpen()); return; }
+  if(helpOpen()){ if(e.key === 'Escape'){ e.preventDefault(); showHelp(false); } return; }
+  if(e.key === 'Escape'){
+    const armed = Object.keys(armedAt).some(isArmed);
+    if(armed){ disarmAll(); render(true); }
+    else if(activeTab === 'log') toggleLog();
+    else return;
+    e.preventDefault(); return;
+  }
+  if(e.shiftKey) return;
+  // e.code keeps shortcuts working on a Thai keyboard layout
+  const digit = /^(?:Digit|Numpad)([1-8])$/.exec(e.code);
+  if(digit){
+    const tab = document.querySelectorAll('#tabs .tab')[+digit[1]-1];
+    if(tab){ e.preventDefault(); selectTab(tab.dataset.tab); }
+    return;
+  }
+  if(e.code === 'KeyL'){ e.preventDefault(); toggleLog(); return; }
+  if(e.code === 'BracketLeft' || e.code === 'BracketRight'){ if(cycleSubView(e.code === 'BracketLeft' ? -1 : 1)) e.preventDefault(); return; }
+  const space = e.code === 'Space';
+  if((e.code === 'KeyF' || space) && activeTab === 'gods'){
+    // Space on a visible control keeps its normal meaning, except on the gods tab button itself
+    const ctl = t && t.closest && t.closest('button,[role="button"],a,summary,label');
+    if(space && ctl && ctl.offsetParent && !(ctl.classList.contains('tab') && ctl.dataset.tab === 'gods')) return;
+    const b = $('fightBtn');
+    e.preventDefault();
+    if(e.repeat || !b.offsetParent || b.disabled) return;
+    b.click();
+  }
+}
+function initPlatform(){
+  document.querySelectorAll('#tabs .tab').forEach((t,i)=>{ t.appendChild(kbd(String(i+1))); t.title = t.textContent.trim().replace(/\d$/, '') + ' (' + (i+1) + ')'; });
+  $('fightBtn').appendChild(kbd('F'));
+  $('logBtn').title = 'บันทึกและเซฟ (L)';
+  for(const id in HUD_TIPS){ const el = $(id); const host = el && (el.closest('.chip,.hpRow,.godCount') || el); if(host) host.title = HUD_TIPS[id]; }
+  buildHelp();
+  const kb = document.createElement('button');
+  kb.className = 'logBtn keyBtn'; kb.id = 'keyBtn'; kb.textContent = '?';
+  kb.title = 'ปุ่มลัดคีย์บอร์ด (?)'; kb.setAttribute('aria-label', 'ปุ่มลัดคีย์บอร์ด');
+  kb.addEventListener('click', ()=>showHelp(true));
+  $('logBtn').after(kb);
+  document.addEventListener('keydown', onKey);
+}
+
 // ---------- save / load ----------
 function save(){
   s.lastSave = Date.now();
@@ -1180,7 +1280,7 @@ function boot(saved){
   $('dgStop').addEventListener('click', ()=>{ G.stopDungeon(s); addLog('หยุดสำรวจดันเจี้ยน'); render(true); });
   $('dgAuto').addEventListener('change', e=>{ s.meta.dgAuto = e.target.checked; render(true); });
   $('rbBtn').addEventListener('click', onRebirth);
-  $('logBtn').addEventListener('click', ()=>selectTab(activeTab === 'log' ? 'train' : 'log'));
+  $('logBtn').addEventListener('click', toggleLog);
   $('autoClone').addEventListener('change', e=>{ s.create.autoClone = e.target.checked; render(true); });
   document.querySelectorAll('.tab').forEach(t=>{
     t.addEventListener('click', ()=>selectTab(t.dataset.tab));
@@ -1190,6 +1290,7 @@ function boot(saved){
   if(!s.log.length) addLog('เริ่มต้นเส้นทางสังหารเทพ: ร่างเงาจะถูกสร้างขึ้นเองทีละร่าง ส่งไปฝึกกายและสนามรบ แล้วท้าเทพสายฟ้าเมื่อคาดการณ์ว่าชนะ');
   if(!storageOk) addLog('เบราว์เซอร์นี้ไม่อนุญาตให้บันทึกเกม — ความคืบหน้าจะหายเมื่อปิดหน้า');
   selectTab('train');
+  initPlatform();
 
   lastTickAt = Date.now();
   requestAnimationFrame(loop);
