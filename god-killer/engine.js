@@ -182,6 +182,7 @@ function bestSafeMonster(s, d){
 function bestRowFor(s, kind, d){ return kind === 'mon' ? bestSafeMonster(s, d || derive(s)) : topRow(s, kind); }
 // put every clone already working in `kind` on its best row
 function moveToBest(s, kind){
+  if(!JOB_KINDS.includes(kind)) return false;
   const i = bestRowFor(s, kind);
   if(i < 0) return false;
   let n = 0;
@@ -217,7 +218,7 @@ function setPlan(s, preset){
 }
 function togglePlan(s, on){
   if(!planUnlocked(s)) return false;
-  s.meta.plan.on = on;
+  s.meta.plan.on = !!on;
   applyPlan(s);
   return true;
 }
@@ -299,18 +300,18 @@ function gainExp(s, key, exp, ev){
 function toggleTeam(s, key){
   const t = s.meta.team, i = t.indexOf(key);
   if(i >= 0){ t.splice(i, 1); return true; }
-  if(!s.meta.pets[key] || t.length >= D.TEAM_SIZE) return false;
+  if(!petDef(key) || !s.meta.pets[key] || t.length >= D.TEAM_SIZE) return false;
   t.push(key);
   return true;
 }
 const dungeonPower = (i, depth) => D.DUNGEONS[i].power * Math.pow(D.DEPTH_GROWTH, depth-1);
 function dungeonUnlocked(s, i){
-  return petsUnlocked(s) && (i === 0 || (s.meta.dgBest[D.DUNGEONS[i-1].key] || 0) >= D.DUNGEON_UNLOCK_DEPTH);
+  return Number.isInteger(i) && i >= 0 && i < D.DUNGEONS.length && petsUnlocked(s) && (i === 0 || (s.meta.dgBest[D.DUNGEONS[i-1].key] || 0) >= D.DUNGEON_UNLOCK_DEPTH);
 }
 const maxDepth = (s, i) => Math.min(D.MAX_DEPTH, (s.meta.dgBest[D.DUNGEONS[i].key] || 0) + 1);
 function winChance(s, i, depth){ const r = teamPower(s) / dungeonPower(i, depth); return r >= 1 ? 1 : r*r; }
 function startDungeon(s, i, depth){
-  if(!dungeonUnlocked(s, i) || !s.meta.team.length || depth < 1 || depth > maxDepth(s, i)) return false;
+  if(!dungeonUnlocked(s, i) || !s.meta.team.length || !Number.isInteger(depth) || depth < 1 || depth > maxDepth(s, i)) return false;
   s.meta.run = { i, depth, t:0 };
   return true;
 }
@@ -404,7 +405,7 @@ function ubStats(s, i){
   const last = D.GODS[D.GODS.length-1], u = D.ULTIMATES[i], k = u.mult * Math.pow(D.UB_GROWTH, ubLevel(s, i));
   return { name:u.name, hp:last.hp*k, atk:last.atk*k, def:last.def*k };
 }
-const ubOpen = (s, i) => ubUnlocked(s) && (i === 0 || ubLevel(s, i-1) >= D.UB_UNLOCK_LV);
+const ubOpen = (s, i) => Number.isInteger(i) && i >= 0 && i < D.ULTIMATES.length && ubUnlocked(s) && (i === 0 || ubLevel(s, i-1) >= D.UB_UNLOCK_LV);
 const mightCost = (s, x) => x.flat ? x.cost : x.cost * (mightLv(s, x.key) + 1);
 function buyMight(s, key){
   const x = D.MIGHT.find(y=>y.key===key);
@@ -450,6 +451,7 @@ const creationByKey = key => D.CREATIONS.find(c=>c.key===key);
 // ev collects things worth telling the player: {type, ...}
 function step(s, dt, ev){
   if(!(dt > 0)) return;
+  dt = Math.min(dt, MAX_OFFLINE_SEC);
   s.playTime += dt;
   let d = derive(s);
 
@@ -657,14 +659,16 @@ function advance(s, sec, ev){
 
 // ---------- player actions ----------
 function assign(s, kind, i, delta){
-  if(!JOB_KINDS.includes(kind) || !rowUnlocked(s, kind, i)) return 0;
+  if(!JOB_KINDS.includes(kind) || !Number.isInteger(i) || i < 0 || i >= s[kind].length || !rowUnlocked(s, kind, i)) return 0;
   const r = s[kind][i];
+  delta = Math.trunc(delta);
+  if(!delta) return 0;
   if(delta > 0) delta = Math.min(delta, idle(s));
   else delta = Math.max(delta, -r.n);
   r.n += delta;
   return delta;
 }
-function unassignKind(s, kind){ s[kind].forEach(r=>{ r.n = 0; }); }
+function unassignKind(s, kind){ if(JOB_KINDS.includes(kind)) s[kind].forEach(r=>{ r.n = 0; }); }
 
 function setCreateTarget(s, key){
   const i = D.CREATIONS.findIndex(c=>c.key===key);
@@ -723,7 +727,7 @@ function sanitize(raw){
     if(typeof raw.create.autoClone === 'boolean') d.create.autoClone = raw.create.autoClone;
   }
   if(Array.isArray(raw.log)) d.log = raw.log.filter(l => typeof l === 'string').slice(0, 60);
-  d.gen = Math.floor(capped(raw.gen, 300));
+  d.gen = Math.floor(capped(raw.gen, 150));
   if(raw.mono && typeof raw.mono === 'object') D.MONUMENTS.forEach(mo=>{ if(isNum(raw.mono[mo.key])) d.mono[mo.key] = Math.floor(capped(raw.mono[mo.key], 300)); });
   const rm = raw.meta && typeof raw.meta === 'object' ? raw.meta : {};
   const m = d.meta;
@@ -731,7 +735,7 @@ function sanitize(raw){
   m.rebirths = Math.floor(m.rebirths);
   // a phase-1 save has no meta: its current run is the best so far
   m.bestGods = Math.min(D.GODS.length, Math.floor(Math.max(nonNeg(rm.bestGods, 0), d.gods)));
-  if(rm.up && typeof rm.up === 'object') D.UPGRADES.forEach(u=>{ if(isNum(rm.up[u.key])) m.up[u.key] = Math.floor(capped(rm.up[u.key], 2000)); });
+  if(rm.up && typeof rm.up === 'object') D.UPGRADES.forEach(u=>{ if(isNum(rm.up[u.key])) m.up[u.key] = Math.floor(capped(rm.up[u.key], 300)); });
   if(rm.ach && typeof rm.ach === 'object') D.ACHIEVEMENTS.forEach(a=>{ if(rm.ach[a.key]) m.ach[a.key] = 1; });
   if(!rm.dpLife) m.dpLife = d.dpTotal;
   if(rm.pets && typeof rm.pets === 'object') D.PETS.forEach(p=>{
@@ -740,14 +744,14 @@ function sanitize(raw){
   });
   if(Array.isArray(rm.team)) m.team = [...new Set(rm.team.filter(k => D.PETS.some(p=>p.key===k) && Object.prototype.hasOwnProperty.call(m.pets, k)))].slice(0, D.TEAM_SIZE);
   if(rm.mats && typeof rm.mats === 'object') for(const k in D.MATERIALS) if(isNum(rm.mats[k])) m.mats[k] = Math.floor(Math.max(0, rm.mats[k]));
-  if(rm.gear && typeof rm.gear === 'object') D.GEAR.forEach(g=>{ if(isNum(rm.gear[g.key])) m.gear[g.key] = Math.floor(capped(rm.gear[g.key], 1000)); });
+  if(rm.gear && typeof rm.gear === 'object') D.GEAR.forEach(g=>{ if(isNum(rm.gear[g.key])) m.gear[g.key] = Math.floor(capped(rm.gear[g.key], 200)); });
   if(rm.dgBest && typeof rm.dgBest === 'object') D.DUNGEONS.forEach(g=>{ if(isNum(rm.dgBest[g.key])) m.dgBest[g.key] = Math.min(D.MAX_DEPTH, Math.floor(Math.max(0, rm.dgBest[g.key]))); });
   if(typeof rm.dgAuto === 'boolean') m.dgAuto = rm.dgAuto;
   if(rm.chal && typeof rm.chal === 'object') D.CHALLENGES.forEach(c=>{ if(isNum(rm.chal[c.key])) m.chal[c.key] = Math.min(D.CHAL_MAX, Math.floor(Math.max(0, rm.chal[c.key]))); });
-  if(Array.isArray(rm.ub)) m.ub = D.ULTIMATES.map((u,i)=>Math.floor(capped(rm.ub[i], 1e5)));
+  if(Array.isArray(rm.ub)) m.ub = D.ULTIMATES.map((u,i)=>Math.floor(capped(rm.ub[i], 2000)));
   m.mp = nonNeg(rm.mp, 0); m.mpTotal = nonNeg(rm.mpTotal, 0);
   if(rm.might && typeof rm.might === 'object') D.MIGHT.forEach(x=>{ if(isNum(rm.might[x.key])) m.might[x.key] = Math.min(x.max, Math.floor(Math.max(0, rm.might[x.key]))); });
-  if(D.CHALLENGES.some(c=>c.key===raw.challenge) && chalDone(d, raw.challenge) < D.CHAL_MAX) d.challenge = raw.challenge;
+  if(D.CHALLENGES.some(c=>c.key===raw.challenge) && chalDone(d, raw.challenge) < D.CHAL_MAX && d.gods <= chalGoal(d, raw.challenge)) d.challenge = raw.challenge;
   // tutorial progress; saves from before the tutorial existed skip it once past the basics
   if(rm.plan && typeof rm.plan === 'object'){
     const p = rm.plan;
@@ -766,6 +770,11 @@ function sanitize(raw){
   for(const kind of JOB_KINDS){ for(const r of d[kind]){ if(over <= 0) break; const k = Math.min(r.n, over); r.n -= k; over -= k; } }
   const dd = derive(d);
   d.clones = Math.min(d.clones, dd.maxClones);
+  // a clone in progress at the cap would push clones past it; an item that isn't unlocked can't be the target
+  if(d.create.cur === 'clone' && d.clones >= dd.maxClones){ d.create.cur = null; d.create.prog = 0; }
+  if(!creationUnlocked(d, D.CREATIONS.findIndex(c=>c.key===d.create.target))) d.create.target = 'clone';
+  if(d.create.cur && !creationUnlocked(d, D.CREATIONS.findIndex(c=>c.key===d.create.cur))){ d.create.cur = null; d.create.prog = 0; }
+  if(d.create.cur) d.create.prog = Math.min(d.create.prog, creationByKey(d.create.cur).time);
   over = assigned(d) - d.clones;
   for(const kind of JOB_KINDS){ for(const r of d[kind]){ if(over <= 0) break; const k = Math.min(r.n, over); r.n -= k; over -= k; } }
   d.hp = Math.min(d.hp, dd.maxHp);
