@@ -74,6 +74,10 @@ function rewardParts(i){
   const r = D.GODS[i].reward, out = [];
   if(r.unlock === 'skills') out.push('ปลดล็อก <b>วิชาเวท</b>');
   if(r.unlock === 'create') out.push('ปลดล็อก <b>การสร้างสรรพสิ่ง</b>');
+  if(r.unlock === 'gen') out.push('ปลดล็อก <b>เครื่องผลิตพลังเทวะ</b>');
+  if(r.unlock === 'monuments') out.push('ปลดล็อก <b>อนุสรณ์</b>');
+  if(r.unlock === 'rebirth') out.push('ปลดล็อก <b>การเกิดใหม่</b>');
+  out.push('<b>' + D.GODS[i].gp + ' God Power</b> เมื่อเกิดใหม่');
   const monBefore = Math.min(D.MONSTERS.length, 2 + 2*i), monAfter = Math.min(D.MONSTERS.length, 2 + 2*(i+1));
   if(monAfter > monBefore) out.push('สนามรบใหม่ <b>'+(monAfter-monBefore)+' แห่ง</b>');
   if(r.maxClones) out.push('ร่างเงาสูงสุด <b>+'+r.maxClones+'</b>');
@@ -320,6 +324,84 @@ function renderGods(d, full){
   });
 }
 
+// ---------- temple: generator & monuments ----------
+function buildTemple(){
+  $('monoList').innerHTML = D.MONUMENTS.map((mo,i)=>`<div class="cItem" data-i="${i}">
+      <div class="jobHead"><span class="jobName">${mo.name}</span><span class="jobLv"></span></div>
+      <div class="cDesc"></div>
+      <div class="cFoot"><span class="cCost"></span><button class="selBtn" data-act="build" data-key="${mo.key}">สร้าง</button></div>
+    </div>`).join('');
+  R.mono = [...document.querySelectorAll('#monoList .cItem')].map(el=>({
+    el, lv: el.querySelector('.jobLv'), desc: el.querySelector('.cDesc'), cost: el.querySelector('.cCost'), btn: el.querySelector('.selBtn')
+  }));
+}
+function bonusText(x, L){ return x.add ? '+' + fmt(x.per*L) + ' ร่างเงาสูงสุด' : '+' + Math.round(x.per*L*100) + '%'; }
+function renderTemple(d, full){
+  if(!full) return;
+  const cost = G.genCost(s);
+  setText($('genLv'), 'Lv.' + s.gen);
+  const next = D.GEN_RATE * Math.pow(D.GEN_GROWTH, s.gen) * d.m.dp;
+  setText($('genRate'), (s.gen ? 'ผลิต ' + fmt(G.genRate(s, d)) + ' DP/วิ' : 'ยังไม่ได้สร้าง') + ' · เลเวลถัดไป ' + fmt(next) + ' DP/วิ');
+  setText($('genBtn'), (s.gen ? 'อัปเกรด' : 'สร้างเครื่องผลิต') + ' · ' + fmt(cost) + ' DP');
+  setDisabled($('genBtn'), s.dp < cost);
+  const open = G.monumentsUnlocked(s);
+  setShown($('monoLock'), !open);
+  if(!open) setText($('monoLockGod'), D.GODS[D.UNLOCK_AT.monuments].name);
+  setShown($('monoTitle'), open);
+  setShown($('monoList'), open);
+  if(!open) return;
+  D.MONUMENTS.forEach((mo,i)=>{
+    const ref = R.mono[i], L = s.mono[mo.key] || 0, c = G.monumentCost(mo, L);
+    const have = s.own[mo.item] || 0, itemName = G.creationByKey(mo.item).name;
+    setText(ref.lv, 'Lv.' + L);
+    setText(ref.desc, mo.desc + ' ต่อเลเวล' + (L ? ' · ตอนนี้ ' + bonusText(mo, L) : ''));
+    setHTML(ref.cost, '<span class="' + (s.dp < c.dp ? 'short' : '') + '">DP ' + fmt(c.dp) + '</span> · <span class="' + (have < c.items ? 'short' : '') + '">' +
+      itemName + ' ' + fmt(have) + '/' + fmt(c.items) + '</span>');
+    setDisabled(ref.btn, !G.canBuild(s, mo));
+  });
+}
+
+// ---------- rebirth: God Power shop & achievements ----------
+const ACH_LABEL = { clones:'มีร่างเงา', trainLv:'เลเวลฝึกกายรวม', skillLv:'เลเวลวิชาเวทรวม', kills:'ฆ่ามอนสเตอร์ในรอบเดียว', made:'สร้างของในรอบเดียว',
+  gods:'สังหารเทพในรอบเดียว', rebirths:'เกิดใหม่', dpLife:'พลังเทวะสะสมตลอดกาล', monuments:'เลเวลอนุสรณ์รวม', genLv:'เครื่องผลิต Lv.' };
+function buildRebirth(){
+  $('upList').innerHTML = D.UPGRADES.map((u,i)=>`<div class="cItem" data-i="${i}">
+      <div class="jobHead"><span class="jobName">${u.name}</span><span class="jobLv"></span></div>
+      <div class="cDesc"></div>
+      <div class="cFoot"><span class="cCost"></span><button class="selBtn" data-act="upgrade" data-key="${u.key}">ซื้อ</button></div>
+    </div>`).join('');
+  R.up = [...document.querySelectorAll('#upList .cItem')].map(el=>({
+    lv: el.querySelector('.jobLv'), desc: el.querySelector('.cDesc'), cost: el.querySelector('.cCost'), btn: el.querySelector('.selBtn')
+  }));
+  $('achList').innerHTML = D.ACHIEVEMENTS.map(a=>`<div class="ach" data-key="${a.key}"><b>${a.name}</b><span>${ACH_LABEL[a.type]} ${fmt(a.n)}</span><div class="bar gold"><i></i></div></div>`).join('');
+  R.ach = [...document.querySelectorAll('#achList .ach')].map(el=>({ el, bar: el.querySelector('.bar>i') }));
+}
+let rbArmedUntil = 0;
+function renderRebirth(d, full){
+  if(!full) return;
+  const m = s.meta, gain = G.rebirthGain(s);
+  setText($('gpTxt'), fmt(m.gp));
+  setText($('rbInfo'), 'เกิดใหม่แล้ว ' + m.rebirths + ' ครั้ง · ถ้าเกิดใหม่ตอนนี้จะได้ +' + gain + ' God Power (จากเทพ ' + s.gods + ' องค์ที่สังหารในรอบนี้)');
+  const armed = Date.now() < rbArmedUntil;
+  setText($('rbBtn'), !gain ? 'ต้องสังหารเทพอย่างน้อย 1 องค์ในรอบนี้' : armed ? 'แตะอีกครั้งเพื่อยืนยันการเกิดใหม่' : 'เกิดใหม่ · +' + gain + ' God Power');
+  setDisabled($('rbBtn'), !gain);
+  setClass($('rbBtn'), 'flee', armed);
+  D.UPGRADES.forEach((u,i)=>{
+    const ref = R.up[i], L = m.up[u.key] || 0, c = G.upgradeCost(s, u);
+    setText(ref.lv, 'Lv.' + L);
+    setText(ref.desc, u.desc + ' ต่อเลเวล' + (L ? ' · ตอนนี้ ' + bonusText(u, L) : ''));
+    setHTML(ref.cost, '<span class="' + (m.gp < c ? 'short' : '') + '">' + c + ' God Power</span>');
+    setDisabled(ref.btn, m.gp < c);
+  });
+  const n = G.achCount(s);
+  setText($('achSum'), n + '/' + D.ACHIEVEMENTS.length + ' · ค่าสถานะทั้งหมด +' + Math.round(n*D.ACH_BONUS*100) + '%');
+  D.ACHIEVEMENTS.forEach((a,i)=>{
+    const done = !!m.ach[a.key];
+    setClass(R.ach[i].el, 'done', done);
+    setBar(R.ach[i].bar, done ? 1 : G.achValue(s, a.type) / a.n);
+  });
+}
+
 // ---------- HUD & tabs ----------
 function renderHud(d, full){
   setBar($('hudHpBar'), s.hp / d.maxHp);
@@ -331,8 +413,10 @@ function renderHud(d, full){
   setText($('hudDp'), fmt(s.dp));
   setText($('hudClones'), fmt(s.clones) + '/' + fmt(d.maxClones));
 }
-const TABS = ['train','skill','mon','create','gods','log'];
-function tabLocked(name){ return name === 'skill' && !G.skillsUnlocked(s); }
+const TABS = ['train','skill','mon','create','temple','gods','rebirth','log'];
+const TAB_LOCK = { skill:['skills', ()=>G.skillsUnlocked(s)], temple:['gen', ()=>G.genUnlocked(s)], rebirth:['rebirth', ()=>G.rebirthUnlocked(s)] };
+const TAB_NAME = { skill:'วิชาเวท', temple:'เทวาลัย', rebirth:'การเกิดใหม่' };
+function tabLocked(name){ const l = TAB_LOCK[name]; return !!l && !l[1](); }
 function renderTabs(d){
   if(s.gods < D.GODS.length && !s.fight && s.hp >= d.maxHp*0.999 && fightOutlook(d).win) alerts.gods = true;
   document.querySelectorAll('.tab').forEach(t=>{
@@ -343,11 +427,12 @@ function renderTabs(d){
   });
 }
 function selectTab(name){
-  if(tabLocked(name)){ toast('ปลดล็อกวิชาเวทเมื่อสังหาร ' + D.GODS[0].name); return; }
+  if(tabLocked(name)){ toast('ปลดล็อก' + TAB_NAME[name] + 'เมื่อสังหาร ' + D.GODS[D.UNLOCK_AT[TAB_LOCK[name][0]]].name); return; }
   activeTab = name;
   alerts[name] = false;
   TABS.forEach(t=>setShown($('tab-'+t), t === name));
   document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-pressed', t.dataset.tab === name ? 'true' : 'false'));
+  setClass($('logBtn'), 'on', name === 'log');
   if(name === 'log') renderLog();
   render(true);
 }
@@ -361,6 +446,8 @@ function render(full){
   if(activeTab === 'train' || activeTab === 'skill' || activeTab === 'mon') renderJobs(activeTab, d, full);
   else if(activeTab === 'create') renderCreate(d, full);
   else if(activeTab === 'gods') renderGods(d, full);
+  else if(activeTab === 'temple') renderTemple(d, full);
+  else if(activeTab === 'rebirth') renderRebirth(d, full);
   else if(activeTab === 'log' && logDirty) renderLog();
   if(full) renderTabs(d);
 }
@@ -384,9 +471,16 @@ function handleEvents(ev, quiet){
       addLog('⚔ สังหาร ' + god.name + ' สำเร็จ! ได้รับ: ' + stripTags(rewardParts(e.i).join(', ')));
       if(r.unlock === 'skills') alerts.skill = true;
       if(r.unlock === 'create') alerts.create = true;
+      if(r.unlock === 'gen' || r.unlock === 'monuments') alerts.temple = true;
+      if(r.unlock === 'rebirth') alerts.rebirth = true;
       alerts.mon = true;
       if(!quiet){ toast('⚔ สังหาร ' + god.name + ' สำเร็จ!'); celebrate(); }
       save();
+    } else if(e.type === 'ach'){
+      const a = D.ACHIEVEMENTS.find(x=>x.key===e.key);
+      addLog('🏆 ความสำเร็จ: ' + a.name + ' (ค่าสถานะทั้งหมด +' + Math.round(D.ACH_BONUS*100) + '%)');
+      alerts.rebirth = G.rebirthUnlocked(s);
+      if(!quiet) toast('🏆 ความสำเร็จ: ' + a.name);
     } else if(e.type === 'godLose'){
       addLog('พ่ายแพ้ต่อ ' + D.GODS[e.i].name + ' — ฝึกให้แข็งแกร่งขึ้นแล้วกลับมาใหม่');
       if(!quiet) toast('พ่ายแพ้... ต้องแข็งแกร่งกว่านี้');
@@ -498,8 +592,30 @@ function onMainClick(e){
     G.unassignKind(s, b.dataset.kind);
   } else if(act === 'target'){
     G.setCreateTarget(s, b.dataset.key);
+  } else if(act === 'build'){
+    const mo = D.MONUMENTS.find(x=>x.key===b.dataset.key);
+    if(G.buildMonument(s, b.dataset.key)){ addLog('สร้าง ' + mo.name + ' เป็น Lv.' + s.mono[mo.key]); toast(mo.name + ' Lv.' + s.mono[mo.key]); }
+  } else if(act === 'upgrade'){
+    const u = D.UPGRADES.find(x=>x.key===b.dataset.key);
+    if(G.buyUpgrade(s, b.dataset.key)){ addLog('อัปเกรดถาวร ' + u.name + ' เป็น Lv.' + s.meta.up[u.key]); save(); }
   }
   render(true);
+}
+function onGen(){
+  if(G.upgradeGen(s)){ addLog('เครื่องผลิตพลังเทวะ Lv.' + s.gen); render(true); }
+}
+function onRebirth(){
+  const gain = G.rebirthGain(s);
+  if(!gain) return;
+  if(Date.now() >= rbArmedUntil){ rbArmedUntil = Date.now() + 4000; render(true); return; }
+  rbArmedUntil = 0;
+  G.rebirth(s);
+  lastLost = s.clonesLost; shownGod = -1;
+  addLog('🔄 เกิดใหม่ครั้งที่ ' + s.meta.rebirths + ' — ได้รับ ' + gain + ' God Power');
+  toast('เกิดใหม่สำเร็จ! +' + gain + ' God Power');
+  celebrate();
+  save();
+  selectTab('rebirth');
 }
 function onFight(){
   if(s.fight){ G.flee(s); addLog('ถอยหนีจาก ' + D.GODS[s.gods].name); }
@@ -560,13 +676,16 @@ function boot(saved){
   lastLost = s.clonesLost;
 
   buildJobs('train'); buildJobs('skill'); buildJobs('mon');
-  buildCreate(); buildGods();
+  buildCreate(); buildGods(); buildTemple(); buildRebirth();
   renderSteps();
   drawPixelHero($('heroPixel'));
   fx = initFX($('fx'));
 
   $('main').addEventListener('click', onMainClick);
   $('fightBtn').addEventListener('click', onFight);
+  $('genBtn').addEventListener('click', onGen);
+  $('rbBtn').addEventListener('click', onRebirth);
+  $('logBtn').addEventListener('click', ()=>selectTab(activeTab === 'log' ? 'train' : 'log'));
   $('autoClone').addEventListener('change', e=>{ s.create.autoClone = e.target.checked; render(true); });
   document.querySelectorAll('.tab').forEach(t=>{
     t.addEventListener('click', ()=>selectTab(t.dataset.tab));

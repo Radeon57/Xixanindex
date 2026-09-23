@@ -58,19 +58,76 @@ const HIT_INTERVAL = 0.5;      // seconds between blows in a god fight
 const HP_REGEN = 0.1;          // share of max HP regained per second outside a fight
 
 // Gods are fought by the hero. Each one killed unlocks something and makes the hero stronger.
-// unlock: 'skills' | 'create' ; monsters unlock two at a time per god (see engine.monstersUnlocked).
+// unlock: 'skills' | 'create' | 'gen' | 'monuments' | 'rebirth'; monsters unlock two at a time per god.
+// gp: God Power paid out on rebirth for every god killed in that run.
 const GODS = [
-  { name:'เทพสายฟ้า',   hp:34000, atk:160, def:810, reward:{ unlock:'skills', maxClones:10, stat:1.3 } },
-  { name:'เทพสงคราม',   hp:3.7e5, atk:4400, def:8800, reward:{ unlock:'create', maxClones:20, stat:1.3 } },
-  { name:'เทพมรณะ',    hp:2.4e7, atk:3.3e5, def:5.8e5, reward:{ maxClones:30, stat:1.3, clone:2 } },
-  { name:'เทพโชคชะตา',  hp:2.9e9, atk:4e7, def:7e7, reward:{ maxClones:40, stat:1.3, dp:2 } },
-  { name:'เทพทะเล',    hp:3.1e11, atk:4.3e9, def:7.4e9, reward:{ maxClones:50, stat:1.3, speed:2 } },
-  { name:'เทพอัคคี',    hp:1.3e12, atk:1.7e10, def:3e10, reward:{ maxClones:60, stat:1.5 } }
+  { name:'เทพสายฟ้า',   hp:34000, atk:160, def:810,       gp:1,  reward:{ unlock:'skills', maxClones:10, stat:1.3 } },
+  { name:'เทพสงคราม',   hp:3.7e5, atk:4400, def:8800,     gp:1,  reward:{ unlock:'create', maxClones:20, stat:1.3 } },
+  { name:'เทพมรณะ',    hp:2.4e7, atk:3.3e5, def:5.8e5,   gp:2,  reward:{ unlock:'gen', maxClones:30, stat:1.3, clone:2 } },
+  { name:'เทพโชคชะตา',  hp:2.9e9, atk:4e7, def:7e7,       gp:3,  reward:{ unlock:'monuments', maxClones:40, stat:1.3, dp:2 } },
+  { name:'เทพทะเล',    hp:3.1e11, atk:4.3e9, def:7.4e9,  gp:4,  reward:{ maxClones:50, stat:1.3, speed:2 } },
+  { name:'เทพอัคคี',    hp:1.3e12, atk:1.7e10, def:3e10,  gp:6,  reward:{ unlock:'rebirth', maxClones:60, stat:1.5 } },
+  { name:'เทพกาลเวลา',  hp:4.1e12, atk:5.7e10, def:1e11,  gp:10, reward:{ maxClones:80, stat:1.5, speed:2 } },
+  { name:'เทพจันทรา',   hp:1.3e13, atk:1.8e11, def:3.2e11,gp:15, reward:{ maxClones:100, stat:1.5, dp:3 } },
+  { name:'เทพสุริยัน',   hp:4.2e13, atk:5.8e11, def:1e12,  gp:25, reward:{ maxClones:120, stat:1.5, clone:3 } },
+  { name:'เทพเจ้าสูงสุด', hp:1.2e14, atk:1.6e12, def:2.9e12,gp:40, reward:{ stat:2 } }
+];
+// the god whose defeat unlocks each system (index into GODS)
+const UNLOCK_AT = { skills:0, create:1, gen:2, monuments:3, rebirth:5 };
+
+// Permanent upgrades bought with God Power; survive rebirth. Level L costs cost*(L+1) GP.
+const UPGRADES = [
+  { key:'might',  name:'พลังแห่งเทพ',   stat:'stat',      per:0.25,       cost:1, desc:'+25% ค่าสถานะทั้งหมด' },
+  { key:'legion', name:'กองทัพเงา',     stat:'maxClones', per:10, add:true, cost:1, desc:'+10 ร่างเงาสูงสุด' },
+  { key:'focus',  name:'สมาธิเทพ',      stat:'speed',     per:0.25,       cost:2, desc:'+25% ความเร็วฝึก' },
+  { key:'faith',  name:'ศรัทธาแห่งทวยเทพ', stat:'dp',     per:0.5,        cost:2, desc:'+50% พลังเทวะที่ได้' },
+  { key:'maker',  name:'หัตถ์สร้างโลก',   stat:'create',    per:0.25,       cost:2, desc:'+25% ความเร็วสร้าง' },
+  { key:'shade',  name:'เงาอมตะ',       stat:'clone',     per:0.25,       cost:2, desc:'+25% พลังร่างเงา' }
+];
+
+// Divinity generator: produces DP by itself. Level L makes GEN_RATE*GEN_GROWTH^(L-1) DP/s; next level costs GEN_COST*GEN_COST_GROWTH^L DP.
+const GEN_RATE = 100, GEN_GROWTH = 4, GEN_COST = 1e5, GEN_COST_GROWTH = 5;
+
+// Monuments are bought with DP plus created items. Level L costs dp*10^L DP and n*(L+1) items.
+const MONUMENTS = [
+  { key:'statue', name:'รูปปั้นนักรบ',   stat:'phys',      per:0.5,        dp:1e6, item:'stone', n:10, desc:'+50% กาย' },
+  { key:'shrine', name:'ศาลจอมเวท',    stat:'myst',      per:0.5,        dp:3e6, item:'water', n:4,  desc:'+50% เวท' },
+  { key:'temple', name:'วิหารเทวะ',     stat:'dp',        per:0.5,        dp:1e7, item:'soil',  n:6,  desc:'+50% พลังเทวะที่ได้' },
+  { key:'tower',  name:'หอคอยเงา',     stat:'clone',     per:0.5,        dp:3e7, item:'plant', n:3,  desc:'+50% พลังร่างเงา' },
+  { key:'clock',  name:'หอนาฬิกาสวรรค์', stat:'speed',     per:0.3,        dp:1e8, item:'air',   n:5,  desc:'+30% ความเร็วฝึก' },
+  { key:'city',   name:'นครเทพ',       stat:'maxClones', per:20, add:true, dp:1e9, item:'human', n:1,  desc:'+20 ร่างเงาสูงสุด' }
+];
+
+// Achievements are permanent and each adds ACH_BONUS to all stats.
+// type: what is measured (see engine.achValue); n: the target.
+const ACH_BONUS = 0.03;
+const ACHIEVEMENTS = [
+  { key:'cl50',   name:'กองทัพเงา',        type:'clones',   n:50 },
+  { key:'cl200',  name:'ทัพเงามหึมา',       type:'clones',   n:200 },
+  { key:'tr100',  name:'ร่างกายเหล็ก',       type:'trainLv',  n:100 },
+  { key:'tr500',  name:'ร่างกายเทพ',        type:'trainLv',  n:500 },
+  { key:'sk100',  name:'ผู้ฝึกเวท',          type:'skillLv',  n:100 },
+  { key:'sk500',  name:'จอมเวท',           type:'skillLv',  n:500 },
+  { key:'k1e3',   name:'นักล่า',            type:'kills',    n:1e3 },
+  { key:'k1e5',   name:'ผู้พิชิตอสูร',        type:'kills',    n:1e5 },
+  { key:'k1e7',   name:'มหันตภัยของอสูร',    type:'kills',    n:1e7 },
+  { key:'m50',    name:'ผู้สร้าง',           type:'made',     n:50 },
+  { key:'m1000',  name:'ผู้สร้างโลก',         type:'made',     n:1000 },
+  { key:'g1',     name:'ฆ่าเทพองค์แรก',      type:'gods',     n:1 },
+  { key:'g6',     name:'สิ้นยุคเทพเก่า',      type:'gods',     n:6 },
+  { key:'g10',    name:'ผู้สังหารเทพ',        type:'gods',     n:10 },
+  { key:'r1',     name:'เกิดใหม่',            type:'rebirths', n:1 },
+  { key:'r5',     name:'วัฏจักรนิรันดร์',       type:'rebirths', n:5 },
+  { key:'dp1e9',  name:'ผู้ร่ำรวยศรัทธา',      type:'dpLife',   n:1e9 },
+  { key:'dp1e15', name:'ทะเลแห่งศรัทธา',      type:'dpLife',   n:1e15 },
+  { key:'mo10',   name:'สถาปนิกสวรรค์',      type:'monuments',n:10 },
+  { key:'gen10',  name:'เครื่องจักรเทวะ',      type:'genLv',    n:10 }
 ];
 
 root.GKDATA = {
   LEVEL_TIME_GROWTH, ROW_UNLOCK_LEVEL, TRAININGS, SKILLS,
   KILL_RATE, KILL_RATIO_CAP, DEATH_RATE, MONSTERS,
-  CREATIONS, BASE_MAX_CLONES, HIT_INTERVAL, HP_REGEN, GODS
+  CREATIONS, BASE_MAX_CLONES, HIT_INTERVAL, HP_REGEN, GODS, UNLOCK_AT,
+  UPGRADES, GEN_RATE, GEN_GROWTH, GEN_COST, GEN_COST_GROWTH, MONUMENTS, ACH_BONUS, ACHIEVEMENTS
 };
 })(typeof window !== 'undefined' ? window : globalThis);

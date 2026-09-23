@@ -6,9 +6,14 @@ const SAVE_VERSION = 2;
 const MAX_OFFLINE_SEC = 8*3600;
 const JOB_KINDS = ['train','skill','mon'];
 
-function newState(){
+// meta survives rebirth; everything else in the state is one run
+function newMeta(){
+  return { gp:0, gpTotal:0, rebirths:0, bestGods:0, dpLife:0, up:{}, ach:{} };
+}
+function newState(meta){
   return {
     v: SAVE_VERSION,
+    meta: meta || newMeta(),
     dp: 0,
     dpTotal: 0,
     clones: 0,
@@ -17,6 +22,8 @@ function newState(){
     mon: D.MONSTERS.map(()=>({ n:0, kills:0, acc:0, dacc:0 })),
     battleRaw: 0,
     own: {}, made: {},
+    gen: 0,
+    mono: {},
     create: { target:'clone', cur:null, prog:0, autoClone:true },
     gods: 0,
     fight: null,
@@ -29,8 +36,13 @@ function newState(){
 }
 
 // ---------- unlocks ----------
-const skillsUnlocked = s => s.gods >= 1;
-const createUnlocked = s => s.gods >= 2;
+const unlockedBy = (s, what) => s.gods > D.UNLOCK_AT[what];
+const skillsUnlocked = s => unlockedBy(s, 'skills');
+const createUnlocked = s => unlockedBy(s, 'create');
+const genUnlocked = s => unlockedBy(s, 'gen');
+const monumentsUnlocked = s => unlockedBy(s, 'monuments');
+// rebirth stays available in later runs once the unlocking god has ever fallen
+const rebirthUnlocked = s => s.meta.bestGods > D.UNLOCK_AT.rebirth;
 function rowUnlocked(s, kind, i){
   if(kind === 'mon') return i < monstersUnlocked(s);
   if(kind === 'skill' && !skillsUnlocked(s)) return false;
@@ -54,7 +66,15 @@ function mults(s){
     if(r.speed) m.speed *= r.speed;
     if(r.maxClones) m.maxClones += r.maxClones;
   }
+  const apply = (defs, levelOf) => defs.forEach(x=>{
+    const L = levelOf(x);
+    if(!L) return;
+    if(x.add) m[x.stat] += x.per*L; else m[x.stat] *= 1 + x.per*L;
+  });
+  apply(D.UPGRADES, u => s.meta.up[u.key] || 0);
+  m.stat *= 1 + D.ACH_BONUS * achCount(s);
   m.phys = m.myst = m.battle = m.stat;
+  apply(D.MONUMENTS, mo => s.mono[mo.key] || 0);
   D.CREATIONS.forEach(c=>{
     if(!c.bonus) return;
     // bonuses count every unit ever made, so spending items as ingredients never loses their bonus
@@ -90,6 +110,82 @@ function assigned(s){
   return n;
 }
 const idle = s => Math.max(0, s.clones - assigned(s));
+const achCount = s => Object.keys(s.meta.ach).length;
+function sumLv(rows){ let t = 0; for(const r of rows) t += r.lv; return t; }
+function sumKills(s){ let t = 0; for(const r of s.mon) t += r.kills; return t; }
+function sumMade(s){ let t = 0; for(const k in s.made) if(k !== 'clone') t += s.made[k]; return t; }
+function sumMono(s){ let t = 0; for(const k in s.mono) t += s.mono[k]; return t; }
+function achValue(s, type){
+  switch(type){
+    case 'clones': return s.clones;
+    case 'trainLv': return sumLv(s.train);
+    case 'skillLv': return sumLv(s.skill);
+    case 'kills': return sumKills(s);
+    case 'made': return sumMade(s);
+    case 'gods': return s.gods;
+    case 'rebirths': return s.meta.rebirths;
+    case 'dpLife': return s.meta.dpLife;
+    case 'monuments': return sumMono(s);
+    case 'genLv': return s.gen;
+  }
+  return 0;
+}
+function checkAchievements(s, ev){
+  for(const a of D.ACHIEVEMENTS){
+    if(s.meta.ach[a.key] || achValue(s, a.type) < a.n) continue;
+    s.meta.ach[a.key] = 1;
+    if(ev) ev.push({ type:'ach', key:a.key });
+  }
+}
+
+// ---------- generator, monuments, upgrades ----------
+const genRate = (s, d) => s.gen ? D.GEN_RATE * Math.pow(D.GEN_GROWTH, s.gen-1) * d.m.dp : 0;
+const genCost = s => D.GEN_COST * Math.pow(D.GEN_COST_GROWTH, s.gen);
+function upgradeGen(s){
+  if(!genUnlocked(s)) return false;
+  const c = genCost(s);
+  if(s.dp < c) return false;
+  s.dp -= c; s.gen++;
+  return true;
+}
+function monumentCost(mo, L){ return { dp: mo.dp * Math.pow(10, L), items: mo.n * (L+1) }; }
+function canBuild(s, mo){
+  const c = monumentCost(mo, s.mono[mo.key] || 0);
+  return s.dp >= c.dp && (s.own[mo.item]||0) >= c.items;
+}
+function buildMonument(s, key){
+  const mo = D.MONUMENTS.find(x=>x.key===key);
+  if(!mo || !monumentsUnlocked(s) || !canBuild(s, mo)) return false;
+  const c = monumentCost(mo, s.mono[key] || 0);
+  s.dp -= c.dp; s.own[mo.item] -= c.items;
+  s.mono[key] = (s.mono[key] || 0) + 1;
+  return true;
+}
+const upgradeCost = (s, u) => u.cost * ((s.meta.up[u.key] || 0) + 1);
+function buyUpgrade(s, key){
+  const u = D.UPGRADES.find(x=>x.key===key);
+  if(!u) return false;
+  const c = upgradeCost(s, u);
+  if(s.meta.gp < c) return false;
+  s.meta.gp -= c;
+  s.meta.up[key] = (s.meta.up[key] || 0) + 1;
+  return true;
+}
+
+// ---------- rebirth ----------
+function rebirthGain(s){ let g = 0; for(let i=0;i<s.gods;i++) g += D.GODS[i].gp; return g; }
+// start a new run: God Power for every god killed this run; meta and the log carry over
+function rebirth(s){
+  const gain = rebirthGain(s);
+  if(!rebirthUnlocked(s) || !gain) return 0;
+  const meta = s.meta, log = s.log;
+  meta.gp += gain; meta.gpTotal += gain; meta.rebirths++;
+  const fresh = newState(meta);
+  fresh.log = log;
+  for(const k of Object.keys(s)) if(!(k in fresh)) delete s[k];
+  Object.assign(s, fresh);
+  return gain;
+}
 
 function levelTime(def, lv){ return def.base * (1 + D.LEVEL_TIME_GROWTH*lv); }
 // blows traded per HIT_INTERVAL: attack squared over (attack + defence) keeps damage positive and rewards stacking attack
@@ -150,7 +246,7 @@ function step(s, dt, ev){
       const k = Math.floor(r.acc); r.acc -= k;
       r.kills += k;
       const gain = k * D.MONSTERS[i].dp * d.m.dp;
-      s.dp += gain; s.dpTotal += gain;
+      s.dp += gain; s.dpTotal += gain; s.meta.dpLife += gain;
       s.battleRaw += k * D.MONSTERS[i].battle;
     }
     r.dacc += rt.deaths * dt;
@@ -162,8 +258,11 @@ function step(s, dt, ev){
   }
 
   d = derive(s);
+  if(s.gen){ const g = genRate(s, d) * dt; s.dp += g; s.dpTotal += g; s.meta.dpLife += g; }
   stepCreate(s, dt, d, ev);
   stepFight(s, dt, d, ev);
+  s.achT = (s.achT || 0) + dt;
+  if(s.achT >= 1){ s.achT = 0; checkAchievements(s, ev); }
 }
 
 // what to make next for `key`: the item itself if affordable, otherwise the first missing ingredient (recursively);
@@ -222,6 +321,7 @@ function stepFight(s, dt, d, ev){
     if(f.ghp <= 0){
       s.fight = null;
       s.gods++;
+      if(s.gods > s.meta.bestGods) s.meta.bestGods = s.gods;
       s.hp = derive(s).maxHp;
       if(ev) ev.push({ type:'godWin', i:s.gods-1 });
       return;
@@ -304,6 +404,17 @@ function sanitize(raw){
     if(typeof raw.create.autoClone === 'boolean') d.create.autoClone = raw.create.autoClone;
   }
   if(Array.isArray(raw.log)) d.log = raw.log.filter(l => typeof l === 'string').slice(0, 60);
+  d.gen = Math.floor(nonNeg(raw.gen, 0));
+  if(raw.mono && typeof raw.mono === 'object') D.MONUMENTS.forEach(mo=>{ if(isNum(raw.mono[mo.key])) d.mono[mo.key] = Math.floor(Math.max(0, raw.mono[mo.key])); });
+  const rm = raw.meta && typeof raw.meta === 'object' ? raw.meta : {};
+  const m = d.meta;
+  ['gp','gpTotal','rebirths','dpLife'].forEach(k=>{ m[k] = nonNeg(rm[k], 0); });
+  m.rebirths = Math.floor(m.rebirths);
+  // a phase-1 save has no meta: its current run is the best so far
+  m.bestGods = Math.min(D.GODS.length, Math.floor(Math.max(nonNeg(rm.bestGods, 0), d.gods)));
+  if(rm.up && typeof rm.up === 'object') D.UPGRADES.forEach(u=>{ if(isNum(rm.up[u.key])) m.up[u.key] = Math.floor(Math.max(0, rm.up[u.key])); });
+  if(rm.ach && typeof rm.ach === 'object') D.ACHIEVEMENTS.forEach(a=>{ if(rm.ach[a.key]) m.ach[a.key] = 1; });
+  if(!rm.dpLife) m.dpLife = d.dpTotal;
   // never trust more assigned clones than exist
   let over = assigned(d) - d.clones;
   for(const kind of JOB_KINDS){ for(const r of d[kind]){ if(over <= 0) break; const k = Math.min(r.n, over); r.n -= k; over -= k; } }
@@ -314,7 +425,10 @@ function sanitize(raw){
 root.GK = {
   SAVE_VERSION, MAX_OFFLINE_SEC, D,
   newState, sanitize, derive, mults, assigned, idle, levelTime, monsterRates, blow,
-  skillsUnlocked, createUnlocked, rowUnlocked, monstersUnlocked, creationUnlocked, canAfford, creationByKey,
+  skillsUnlocked, createUnlocked, genUnlocked, monumentsUnlocked, rebirthUnlocked,
+  rowUnlocked, monstersUnlocked, creationUnlocked, canAfford, creationByKey,
+  achValue, achCount, genRate, genCost, upgradeGen, monumentCost, canBuild, buildMonument,
+  upgradeCost, buyUpgrade, rebirthGain, rebirth,
   step, advance, assign, unassignKind, setCreateTarget, startFight, flee
 };
 })(typeof window !== 'undefined' ? window : globalThis);
