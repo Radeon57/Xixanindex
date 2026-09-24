@@ -180,6 +180,26 @@ const PLAN_UNLOCK_GODS = 1, AUTOFIGHT_UNLOCK_REBIRTHS = 1;
 // MP refunded to saves that bought the old auto-fight Might perk (it is now a free toggle)
 const MIGHT_AUTOFIGHT_REFUND = 1;
 
+// Fortune (โชควาสนา): while the page is open, a spirit treasure appears every few minutes for a short time; tapping it
+// pays one reward. Spawning and the timer are UI-side only (never during offline catch-up); the rewards are engine rules.
+// Balance: about one treasure per ~4.7 min, each reward type worth ~40s of its resource, so a player who taps every one
+// gains roughly +5-9% in one resource at a time; the idle bot never taps, so its god timings are unchanged.
+//   every: [min, max] seconds of visible play between treasures; life: seconds a treasure stays before it fades
+//   dpSecs: 'dp' pays this many seconds of the current Divinity income (at least dpMin)
+//   boostSecs/boostMult/boostCap: 'speed' multiplies training and skill speed for boostSecs (stacks up to boostCap seconds)
+//   createSecs: 'create' finishes this many seconds of creation work at once
+//   each catch in a row adds streakBonus to the next reward (up to streakMax catches); a treasure left to fade breaks the streak
+const FORTUNE = {
+  unlockGods: 1, first: [60, 120], every: [180, 360], life: 12,
+  dpSecs: 40, dpMin: 10, boostSecs: 40, boostMult: 2, boostCap: 120, createSecs: 40,
+  streakBonus: 0.05, streakMax: 5,
+  items: [
+    { kind:'dp',     name:'ผลท้อเซียน',  color:'#ff9ab8', desc:'พลังเทวะเท่ากับรายได้หลายสิบวินาที' },
+    { kind:'speed',  name:'คัมภีร์ลับ',   color:'#9fe7ff', desc:'ความเร็วฝึกกายและวิชาเวท ×2 ชั่วครู่' },
+    { kind:'create', name:'เม็ดยาทิพย์', color:'#e8c76f', desc:'เร่งการสร้างให้เสร็จทันที' }
+  ]
+};
+
 // Achievements are permanent and each adds ACH_BONUS to all stats.
 // type: what is measured (see engine.achValue); n: the target.
 const ACH_BONUS = 0.03;
@@ -214,6 +234,6 @@ root.GKDATA = {
   PETS, PET_GROWTH, PET_EXP_BASE, PET_EXP_GROWTH, PET_MAX_LV, TEAM_SIZE,
   DUNGEONS, DEPTH_GROWTH, MAX_DEPTH, DUNGEON_UNLOCK_DEPTH, MATERIALS, GEAR, FORGE_COST, FORGE_GROWTH, FORGE_MIN_CHANCE,
   CHALLENGES, CHAL_MAX, CHAL_FIRST_GOAL, FEW_CLONES, ULTIMATES, UB_GROWTH, UB_UNLOCK_LV, MIGHT,
-  PLAN_PRESETS, PLAN_UNLOCK_GODS, AUTOFIGHT_UNLOCK_REBIRTHS, MIGHT_AUTOFIGHT_REFUND
+  PLAN_PRESETS, PLAN_UNLOCK_GODS, AUTOFIGHT_UNLOCK_REBIRTHS, MIGHT_AUTOFIGHT_REFUND, FORTUNE
 };
 })(typeof window !== 'undefined' ? window : globalThis);

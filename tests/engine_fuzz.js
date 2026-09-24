@@ -72,6 +72,9 @@ function invariants(s, where){
     }
   }
   if(typeof m.plan.on !== 'boolean') bad.push('plan.on ' + m.plan.on);
+  if(s.boostT > D.FORTUNE.boostCap) bad.push('boostT ' + s.boostT);
+  const fo = m.fortune;
+  if(!fo || !isInt(fo.streak) || !isInt(fo.best) || !isInt(fo.caught) || fo.best < fo.streak || fo.caught < fo.streak) bad.push('fortune ' + JSON.stringify(fo));
   const ci = D.CREATIONS.findIndex(c => c.key === s.create.target);
   if(ci < 0 || !G.creationUnlocked(s, ci)) bad.push('create target ' + s.create.target);
   if(s.create.cur && !G.creationByKey(s.create.cur)) bad.push('create cur ' + s.create.cur);
@@ -142,6 +145,8 @@ const actions = [
   s => G.setPlan(s, R() < .7 ? pick(D.PLAN_PRESETS).key : J()),
   s => G.step(s, R() < .8 ? R() * 2 : J(), []),
   s => G.advance(s, R() < .8 ? R() * 120 : J(), []),
+  s => G.claimFortune(s, R() < .7 ? G.rollFortune(s, R() < .8 ? R() : J()) : J(), []),
+  s => G.missFortune(s),
 ];
 // read-only helpers the UI calls every frame must not throw either
 function readers(s){
@@ -151,6 +156,7 @@ function readers(s){
   for(let i = 0; i < D.ULTIMATES.length; i++){ const u = G.ubStats(s, i); G.outlook(s, d, u, u.hp); }
   if(s.gods < D.GODS.length){ const g = D.GODS[s.gods]; G.outlook(s, d, g, g.hp); G.neededFactor(s, d, g); }
   if(s.fight) G.fightTarget(s, s.fight);
+  G.dpRate(s, d); G.fortuneKinds(s); G.fortuneMult(s); G.fortuneUnlocked(s);
 }
 function fuzzActions(name, make, n){
   const s = make();
@@ -206,6 +212,11 @@ function compareRuns(name, make, secs, dt, prep){
   compareRuns('early', () => G.newState(), 900, 0.2, s => { s.clones = 10; s.mon[1].n = 5; s.train[0].n = 5; });
   // an ultimate-being fight
   compareRuns('ub fight', lateSave, 60, 0.1, s => { s.meta.ub = [0, 0, 0]; s.meta.run = null; G.startUbFight(s, 0); });
+  // a fortune training boost that runs out part-way through a step
+  for(const dt of [0.1, 0.3, 0.7]){
+    const [a, b] = compareRuns('fortune boost dt=' + dt, midSave, 60, dt, s => { s.meta.run = null; s.boostT = 30.55; });
+    if(a.boostT !== 0 || b.boostT !== 0) fail('fortune boost did not run out: ' + a.boostT + ' / ' + b.boostT);
+  }
 }
 console.log('B step/advance ok', ((Date.now() - T0) / 1000).toFixed(1) + 's');
 
@@ -260,6 +271,84 @@ function mutate(o){
   }
 }
 console.log('C sanitize ok', ((Date.now() - T0) / 1000).toFixed(1) + 's');
+
+// ---------- E. fortune (spirit treasure) rules ----------
+{
+  const F = D.FORTUNE, near = (x, y, tol) => Math.abs(x - y) <= (tol || 1e-9) * Math.max(1, Math.abs(x), Math.abs(y));
+  // locked until the first god; kinds are always valid and never empty
+  const fresh = G.newState();
+  if(G.fortuneUnlocked(fresh)) fail('fortune open before the first god');
+  if(!G.fortuneUnlocked(midSave())) fail('fortune closed on a mid save');
+  for(const make of [() => G.newState(), midSave, lateSave]){
+    const s = make(), kinds = G.fortuneKinds(s);
+    if(!kinds.length || kinds.some(k => !G.fortuneItem(k))) fail('fortuneKinds: ' + kinds);
+    for(const r of [0, 0.3, 0.5, 0.999999, 1, 5, -1, NaN, Infinity, 'x', undefined]) if(!kinds.includes(G.rollFortune(s, r))) fail('rollFortune(' + r + ') gave ' + G.rollFortune(s, r));
+  }
+  // before creation and the generator, Divinity is useless, so only the boost appears
+  { const s = G.newState(); s.gods = 1; s.meta.bestGods = 1; s.clones = 5; s.train[0].n = 5;
+    if(JSON.stringify(G.fortuneKinds(s)) !== '["speed"]') fail('early fortune kinds: ' + G.fortuneKinds(s)); }
+  // unknown kinds change nothing
+  { const s = midSave(), before = JSON.stringify(s);
+    for(const k of [undefined, null, 'x', 'constructor', '__proto__', 1, {}]) if(G.claimFortune(s, k, []) !== null) fail('claimFortune accepted ' + k);
+    if(JSON.stringify(s) !== before) fail('claimFortune(junk) changed the state'); }
+  // 'dp' pays dpSecs of income, times the streak bonus
+  { const s = midSave(); s.mon[0].n = 20; s.clones = Math.max(s.clones, G.assigned(s));
+    const want = Math.max(F.dpMin, G.dpRate(s) * F.dpSecs), dp0 = s.dp, life0 = s.meta.dpLife;
+    const r = G.claimFortune(s, 'dp', []);
+    if(r.kind !== 'dp' || !near(r.dp, want) || !near(s.dp - dp0, want) || !near(s.meta.dpLife - life0, want)) fail('dp reward ' + JSON.stringify(r) + ' want ' + want);
+    // measured income over 60s agrees with dpRate within 15% (kills are whole numbers)
+    const t = midSave(); t.meta.run = null; t.gen = 0; t.mon.forEach(x => { x.n = 0; }); t.mon[0].n = 20; t.clones = Math.max(t.clones, G.assigned(t)); t.create.autoClone = false; t.create.target = 'clone';
+    const rate = G.dpRate(t), d0 = t.dpTotal; G.advance(t, 60, []);
+    if(!(rate > 0) || Math.abs((t.dpTotal - d0) / 60 - rate) > 0.15 * rate) fail('dpRate ' + rate + ' vs measured ' + (t.dpTotal - d0) / 60); }
+  // 'speed' doubles training for boostSecs, stacks up to boostCap, and runs out
+  { const a = midSave(); a.meta.run = null; a.fight = null; a.train.forEach(r => { r.n = 0; }); a.skill.forEach(r => { r.n = 0; }); a.mon.forEach(r => { r.n = 0; });
+    a.train[0].n = 10; a.train[0].lv = 0; a.train[0].prog = 0; a.create.autoClone = false; a.create.target = 'clone';
+    const b = clone(a);
+    const r = G.claimFortune(b, 'speed', []);
+    if(r.kind !== 'speed' || r.secs !== F.boostSecs || b.boostT !== F.boostSecs) fail('speed reward ' + JSON.stringify(r));
+    if(!near(G.derive(b).m.speed, G.derive(a).m.speed * F.boostMult)) fail('boost does not multiply speed');
+    const work = s => { let w = 0; for(let L = 0; L < s.train[0].lv; L++) w += G.levelTime(D.TRAININGS[0], L); return w + s.train[0].prog; };
+    G.advance(a, 10, []); G.advance(b, 10, []);
+    if(!near(work(b), work(a) * F.boostMult, 1e-6)) fail('boosted training ' + work(b) + ' vs ' + work(a));
+    for(let i = 0; i < 10; i++) G.claimFortune(b, 'speed', []);
+    if(b.boostT > F.boostCap) fail('boost over cap ' + b.boostT);
+    G.advance(b, F.boostCap + 5, []);
+    if(b.boostT !== 0 || !near(G.derive(b).m.speed, G.derive(a).m.speed)) fail('boost did not end'); }
+  // 'create' finishes createSecs of creation work
+  { const s = lateSave(); s.meta.fortune.streak = 0;
+    if(!G.fortuneKinds(s).includes('create')) fail('late save cannot use a creation treasure');
+    const made0 = JSON.stringify(s.made), r = G.claimFortune(s, 'create', []);
+    if(r.kind !== 'create' || r.secs !== F.createSecs || !(r.made > 0) || JSON.stringify(s.made) === made0) fail('create reward ' + JSON.stringify(r)); }
+  // a reward that stopped being useful falls back to one that is
+  { const s = G.newState(); s.gods = 1; s.meta.bestGods = 1; s.clones = 5; s.train[0].n = 5;
+    const r = G.claimFortune(s, 'create', []);
+    if(!r || r.kind !== 'speed') fail('fallback reward ' + JSON.stringify(r)); }
+  // the streak grows the reward up to streakMax, a miss resets it, the best is kept
+  { const s = midSave();
+    for(let i = 0; i < F.streakMax + 3; i++){
+      const want = 1 + F.streakBonus * Math.min(i, F.streakMax), r = G.claimFortune(s, 'dp', []);
+      if(!near(r.mult, want) || r.streak !== i + 1) fail('streak ' + i + ': ' + JSON.stringify(r));
+    }
+    G.missFortune(s);
+    if(s.meta.fortune.streak !== 0 || s.meta.fortune.best !== F.streakMax + 3 || s.meta.fortune.caught !== F.streakMax + 3 || G.fortuneMult(s) !== 1) fail('miss ' + JSON.stringify(s.meta.fortune));
+    // streak survives rebirth (meta), the boost does not (one run)
+    s.meta.fortune.streak = 2; s.boostT = 30; G.rebirth(s);
+    if(s.meta.fortune.streak !== 2 || s.boostT !== 0) fail('rebirth fortune ' + JSON.stringify(s.meta.fortune) + ' boostT ' + s.boostT);
+    // save round trip, and bad values
+    s.boostT = 12.5; s.meta.fortune = { streak: 3, best: 7, caught: 20 };
+    const t = G.sanitize(clone(s));
+    if(t.boostT !== 12.5 || JSON.stringify(t.meta.fortune) !== JSON.stringify(s.meta.fortune)) fail('fortune save round trip');
+    const u = G.sanitize(Object.assign(clone(s), { boostT: 1e9, meta: Object.assign(clone(s.meta), { fortune: { streak: 9.7, best: 2, caught: -4 } }) }));
+    if(u.boostT !== F.boostCap || u.meta.fortune.streak !== 9 || u.meta.fortune.best !== 9 || u.meta.fortune.caught !== 9) fail('fortune sanitize ' + u.boostT + ' ' + JSON.stringify(u.meta.fortune));
+    invariants(u, 'fortune sanitize'); }
+  // balance guard: an active player who catches every treasure gains at most ~10% of any one resource
+  { const cycle = (F.every[0] + F.every[1]) / 2 + F.life / 2, top = 1 + F.streakBonus * F.streakMax;
+    for(const [k, secs] of [['dp', F.dpSecs], ['speed', F.boostSecs * (F.boostMult - 1)], ['create', F.createSecs]]){
+      const share = secs * top / cycle / 2;   // at least two reward kinds share the treasures once more than one is useful
+      if(share > 0.1) fail('fortune ' + k + ' reward too big: +' + (share * 100).toFixed(1) + '% for an active player');
+    } }
+}
+console.log('E fortune ok', ((Date.now() - T0) / 1000).toFixed(1) + 's');
 
 // ---------- D. long bot run across rebirths, challenges and ultimate beings ----------
 function bot(s, t){

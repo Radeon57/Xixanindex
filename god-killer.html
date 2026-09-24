@@ -410,6 +410,27 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
 .gToc a{font-size:.7rem;color:var(--sub);border:1px solid var(--border);border-radius:8px;padding:3px 7px;text-decoration:none}
 .ctlBtn,.maxBtn,.selBtn{touch-action:manipulation;user-select:none;-webkit-user-select:none}
 #main{overscroll-behavior:contain}
+
+/* ---------- fortune (โชควาสนา): spirit treasure and training-boost bar ---------- */
+.fortune{--fc:var(--gold);position:fixed;z-index:45;width:84px;margin:-40px 0 0 -42px;padding:0;border:0;background:none;color:var(--text);font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;touch-action:manipulation;user-select:none;-webkit-user-select:none;animation:fortuneIn .45s ease-out}
+.fortuneHalo{position:absolute;left:50%;top:26px;width:88px;height:88px;margin:-44px 0 0 -44px;border-radius:50%;background:radial-gradient(circle,var(--fc) 0%,transparent 66%);opacity:.5;pointer-events:none;animation:fortunePulse 1.6s ease-in-out infinite}
+.fortuneBob{position:relative;display:block;width:52px;height:52px;animation:fortuneBob 2.4s ease-in-out infinite}
+.fortuneBob svg{width:100%;height:100%;filter:drop-shadow(0 0 6px var(--fc))}
+.fortuneName{position:relative;font-size:.66rem;font-weight:bold;color:var(--fc);white-space:nowrap;text-shadow:0 1px 2px #000,0 0 6px #000;background:rgba(11,10,23,.72);border-radius:6px;padding:1px 6px}
+.fortuneLife{position:relative;display:block;width:48px;height:3px;border-radius:2px;background:rgba(0,0,0,.55);overflow:hidden}
+.fortuneLife>i{display:block;height:100%;background:var(--fc);transform-origin:left}
+.fortune.ending{animation:fortuneBlink .5s ease-in-out infinite}
+.fortune.got{pointer-events:none;animation:fortuneGot .45s ease-out forwards}
+.fortune.gone{pointer-events:none;animation:fortuneGone .6s ease-in forwards}
+.fortune:focus-visible{outline:2px solid var(--fc);outline-offset:2px;border-radius:12px}
+.fortuneGain{position:fixed;z-index:46;pointer-events:none;font-size:.86rem;font-weight:bold;color:var(--gold);white-space:nowrap;text-shadow:0 1px 3px #000;transform:translate(-50%,0);animation:dmgUp 1.2s ease-out forwards}
+.buffBar{display:none;font-size:.7rem;color:#9fe7ff;background:rgba(159,231,255,.08);border:1px solid rgba(159,231,255,.35);border-radius:8px;padding:4px 8px;margin-bottom:6px}
+@keyframes fortuneIn{0%{opacity:0;transform:scale(.3)}70%{opacity:1;transform:scale(1.12)}100%{opacity:1;transform:scale(1)}}
+@keyframes fortuneBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+@keyframes fortunePulse{0%,100%{opacity:.35;transform:scale(.85)}50%{opacity:.75;transform:scale(1.1)}}
+@keyframes fortuneBlink{50%{opacity:.45}}
+@keyframes fortuneGot{to{opacity:0;transform:scale(1.7)}}
+@keyframes fortuneGone{to{opacity:0;transform:translateY(10px) scale(.6)}}
 </style>
 </head>
 <body>

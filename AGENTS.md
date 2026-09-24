@@ -27,6 +27,7 @@ https://radeon57.github.io/Xixanindex/god-killer.html (`index.html` redirects th
 - **Offline progress** is `G.advance`, which runs in 1s chunks up to 8h. `G.step` must give the same results as `advance`.
 - **Destructive buttons** use a two-tap confirm (`confirmTap`), with the second tap at least 400ms after the first.
 - **UI text** is Thai. Keep new text in natural Thai.
+- **Fortune (โชควาสนา).** The spirit-treasure spawn timer lives in ui.js (`fortuneTick`) and counts only seconds when the tab is visible and no dialog is open, so offline catch-up never spawns one. Rewards are `G.claimFortune` in the engine, and the numbers are `FORTUNE` in data.js. On localhost or with `?debug`, `GKDebug.fortune('dp'|'speed'|'create')` spawns one right away.
 - **Balance.** Idle-bot timings are about 3.4 / 4.8 / 6.6 / 9.1 hours for gods 7–10. Re-check them if you change numbers in `data.js`.
 
 ## Test before pushing

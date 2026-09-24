@@ -11,7 +11,8 @@ function newMeta(){
   return { gp:0, gpTotal:0, rebirths:0, bestGods:0, dpLife:0, up:{}, ach:{},
            pets:{}, team:[], mats:{}, gear:{}, dgBest:{}, run:null, dgAuto:true,
            chal:{}, ub:[], mp:0, mpTotal:0, might:{},
-           tut:0, seen:{}, plan:{ on:false, train:40, skill:30, mon:30 }, autoFight:false, createPref:null };
+           tut:0, seen:{}, plan:{ on:false, train:40, skill:30, mon:30 }, autoFight:false, createPref:null,
+           fortune:{ streak:0, best:0, caught:0 } };
 }
 function newState(meta){
   return {
@@ -35,6 +36,7 @@ function newState(meta){
     clonesLost: 0,
     playTime: 0,
     strikeAt: 0,
+    boostT: 0,          // seconds of play left on a fortune training boost
     lastSave: Date.now(),
     log: []
   };
@@ -110,6 +112,7 @@ function mults(s){
     if(c.bonus.add) m[c.bonus.stat] += n*c.bonus.per;
     else m[c.bonus.stat] *= 1 + n*c.bonus.per;
   });
+  if(s.boostT > 0) m.speed *= D.FORTUNE.boostMult;   // fortune boost: a short burst, so it counts even in 'mortal'
   // applied last so no bonus can lift the challenge's cap
   if(inChallenge(s, 'few')) m.maxClones = Math.min(m.maxClones, D.FEW_CLONES);
   return m;
@@ -459,6 +462,8 @@ const creationByKey = key => D.CREATIONS.find(c=>c.key===key);
 function step(s, dt, ev){
   if(!(dt > 0)) return;
   dt = Math.min(dt, MAX_OFFLINE_SEC);
+  // a fortune boost that runs out inside this step: split the step there, so any step size gives the same result
+  if(s.boostT > 0 && s.boostT < dt){ const a = s.boostT; step(s, a, ev); step(s, dt - a, ev); return; }
   s.playTime += dt;
   let d = derive(s);
 
@@ -519,6 +524,7 @@ function step(s, dt, ev){
     }
   }
   stepDungeon(s, dt, ev);
+  if(s.boostT > 0) s.boostT = Math.max(0, s.boostT - dt);
   s.achT = (s.achT || 0) + dt;
   if(s.achT >= 1){ s.achT = 0; checkAchievements(s, ev); checkPets(s, ev); applyPlan(s); }
 }
@@ -677,6 +683,61 @@ function advance(s, sec, ev){
   while(sec > 0){ const dt = Math.min(CHUNK, sec); step(s, dt, ev); sec -= dt; }
 }
 
+// ---------- fortune: spirit treasures the player taps (the UI decides when one appears) ----------
+const fortuneUnlocked = s => s.meta.bestGods >= D.FORTUNE.unlockGods;
+const fortuneItem = kind => D.FORTUNE.items.find(x=>x.kind===kind) || null;
+// expected Divinity per second right now: monster kills plus the generator
+function dpRate(s, d){
+  d = d || derive(s);
+  let r = genRate(s, d);
+  for(let i=0;i<s.mon.length;i++) if(s.mon[i].n) r += monsterRates(s, i, d).kills * D.MONSTERS[i].dp * d.m.dp;
+  return r;
+}
+// rewards that would help right now; never empty
+function fortuneKinds(s){
+  const out = [];
+  if(createUnlocked(s) || genUnlocked(s)) out.push('dp');   // before that, Divinity has no use yet
+  if((s.train.some(r=>r.n) || s.skill.some(r=>r.n)) && s.boostT + D.FORTUNE.boostSecs <= D.FORTUNE.boostCap) out.push('speed');
+  if(createUnlocked(s) && nextCreation(s, derive(s))) out.push('create');
+  return out.length ? out : ['speed'];
+}
+// pick the treasure that appears, from a random number in [0,1)
+function rollFortune(s, r){
+  const k = fortuneKinds(s);
+  r = isNum(r) ? r : 0;
+  return k[Math.min(k.length - 1, Math.max(0, Math.floor(r * k.length)))];
+}
+// reward multiplier from treasures caught in a row
+const fortuneMult = s => 1 + D.FORTUNE.streakBonus * Math.min(s.meta.fortune.streak, D.FORTUNE.streakMax);
+// tap a treasure: pays its reward (or, if that stopped being useful since it appeared, another one) and extends the streak.
+// returns what was paid: { kind, mult, streak, dp | secs, made }, or null for an unknown kind
+function claimFortune(s, kind, ev){
+  if(!fortuneItem(kind)) return null;
+  const F = D.FORTUNE, f = s.meta.fortune, kinds = fortuneKinds(s);
+  if(!kinds.includes(kind)) kind = kinds[0];
+  const mult = fortuneMult(s), d = derive(s), out = { kind, mult };
+  if(kind === 'dp'){
+    const g = Math.max(F.dpMin, dpRate(s, d) * F.dpSecs) * mult;
+    s.dp += g; s.dpTotal += g; s.meta.dpLife += g;
+    out.dp = g;
+  } else if(kind === 'speed'){
+    out.secs = Math.max(0, Math.min(F.boostCap, s.boostT + F.boostSecs * mult) - s.boostT);
+    s.boostT += out.secs;
+  } else {
+    let before = 0; for(const k in s.made) before += s.made[k];
+    out.secs = F.createSecs * mult;
+    stepCreate(s, out.secs, d, ev);
+    let after = 0; for(const k in s.made) after += s.made[k];
+    out.made = after - before;
+  }
+  f.streak++; f.caught++;
+  if(f.streak > f.best) f.best = f.streak;
+  out.streak = f.streak;
+  return out;
+}
+// a treasure faded before it was tapped: the streak starts over
+function missFortune(s){ s.meta.fortune.streak = 0; }
+
 // ---------- player actions ----------
 function assign(s, kind, i, delta){
   if(!JOB_KINDS.includes(kind) || !Number.isInteger(i) || i < 0 || i >= s[kind].length || !rowUnlocked(s, kind, i)) return 0;
@@ -722,6 +783,7 @@ function sanitize(raw){
   if(!raw || typeof raw !== 'object' || raw.v !== SAVE_VERSION) return d;
   ['dp','dpTotal','battleRaw','clonesLost','playTime','hp'].forEach(k=>{ d[k] = Math.min(1e200, nonNeg(raw[k], d[k])); });   // far above real play, low enough that multipliers stay finite
   d.strikeAt = Math.min(nonNeg(raw.strikeAt, 0), d.playTime + D.STRIKE_CD);
+  d.boostT = Math.min(nonNeg(raw.boostT, 0), D.FORTUNE.boostCap);
   d.clones = Math.floor(capped(raw.clones, 1e9));
   d.gods = Math.min(D.GODS.length, Math.floor(nonNeg(raw.gods, 0)));
   d.lastSave = isNum(raw.lastSave) && raw.lastSave > 0 && raw.lastSave <= Date.now() ? raw.lastSave : Date.now();
@@ -784,6 +846,10 @@ function sanitize(raw){
   if(rm.might && rm.might.autoFight) m.mp += D.MIGHT_AUTOFIGHT_REFUND;   // that perk became a free toggle: give its cost back once
   m.tut = isNum(rm.tut) ? Math.floor(Math.max(0, rm.tut)) : (m.bestGods >= 2 || m.rebirths ? 999 : 0);
   m.createPref = typeof rm.createPref === 'string' && rm.createPref !== 'clone' && D.CREATIONS.some(c=>c.key===rm.createPref) ? rm.createPref : null;
+  const rf = rm.fortune && typeof rm.fortune === 'object' ? rm.fortune : {};
+  ['streak','best','caught'].forEach(k=>{ m.fortune[k] = Math.floor(capped(rf[k], 1e9)); });
+  m.fortune.best = Math.max(m.fortune.best, m.fortune.streak);
+  m.fortune.caught = Math.max(m.fortune.caught, m.fortune.best);
   if(rm.seen && typeof rm.seen === 'object') for(const k in rm.seen) if(rm.seen[k] === 1) m.seen[k] = 1;
   const r = rm.run;
   if(r && typeof r === 'object' && Number.isInteger(r.i) && r.i >= 0 && r.i < D.DUNGEONS.length && Number.isInteger(r.depth) && r.depth >= 1 && r.depth <= D.MAX_DEPTH)
@@ -817,6 +883,7 @@ root.GK = {
   chalDone, chalGoal, startChallenge, abandonChallenge, ubUnlocked, ubOpen, ubLevel, ubStats, startUbFight, fightTarget, outlook,
   mightUnlocked, mightLv, mightCost, buyMight,
   planUnlocked, autoFightUnlocked, topRow, bestSafeMonster, bestRowFor, moveToBest, applyPlan, setPlan, togglePlan, neededFactor,
+  fortuneUnlocked, fortuneItem, dpRate, fortuneKinds, rollFortune, fortuneMult, claimFortune, missFortune,
   strike, strikeWait, step, advance, assign, unassignKind, setCreateTarget, startFight, flee
 };
 })(typeof window !== 'undefined' ? window : globalThis);

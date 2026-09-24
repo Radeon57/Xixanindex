@@ -1558,6 +1558,115 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 
+// ---------- fortune (โชควาสนา): a spirit treasure appears now and then while the page is open ----------
+// the timer counts only seconds the tab is visible and no dialog is open, so offline catch-up never makes one;
+// which reward it pays, and how much, is decided by the engine (G.rollFortune / G.claimFortune)
+const FORTUNE_ART = {
+  dp: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 13C16 6 5 12 7 25c2 10 11 17 17 17s15-7 17-17c2-13-9-19-17-12z" fill="#ffb3c8"/><path d="M24 13c-3 7-3 19 0 29" stroke="#e0708f" stroke-width="2" fill="none"/><path d="M24 13c2-5 6-8 12-8-1 5-6 8-12 8z" fill="#6fd49a"/><ellipse cx="15" cy="23" rx="3.5" ry="6" fill="#fff" opacity=".4"/></svg>',
+  speed: '<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="10" y="10" width="28" height="28" rx="2" fill="#f2e6c8"/><rect x="6" y="7" width="6" height="34" rx="3" fill="#b0763a"/><rect x="36" y="7" width="6" height="34" rx="3" fill="#b0763a"/><path d="M16 17h16M16 23h16M16 29h9" stroke="#3f7fa8" stroke-width="2.4" stroke-linecap="round"/><circle cx="31" cy="31" r="3.5" fill="#d9534f"/></svg>',
+  create: '<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="25" r="14" fill="#e8c76f"/><circle cx="24" cy="25" r="10" fill="none" stroke="#a8873e" stroke-width="1.6"/><path d="M18 27c2 4 9 4 11-1s-4-8-7-5 1 6 4 4" fill="none" stroke="#8a6420" stroke-width="1.8" stroke-linecap="round"/><ellipse cx="18.5" cy="19" rx="4" ry="2.6" fill="#fff" opacity=".55"/></svg>'
+};
+const fortune = { wait: 0, cur: null, lastAt: 0, bar: null };
+const fortuneRand = r => r[0] + Math.random() * (r[1] - r[0]);
+function fortunePaused(){ return document.hidden || !!$('welcome') || !!document.querySelector('#guide.open,#settings.open,#keyHelp.open'); }
+function removeFortune(c, cls){
+  if(!cls || motionOff()){ c.el.remove(); return; }
+  c.el.classList.add(cls);
+  setTimeout(()=>c.el.remove(), 650);
+}
+function spawnFortune(kind){
+  if(fortune.cur){ removeFortune(fortune.cur, ''); fortune.cur = null; }
+  if(!G.fortuneItem(kind)) kind = G.rollFortune(s, Math.random());
+  const item = G.fortuneItem(kind), F = D.FORTUNE;
+  // somewhere inside the content area, clear of the HUD and the toast
+  const w = window.innerWidth, h = window.innerHeight, box = $('main').getBoundingClientRect();
+  const x0 = Math.max(box.left, 0) + 50, x1 = Math.min(box.right, w) - 50;
+  const y0 = Math.max(box.top, 0) + 56, y1 = Math.min(box.bottom, h) - 96;
+  const x = x1 > x0 ? x0 + Math.random() * (x1 - x0) : w / 2, y = y1 > y0 ? y0 + Math.random() * (y1 - y0) : h / 2;
+  const el = document.createElement('button');
+  el.type = 'button'; el.className = 'fortune';
+  el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.setProperty('--fc', item.color);
+  el.title = item.name + ' — ' + item.desc;
+  el.setAttribute('aria-label', 'แตะเพื่อรับ' + item.name + ': ' + item.desc);
+  el.innerHTML = '<span class="fortuneHalo"></span><span class="fortuneBob">' + FORTUNE_ART[kind] + '</span><span class="fortuneName">' + item.name + '</span><span class="fortuneLife"><i></i></span>';
+  el.addEventListener('click', onFortuneTap);
+  document.body.appendChild(el);
+  fortune.cur = { el, kind, x, y, left: F.life, life: el.querySelector('.fortuneLife>i') };
+  sfx('ping');
+  if(!s.meta.fortune.caught) toast('✨ โชควาสนา! สมบัติวิญญาณปรากฏ แตะเพื่อรับก่อนมันสลายไป', 2);
+}
+function onFortuneTap(e){
+  const c = fortune.cur;
+  if(!c || e.currentTarget !== c.el) return;
+  fortune.cur = null;
+  fortune.wait = fortuneRand(D.FORTUNE.every);
+  removeFortune(c, 'got');
+  const r = G.claimFortune(s, c.kind, ev);
+  if(!r) return;
+  const name = G.fortuneItem(r.kind).name;
+  let msg, pop;
+  if(r.kind === 'dp'){ msg = 'พลังเทวะ +' + fmt(r.dp); pop = '+' + fmt(r.dp); }
+  else if(r.kind === 'speed'){ msg = 'ความเร็วฝึก ×' + D.FORTUNE.boostMult + ' อีก ' + Math.round(r.secs) + ' วิ'; pop = 'ฝึก ×' + D.FORTUNE.boostMult; }
+  else { msg = 'เร่งการสร้าง ' + Math.round(r.secs) + ' วิ' + (r.made ? ' ได้ ' + fmt(r.made) + ' ชิ้น' : ''); pop = r.made ? 'สร้าง +' + fmt(r.made) : 'เร่งสร้าง'; }
+  const streak = r.mult > 1 ? ' · โชคต่อเนื่อง ' + r.streak + ' ครั้ง (รางวัล +' + Math.round((r.mult - 1) * 100) + '%)' : '';
+  addLog('✨ โชควาสนา: ' + name + ' — ' + msg + streak);
+  toast('✨ ' + name + ': ' + msg + streak, 2);
+  sfx('fortune'); buzz(20);
+  if(!motionOff()){
+    const g = document.createElement('span');
+    g.className = 'fortuneGain'; g.textContent = pop;
+    g.style.left = c.x + 'px'; g.style.top = (c.y - 30) + 'px';
+    document.body.appendChild(g);
+    setTimeout(()=>g.remove(), 1300);
+  }
+  render(true);
+  save();
+}
+function renderBuff(){
+  if(!fortune.bar){
+    const b = document.createElement('div');
+    b.id = 'buffBar'; b.className = 'buffBar';
+    $('chalBar').after(b);
+    fortune.bar = b;
+  }
+  const t = s.boostT || 0;
+  setShown(fortune.bar, t > 0);
+  if(t > 0) setText(fortune.bar, '📜 ' + G.fortuneItem('speed').name + ': ความเร็วฝึก ×' + D.FORTUNE.boostMult + ' · เหลือ ' + Math.ceil(t) + ' วิ');
+}
+function fortuneTick(){
+  const now = performance.now(), dt = Math.min(1, (now - fortune.lastAt) / 1000);   // a throttled background timer never counts as play
+  fortune.lastAt = now;
+  renderBuff();
+  if(fortunePaused()) return;
+  const c = fortune.cur;
+  if(c){
+    c.left -= dt;
+    setBar(c.life, c.left / D.FORTUNE.life);
+    setClass(c.el, 'ending', c.left <= 3);
+    if(c.left > 0) return;
+    fortune.cur = null;
+    fortune.wait = fortuneRand(D.FORTUNE.every);
+    const had = s.meta.fortune.streak;
+    G.missFortune(s);
+    removeFortune(c, 'gone');
+    if(had >= 2){ addLog(G.fortuneItem(c.kind).name + 'สลายไป — โชคต่อเนื่อง ' + had + ' ครั้งขาดตอน'); toast(G.fortuneItem(c.kind).name + 'สลายไป... โชคต่อเนื่องขาดตอน'); }
+    return;
+  }
+  if(!G.fortuneUnlocked(s)) return;
+  fortune.wait -= dt;
+  if(fortune.wait <= 0) spawnFortune();
+}
+function initFortune(){
+  SFX.fortune = ()=>[784, 988, 1319, 1568].forEach((f,i)=>tone(f, 0.22, 'sine', 0.05, 0, i*0.07));
+  fortune.wait = fortuneRand(D.FORTUNE.first);
+  fortune.lastAt = performance.now();
+  renderBuff();
+  setInterval(fortuneTick, 250);
+  // test hook (local or ?debug only): GKDebug.fortune('dp' | 'speed' | 'create') makes a treasure appear now
+  if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /[?&]debug\b/.test(location.search))
+    window.GKDebug = Object.assign(window.GKDebug || {}, { fortune: kind=>{ spawnFortune(kind); return fortune.cur.kind; } });
+}
+
 function boot(saved){
   if(saved && typeof saved === 'object' && saved.v === G.SAVE_VERSION) s = G.sanitize(saved);
   else if(load()) catchUp();
@@ -1600,6 +1709,7 @@ function boot(saved){
   if(!storageOk) addLog('เบราว์เซอร์นี้ไม่อนุญาตให้บันทึกเกม — ความคืบหน้าจะหายเมื่อปิดหน้า');
   selectTab('train');
   initPlatform();
+  initFortune();
   showWelcome();
 
   lastTickAt = Date.now();
