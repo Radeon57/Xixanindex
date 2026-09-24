@@ -278,11 +278,12 @@ function costHTML(c, d){
 }
 function buildCreate(){
   $('createList').innerHTML = D.CREATIONS.map((c,i)=>`<div class="cItem" data-i="${i}">
-      <div class="jobHead"><span class="jobName">${iconHTML('create', c.key)}${c.name}</span><span class="cOwn"></span></div>
+      <div class="jobHead"><span class="jobName">${artHTML('create', i, '#e6c275', iconHTML('create', c.key))}${c.name}</span><span class="cOwn"></span></div>
       <div class="cDesc">${c.bonus ? c.desc + ' ต่อชิ้น (สูงสุด ' + c.bonus.cap + ' ชิ้น)' : c.desc + ' (ใช้เพียงเวลา)'}</div>
       <div class="cFoot"><span class="cCost"></span><button class="selBtn" data-act="target" data-key="${c.key}">เลือกสร้าง</button></div>
       <div class="lockTxt"></div>
     </div>`).join('');
+  loadArt($('createList'));
   R.create = [...document.querySelectorAll('#createList .cItem')].map(el=>({
     el, own: el.querySelector('.cOwn'), cost: el.querySelector('.cCost'), btn: el.querySelector('.selBtn'), lock: el.querySelector('.lockTxt')
   }));
@@ -654,11 +655,12 @@ function buildPets(){
   loadArt($('dgList')); loadArt($('petList'));
   R.pet = [...document.querySelectorAll('#petList .cItem')].map(el=>({ el, lv: el.querySelector('.jobLv'), bar: el.querySelector('.bar>i'),
     desc: el.querySelector('.cDesc'), cost: el.querySelector('.cCost'), btn: el.querySelector('.selBtn'), lock: el.querySelector('.lockTxt') }));
-  $('gearList').innerHTML = D.GEAR.map(g=>`<div class="cItem">
-      <div class="jobHead"><span class="jobName">${iconHTML('gear', g.key)}${g.name}</span><span class="jobLv"></span></div>
+  $('gearList').innerHTML = D.GEAR.map((g,i)=>`<div class="cItem">
+      <div class="jobHead"><span class="jobName">${artHTML('gear', i, '#e6c275', iconHTML('gear', g.key))}${g.name}</span><span class="jobLv"></span></div>
       <div class="cDesc"></div>
       <div class="cFoot"><span class="cCost"></span><button class="selBtn" data-act="forge" data-key="${g.key}"></button></div>
     </div>`).join('');
+  loadArt($('gearList'));
   R.gear = [...document.querySelectorAll('#gearList .cItem')].map(el=>({ lv: el.querySelector('.jobLv'), desc: el.querySelector('.cDesc'),
     cost: el.querySelector('.cCost'), btn: el.querySelector('.selBtn') }));
 }
