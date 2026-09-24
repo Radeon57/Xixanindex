@@ -719,6 +719,17 @@ function advKill(s, zone){
   return gain;
 }
 
+// the treasure guardian of a secret land: worth BOSS_KILL_WORTH kills, extra stones and a rarer seed; returns the DP gained
+function advBoss(s, zone){
+  if(!advUnlocked(s) || !Number.isInteger(zone) || zone < 0 || zone >= advZones(s)) return 0;
+  let gain = 0;
+  for(let i = 0; i < D.BOSS_KILL_WORTH; i++) gain += advKill(s, zone);
+  const r = s.meta.realm, h = D.HERBS[Math.min(D.HERBS.length - 1, (zone >> 1) + 1)].key;
+  r.stones += D.BOSS_STONES * (zone + 1);
+  r.seeds[h] = (r.seeds[h] || 0) + 1;
+  return gain;
+}
+
 // active strike: only during a fight, then a cooldown counted in play time
 const strikeWait = s => Math.max(0, (s.strikeAt || 0) - s.playTime);
 function strike(s){
@@ -919,6 +930,6 @@ root.GK = {
   mightUnlocked, mightLv, mightCost, buyMight,
   planUnlocked, autoFightUnlocked, topRow, bestSafeMonster, bestRowFor, moveToBest, applyPlan, setPlan, togglePlan, neededFactor,
   herbDef, pillDef, realmPlots, realmCost, springCost, growSpeed, realmUpgrade, springUpgrade, plant, plotReady, harvest, canBrew, brew,
-  advUnlocked, advZones, advStats, advKill, strike, strikeWait, step, advance, assign, unassignKind, setCreateTarget, startFight, flee
+  advUnlocked, advZones, advStats, advKill, advBoss, strike, strikeWait, step, advance, assign, unassignKind, setCreateTarget, startFight, flee
 };
 })(typeof window !== 'undefined' ? window : globalThis);

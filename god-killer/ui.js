@@ -1418,6 +1418,7 @@ function guideSections(){
       <li><b>เตาหลอมโอสถ</b>: ยาชั่วคราวเพิ่มพลัง ×2–×3 นาน 10 นาที · ยาทะลวงขั้นและยาเซียนอมตะเพิ่มค่าสถานะถาวร</li>
       <li><b>หินวิญญาณ</b>: ใช้ยกระดับมิติ (ได้แปลงเพิ่ม) และขยายบ่อน้ำพุ (โตเร็วขึ้น) · มิติขั้น ${D.REALM_CHAMBER_LV} ขึ้นไปเปิดห้องบำเพ็ญเวลาเร่ง ความเร็วฝึกเพิ่มขึ้น</li>
       <li><b>ดินแดนลับ</b>: เดินออกประตูทองทางขวาของมิติ มอนสเตอร์ไล่ตามเมื่อเข้าใกล้ ฆ่าแล้วได้ DP ค่ายุทธ์ หินวิญญาณ และเมล็ดสมุนไพร (ดินแดนยิ่งลึก เมล็ดยิ่งหายาก)</li>
+      <li><b>🐉 ผู้พิทักษ์สมบัติ</b>: มอนสเตอร์ตัวใหญ่สีทองในทุกดินแดนลับ แข็งแกร่งกว่าปกติมาก ปราบได้แล้วได้หินวิญญาณก้อนใหญ่และเมล็ดสมุนไพรระดับสูงกว่า กลับมาใหม่ใน ${D.BOSS_RESPAWN/60} นาที</li>
       <li>คอม: WASD หรือลูกศรเดิน · J หรือ Space โจมตี · มือถือ: แตะพื้นเพื่อเดิน แตะมอนสเตอร์เพื่อเข้าโจมตี</li></ul>`],
     ['ความสำเร็จ', `<p>ทุกความสำเร็จเพิ่มค่าสถานะทั้งหมด +${Math.round(D.ACH_BONUS*100)}% ดูได้ที่แท็บเกิดใหม่ › สำเร็จ</p>`],
     ['เล่นตอนออฟไลน์', `<p>ปิดเกมไปก็ยังได้ความคืบหน้าสูงสุด 8 ชั่วโมง กลับมาจะมีการ์ดสรุปให้ดู</p>`],
@@ -1500,6 +1501,7 @@ function initTouch(){
 }
 
 // ---------- adventure mode host (the Phaser scene lives in adventure.js, loaded on first visit) ----------
+const bossBackAt = {};   // secret land -> time its treasure guardian returns
 let advState = 0, advCtl = null, advZone = -1, advAtkQueued = false, realmSeed = 'grass';   // advZone -1 = the personal realm   // advState: 0 not loaded, 1 loading, 2 ready
 const advApi = {
   startZone: ()=>Math.min(advZone, G.advZones(s) - 1),
@@ -1510,6 +1512,16 @@ const advApi = {
   herbIndex: key=>D.HERBS.findIndex(h=>h.key === key),
   herbTime: key=>G.herbDef(key).time,
   plotTap: i=>plotAct(i),
+  bossReady: z=>!(bossBackAt[z] > Date.now()),
+  bossHp: ()=>D.BOSS_HP_MULT, bossDmg: ()=>D.BOSS_DMG_MULT,
+  bossKill: z=>{
+    const r = s.meta.realm, st0 = r.stones, g = G.advBoss(s, z);
+    bossBackAt[z] = Date.now() + D.BOSS_RESPAWN*1000;
+    const h = D.HERBS[Math.min(D.HERBS.length - 1, (z >> 1) + 1)];
+    addLog('🐉 ปราบผู้พิทักษ์สมบัติแห่ง' + D.SECRET_LANDS[z] + '! ได้หินวิญญาณ ' + fmt(r.stones - st0) + ' และเมล็ด' + h.name);
+    toast('🐉 ปราบผู้พิทักษ์สมบัติ! +เมล็ด' + h.name, 3); banner('🐉 ปราบผู้พิทักษ์สมบัติ!'); sfx('win'); buzz([40,40,80]); save();
+    return g;
+  },
   openPanel: what=>{ const el = $(what === 'furnace' ? 'rlFurnace' : 'rlInfo'); if(el) el.scrollIntoView({ behavior:'smooth', block:'center' }); },
   zones: ()=>G.advZones(s),
   stats: z=>G.advStats(s, z),
@@ -1593,8 +1605,8 @@ function renderAdv(){
   setDisabled($('advPrev'), z <= -1); setDisabled($('advNext'), z >= n - 1);
   if(inRealm){ setText($('advZone'), 'มิติ' + D.REALM_NAMES[s.meta.realm.lv - 1]); setText($('advKills'), '💎 ' + fmt(s.meta.realm.stones)); renderRealm(); return; }
   const mon = D.MONSTERS[z], rt = G.advStats(s, z);
-  setText($('advZone'), 'ดินแดนลับ ' + (z + 1) + '/' + n + ' ' + mon.name);
-  setHTML($('advKills'), 'ฆ่าแล้ว ' + fmt(s.meta.adv.kills) + '<span class="advRatio"> · แข็งกว่ามอนสเตอร์ ×' + fmt(rt.ratio) + '</span>');
+  setText($('advZone'), 'ดินแดนลับ ' + (z + 1) + '/' + n + ' · ' + D.SECRET_LANDS[z]);
+  setHTML($('advKills'), mon.name + (bossBackAt[z] > Date.now() ? '' : ' · 🐉 ผู้พิทักษ์อยู่') + ' · ฆ่าแล้ว ' + fmt(s.meta.adv.kills) + '<span class="advRatio"> · แข็งกว่ามอนสเตอร์ ×' + fmt(rt.ratio) + '</span>');
 }
 
 // ---------- save / load ----------
