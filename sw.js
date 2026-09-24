@@ -9,7 +9,8 @@ self.addEventListener('fetch', e=>{
   const req = e.request;
   if(req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
   // no-cache: always revalidate with the server, so the browser's HTTP cache can't serve an old version
-  e.respondWith(fetch(req, { cache:'no-cache' }).then(res=>{
+  // (built from the URL: a navigation Request can't be re-fetched with options)
+  e.respondWith(fetch(req.url, { cache:'no-cache', credentials:'same-origin' }).then(res=>{
     if(res.ok){ const copy = res.clone(); caches.open(CACHE).then(c=>c.put(req, copy)); }
     return res;
   }).catch(()=>caches.match(req, { ignoreSearch:true }).then(r=>r || caches.match('god-killer.html'))));
