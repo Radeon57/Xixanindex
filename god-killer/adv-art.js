@@ -1,8 +1,8 @@
-// God Killer — adventure art and maps shared by the 2D (Phaser) and 3D (Three.js) views.
+// God Killer — adventure mode art and maps.
 // Everything is drawn procedurally onto canvases, so there are no image files to load.
 (function(){
 'use strict';
-const T = 16;                 // tile size in pixels (2D world pixels; one 3D unit per tile)
+const T = 16;                 // tile size in world pixels (the camera zooms 2x, so the art stays crisp)
 const MAP_W = 44, MAP_H = 30; // tiles per zone
 const SOLID = [3, 4, 5];      // water, tree, rock
 const MON_PER_ZONE = 8;

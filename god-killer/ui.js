@@ -862,7 +862,7 @@ function selectTab(name){
     return;
   }
   if(name !== activeTab) $('main').scrollTop = 0;
-  if(activeTab === 'adv' && name !== 'adv') advSleepAll();
+  if(activeTab === 'adv' && name !== 'adv' && advCtl) advCtl.sleep();
   activeTab = name;
   alerts[name] = false;
   TABS.forEach(t=>setShown($('tab-'+t), t === name));
@@ -1109,8 +1109,6 @@ function onMainClick(e){
         toast('เริ่มความท้าทาย: ' + c.name); save();
       }
     }
-  } else if(act === 'advView'){
-    settings.advView = b.dataset.v; saveSettings(); ensureAdv();
   } else if(act === 'petView'){
     petView = b.dataset.v;
   } else if(act === 'depth'){
@@ -1401,7 +1399,7 @@ function guideSections(){
     ['ความท้าทาย', `<p>เล่นรอบใหม่ภายใต้กฎพิเศษ ${D.CHALLENGES.length} แบบ สังหารเทพเป้าหมายได้จะได้โบนัสถาวร ทำซ้ำได้แบบละ ${D.CHAL_MAX} ครั้ง</p>`],
     ['สิ่งมีชีวิตสูงสุดและ Might', `<p>หลังสังหารเทพครบ ${D.GODS.length} องค์ในรอบเดียว จะสู้สิ่งมีชีวิตสูงสุดได้ไม่จำกัด ชนะแล้วได้แต้ม <b>Might</b> ไว้ซื้อความสามารถถาวร</p>`],
     ['คู่หู ดันเจี้ยน อุปกรณ์', `<p>ปลดล็อกเมื่อสังหาร ${god('pets')} ส่งทีมคู่หู ${D.TEAM_SIZE} ตัวไปดันเจี้ยนเพื่อเก็บเลเวลและวัตถุดิบ แล้วเอาวัตถุดิบไปตีบวกอุปกรณ์ ทั้งหมดอยู่ถาวรข้ามการเกิดใหม่</p>`],
-    ['ผจญภัย', `<p>แท็บที่ 9 เป็นโลกที่ตัวละครเดินได้จริง เลือกดูได้ทั้งแบบ <b>2D แผนที่</b> และ <b>3D โลกสามมิติ</b> (มีเนินเขา น้ำ บ้าน สะพาน แสงและเงา) ความคืบหน้าเหมือนกันทั้งสองแบบ แต่ละเขตคือสนามรบของมอนสเตอร์หนึ่งชนิด มอนสเตอร์จะไล่ตามเมื่อเข้าใกล้ ฆ่าได้ 1 ตัวเท่ากับฆ่าในสนามรบ ${D.ADV_KILL_WORTH} ตัว (ได้ DP และค่ายุทธ์) ยิ่งร่างเงาแข็งแกร่ง ตัวละครยิ่งตีแรงและทนขึ้น</p><ul><li>คอม: WASD หรือลูกศรเดิน · J หรือ Space โจมตี</li><li>มือถือ: แตะพื้นเพื่อเดิน แตะมอนสเตอร์เพื่อเดินเข้าไปโจมตีเอง</li><li>เดินเข้าประตูทองด้านขวาเพื่อไปเขตถัดไป</li></ul>`],
+    ['ผจญภัย', `<p>แท็บที่ 9 เป็นโลก 2D ที่ตัวละครเดินได้จริง แต่ละเขตคือสนามรบของมอนสเตอร์หนึ่งชนิด มอนสเตอร์จะไล่ตามเมื่อเข้าใกล้ ฆ่าได้ 1 ตัวเท่ากับฆ่าในสนามรบ ${D.ADV_KILL_WORTH} ตัว (ได้ DP และค่ายุทธ์) ยิ่งร่างเงาแข็งแกร่ง ตัวละครยิ่งตีแรงและทนขึ้น</p><ul><li>คอม: WASD หรือลูกศรเดิน · J หรือ Space โจมตี</li><li>มือถือ: แตะพื้นเพื่อเดิน แตะมอนสเตอร์เพื่อเดินเข้าไปโจมตีเอง</li><li>เดินเข้าประตูทองด้านขวาเพื่อไปเขตถัดไป</li></ul>`],
     ['ความสำเร็จ', `<p>ทุกความสำเร็จเพิ่มค่าสถานะทั้งหมด +${Math.round(D.ACH_BONUS*100)}% ดูได้ที่แท็บเกิดใหม่ › สำเร็จ</p>`],
     ['เล่นตอนออฟไลน์', `<p>ปิดเกมไปก็ยังได้ความคืบหน้าสูงสุด 8 ชั่วโมง กลับมาจะมีการ์ดสรุปให้ดู</p>`],
     ['ย้ายเซฟ', `<p>เซฟเก็บในเบราว์เซอร์ของแต่ละเครื่อง ย้ายเครื่องให้กด "คัดลอกโค้ด" ในหน้านี้ แล้วไปวางที่ช่อง "วางโค้ดเซฟ" ในเครื่องใหม่</p>`],
@@ -1473,7 +1471,7 @@ function initTouch(){
   $('main').addEventListener('touchend', e=>{
     const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
     if(Date.now() - st > 600 || Math.abs(dx) < 70 || Math.abs(dy) > Math.abs(dx)*0.5) return;
-    if(e.target.closest('textarea,input,.seg,#advGame,#adv3d')) return;
+    if(e.target.closest('textarea,input,.seg,#advGame')) return;
     const order = [...document.querySelectorAll('#tabs .tab')].map(x=>x.dataset.tab).filter(n=>!tabLocked(n));
     const i = order.indexOf(activeTab);
     if(i < 0) return;
@@ -1482,11 +1480,8 @@ function initTouch(){
   }, { passive:true });
 }
 
-// ---------- adventure mode host ----------
-// Two views of the same world: 2D (Phaser, adventure.js) and 3D (Three.js, adventure3d.js). Each loads on first use;
-// both share adv-art.js (maps and sprites) and talk to the game only through advApi.
-let advZone = 0, advAtkQueued = false;
-const advViews = { '2d':{ state:0, ctl:null, box:'advGame' }, '3d':{ state:0, ctl:null, box:'adv3d' } };   // state: 0 not loaded, 1 loading, 2 ready
+// ---------- adventure mode host (the Phaser scene lives in adventure.js, loaded on first visit) ----------
+let advState = 0, advCtl = null, advZone = 0, advAtkQueued = false;   // advState: 0 not loaded, 1 loading, 2 ready
 const advApi = {
   startZone: ()=>Math.min(advZone, G.advZones(s) - 1),
   zones: ()=>G.advZones(s),
@@ -1499,29 +1494,18 @@ const advApi = {
   fmt, sfx, reduced: motionOff,
   takeAttack: ()=>{ const a = advAtkQueued; advAtkQueued = false; return a; }
 };
-const advView = ()=>settings.advView === '3d' ? '3d' : '2d';
-const advCtl = ()=>{ const v = advViews[advView()]; return v.state === 2 ? v.ctl : null; };
-function advSleepAll(){ for(const k in advViews) if(advViews[k].ctl) advViews[k].ctl.sleep(); }
 function loadScript(src){ return new Promise((ok, bad)=>{ const e = document.createElement('script'); e.src = src; e.onload = ok; e.onerror = bad; document.head.appendChild(e); }); }
-let artLoad = null;
-const loadArt2 = ()=>artLoad || (artLoad = loadScript('god-killer/adv-art.js'));
 function ensureAdv(){
-  const name = advView(), v = advViews[name];
-  for(const k in advViews){ setShown($(advViews[k].box), k === name); if(k !== name && advViews[k].ctl) advViews[k].ctl.sleep(); }
-  document.querySelectorAll('[data-act="advView"]').forEach(b=>setOn(b, b.dataset.v === name));
-  if(v.state === 2){ v.ctl.goZone(Math.min(advZone, G.advZones(s) - 1)); v.ctl.wake(); return; }
-  if(v.state === 1) return;
-  v.state = 1;
-  setText($('advMsg'), name === '3d' ? 'กำลังโหลดโลก 3D...' : 'กำลังโหลดโลกผจญภัย...');
-  const load = name === '3d'
-    ? loadArt2().then(()=>import('./adventure3d.js'))
-    : loadArt2().then(()=>loadScript('god-killer/vendor/phaser.min.js')).then(()=>loadScript('god-killer/adventure.js')).then(()=>window.GKAdventure);
-  load.then(ctl=>{
-    v.ctl = ctl; v.state = 2;
+  if(advState === 2){ advCtl.wake(); return; }
+  if(advState === 1) return;
+  advState = 1;
+  setText($('advMsg'), 'กำลังโหลดโลกผจญภัย...');
+  loadScript('god-killer/adv-art.js').then(()=>loadScript('god-killer/vendor/phaser.min.js')).then(()=>loadScript('god-killer/adventure.js')).then(()=>{
+    advCtl = window.GKAdventure; advState = 2;
     setText($('advMsg'), '');
-    ctl.mount($(v.box), advApi);
-    if(activeTab !== 'adv' || advView() !== name) ctl.sleep();
-  }).catch(()=>{ v.state = 0; setText($('advMsg'), 'โหลดโหมดผจญภัยไม่สำเร็จ — ตรวจการเชื่อมต่อแล้วเปิดแท็บนี้ใหม่'); });
+    advCtl.mount($('advGame'), advApi);
+    if(activeTab !== 'adv') advCtl.sleep();
+  }).catch(()=>{ advState = 0; setText($('advMsg'), 'โหลดโหมดผจญภัยไม่สำเร็จ — ตรวจการเชื่อมต่อแล้วเปิดแท็บนี้ใหม่'); });
 }
 function renderAdv(){
   const n = G.advZones(s), z = Math.min(advZone, n - 1), mon = D.MONSTERS[z], rt = G.advStats(s, z);
@@ -1632,8 +1616,8 @@ function boot(saved){
   $('genMaxBtn').addEventListener('click', onGenMax);
   $('strikeBtn').addEventListener('click', onStrike);
   $('advAtk').addEventListener('click', ()=>{ advAtkQueued = true; });
-  $('advPrev').addEventListener('click', ()=>{ const c = advCtl(); if(c) c.goZone(Math.max(0, c.zone() - 1)); });
-  $('advNext').addEventListener('click', ()=>{ const c = advCtl(); if(c) c.goZone(Math.min(G.advZones(s) - 1, c.zone() + 1)); });
+  $('advPrev').addEventListener('click', ()=>{ if(advCtl) advCtl.goZone(Math.max(0, advCtl.zone() - 1)); });
+  $('advNext').addEventListener('click', ()=>{ if(advCtl) advCtl.goZone(Math.min(G.advZones(s) - 1, advCtl.zone() + 1)); });
   $('guideBtn').addEventListener('click', ()=>showGuide(true));
   $('soundBtn').addEventListener('click', ()=>{ settings.sound = !settings.sound; saveSettings(); renderSoundBtn(); sfx('ping'); });
   renderSoundBtn(); applyMotion();
