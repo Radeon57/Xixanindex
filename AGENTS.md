@@ -13,6 +13,8 @@ https://radeon57.github.io/Xixanindex/god-killer.html (`index.html` redirects th
 | `god-killer/data.js` | Every tunable number and name: trainings, monsters, creations, gods, upgrades, pets, dungeons, gear, challenges, ultimates, might, achievements. |
 | `god-killer/engine.js` | Pure game rules with no DOM access, exported as `globalThis.GK`. It also runs in Node via `vm.runInThisContext`. |
 | `god-killer/ui.js` | Rendering and input, in one IIFE. |
+| `god-killer/adv-art.js` | Adventure maps (`makeMap`), A* (`findPath`), themes and procedural sprite sheets, shared by both views. |
+| `god-killer/adventure3d.js` | Adventure 3D view (ES module, Three.js r160 in `vendor/`): heightmap terrain with vertex-color splatting, water shader, InstancedMesh trees/rocks, houses, bridges, shadows, billboard sprites. Same exports as the 2D view: `mount`, `sleep`, `wake`, `goZone`, `zone`. |
 | `god-killer/adventure.js` | Adventure tab: a Phaser 3 top-down scene (procedural tiles and sprites, monster FSM, A* tap-to-move). Loaded on first visit with `god-killer/vendor/phaser.min.js`. It talks to the game only through the `advApi` object in ui.js; rewards come from `G.advKill`. |
 | `god-killer/img/<set>/<NN>.webp` | 256×256 portraits for `gods`, `ultimates`, `monsters`, `pets` and `dungeons`. A missing file falls back to a drawn sigil. The prompts used are in `img/PROMPTS.md`. |
 | `tests/engine_fuzz.js` | Engine invariant, fuzz and long-run test. Run it with `node tests/engine_fuzz.js`, about 5s. |
