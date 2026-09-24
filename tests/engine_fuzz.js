@@ -134,6 +134,7 @@ const actions = [
   s => G.startDungeon(s, R() < .6 ? Math.floor(R() * 5) : J(), R() < .6 ? Math.floor(R() * 12) : J()),
   s => G.stopDungeon(s),
   s => G.advKill(s, R() < .7 ? Math.floor(R() * 11) : J()),
+  s => G.advBoss(s, R() < .7 ? Math.floor(R() * 11) : J()),
   s => G.realmUpgrade(s),
   s => G.springUpgrade(s),
   s => G.plant(s, R() < .7 ? Math.floor(R() * 20) : J(), R() < .7 ? pick(D.HERBS).key : J()),

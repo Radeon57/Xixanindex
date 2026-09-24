@@ -92,10 +92,21 @@ class World extends Phaser.Scene {
       const m = this.physics.add.sprite(tx*T + T/2, ty*T + T/2, 'mons', zone*2).setDepth(9);
       m.body.setSize(12, 10).setOffset(2, 5);
       m.play('mon-' + zone);
-      m.home = { x:m.x, y:m.y }; m.state = 'idle'; m.until = 0; m.hp = 100; m.atkAt = 0; m.alive = true;
+      m.home = { x:m.x, y:m.y }; m.state = 'idle'; m.until = 0; m.hp = m.maxHp = 100; m.atkAt = 0; m.alive = true;
       m.bar = this.add.rectangle(m.x, m.y - 10, 12, 2, 0xff6b6b).setOrigin(0, .5).setDepth(11).setVisible(false);
       this.cols.push(this.physics.add.collider(m, this.layer));
       this.mons.push(m);
+    }
+    // the treasure guardian: a big golden version of the zone's monster near the east gate
+    if(zone !== REALM && api.bossReady(zone)){
+      let tx = MAP_W - 8, ty = mid, guard = 0;
+      while(!walkable(this.grid[ty][tx]) && guard++ < 40){ tx = MAP_W - 12 + (Math.random()*8|0); ty = 4 + (Math.random()*(MAP_H-8)|0); }
+      const b = this.physics.add.sprite(tx*T + T/2, ty*T + T/2, 'mons', zone*2).setDepth(9).setScale(2).setTint(0xffe9a8);
+      b.body.setSize(12, 10).setOffset(2, 5); b.play('mon-' + zone);
+      b.boss = true; b.home = { x:b.x, y:b.y }; b.state = 'idle'; b.until = 0; b.hp = b.maxHp = 100 * api.bossHp(); b.atkAt = 0; b.alive = true;
+      b.bar = this.add.rectangle(b.x, b.y - 20, 24, 3, 0xe8c76f).setOrigin(0, .5).setDepth(11).setVisible(false);
+      this.cols.push(this.physics.add.collider(b, this.layer));
+      this.mons.push(b);
     }
     this.stats = zone === REALM ? null : api.stats(zone); this.statsAt = 0;
     api.zoneChanged(zone);
@@ -139,7 +150,9 @@ class World extends Phaser.Scene {
         if(time > sp.until){ sp.until = time + 1500 + Math.random()*3000; const tx = 4 + (Math.random()*36|0), ty = 3 + (Math.random()*24|0); if(walkable(this.grid[ty][tx])){ sp.wx = tx*T + T/2; sp.wy = ty*T + T/2; } }
         sp.setFrame(sp.pi*2);
       } else {
-        const st = Math.min(d, 22*dt); sp.x += dx/d*st; sp.y += dy/d*st; sp.setFlipX(dx < 0);
+        const st = Math.min(d, 22*dt), nx = sp.x + dx/d*st, ny = sp.y + dy/d*st, row = this.grid[Math.floor(ny / T)];
+        if(!row || !walkable(row[Math.floor(nx / T)])){ sp.wx = sp.x; sp.wy = sp.y; sp.until = 0; continue; }
+        sp.x = nx; sp.y = ny; sp.setFlipX(dx < 0);
         sp.setFrame(sp.pi*2 + (Math.floor(time/200) % 2));
       }
     }
@@ -164,14 +177,16 @@ class World extends Phaser.Scene {
       this.floatText(m.x, m.y - 8, '-' + Math.round(this.stats.heroDmg), '#fff3d0');
       if(!api.reduced()) this.tweens.add({ targets:m, alpha:.3, duration:60, yoyo:true });
       if(m.hp <= 0) this.killMonster(m);
+      else if(m.boss) this.floatText(m.x, m.y - 26, Math.ceil(m.hp / m.maxHp * 100) + '%', '#e8c76f');
     }
     if(!any) this.burst(ax, ay, 3, 0xcfc6e8);
   }
   killMonster(m){
     m.alive = false; m.body.enable = false; m.bar.setVisible(false);
     this.burst(m.x, m.y, 22, 0xe8c76f);
-    const gain = api.kill(this.zone);
+    const gain = m.boss ? api.bossKill(this.zone) : api.kill(this.zone);
     this.floatText(m.x, m.y - 14, '+' + api.fmt(gain) + ' DP', '#e8c76f');
+    if(m.boss){ this.burst(m.x, m.y, 40, 0xffe9a8); if(!api.reduced()) this.cameras.main.flash(300, 232, 199, 111); if(this.target === m) this.target = null; m.setVisible(false); return; }
     this.tweens.add({ targets:m, alpha:0, scale:1.6, duration:300, onComplete:()=>m.setVisible(false) });
     if(this.target === m) this.target = null;
     this.time.delayedCall(8000, ()=>{ if(!m.scene) return; m.setPosition(m.home.x, m.home.y).setAlpha(1).setScale(1).setVisible(true); m.body.enable = true; m.hp = 100; m.alive = true; m.state = 'idle'; });
@@ -241,23 +256,24 @@ class World extends Phaser.Scene {
     for(const m of this.mons){
       if(!m.alive) continue;
       const dh = Phaser.Math.Distance.Between(m.x, m.y, this.hero.x, this.hero.y), dHome = Phaser.Math.Distance.Between(m.x, m.y, m.home.x, m.home.y);
-      if(m.state !== 'return' && !this.dead && dh < 70) m.state = dh < 15 ? 'attack' : 'chase';
+      const reach = m.boss ? 22 : 15;
+      if(m.state !== 'return' && !this.dead && dh < 70) m.state = dh < reach ? 'attack' : 'chase';
       if((m.state === 'chase' || m.state === 'attack') && (dHome > 150 || this.dead)) m.state = 'return';
       let mvx = 0, mvy = 0, spd = 0;
       if(m.state === 'idle'){ if(time > m.until){ m.state = 'wander'; m.until = time + 1500 + Math.random()*1500; m.wx = m.home.x + (Math.random()*64 - 32); m.wy = m.home.y + (Math.random()*64 - 32); } }
       else if(m.state === 'wander'){ mvx = m.wx - m.x; mvy = m.wy - m.y; spd = 25; if(time > m.until || Math.hypot(mvx, mvy) < 3){ m.state = 'idle'; m.until = time + 800 + Math.random()*1600; } }
       else if(m.state === 'chase'){ mvx = this.hero.x - m.x; mvy = this.hero.y - m.y; spd = 55; if(dh >= 90) m.state = 'return'; }
       else if(m.state === 'attack'){
-        if(dh >= 18) m.state = 'chase';
-        else if(time - m.atkAt > 1000){ m.atkAt = time; this.heroHurt(this.stats.monDmg); if(!api.reduced()) this.tweens.add({ targets:m, scale:1.25, duration:80, yoyo:true }); }
+        if(dh >= reach + 3) m.state = 'chase';
+        else if(time - m.atkAt > 1000){ m.atkAt = time; this.heroHurt(this.stats.monDmg * (m.boss ? api.bossDmg() : 1)); if(!api.reduced()) this.tweens.add({ targets:m, scale:1.25, duration:80, yoyo:true }); }
       }
-      else if(m.state === 'return'){ mvx = m.home.x - m.x; mvy = m.home.y - m.y; spd = 60; if(dHome < 4){ m.state = 'idle'; m.hp = Math.min(100, m.hp + 50); } }
+      else if(m.state === 'return'){ mvx = m.home.x - m.x; mvy = m.home.y - m.y; spd = 60; if(dHome < 4){ m.state = 'idle'; m.hp = Math.min(m.maxHp, m.hp + m.maxHp/2); } }
       const l = Math.hypot(mvx, mvy);
       m.setVelocity(l > 1 ? mvx / l * spd : 0, l > 1 ? mvy / l * spd : 0);
       if(mvx) m.setFlipX(mvx < 0);
-      const hurt = m.hp < 100;
+      const hurt = m.hp < m.maxHp || m.boss, w = m.boss ? 24 : 12;
       m.bar.setVisible(hurt);
-      if(hurt){ m.bar.setPosition(m.x - 6, m.y - 10); m.bar.setSize(Math.max(.5, 12 * m.hp / 100), 2); }
+      if(hurt){ m.bar.setPosition(m.x - w/2, m.y - (m.boss ? 20 : 10)); m.bar.setSize(Math.max(.5, w * m.hp / m.maxHp), m.boss ? 3 : 2); }
     }
     api.hud(this.hp, this.zone);
   }
