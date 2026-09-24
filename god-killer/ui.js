@@ -227,7 +227,7 @@ function renderJobs(kind, d, full){
     } else {
       const mult = kind === 'train' ? d.m.phys : d.m.myst;
       const now = Date.now();   // at most one pulse per row every 1.5s, so fast late-game levels don't strobe
-      if(ref._lv !== undefined && r.lv > ref._lv && !motionOff() && !(now - ref._lvAt < 1500)){ ref._lvAt = now; replayAnim(ref.el, 'lvUp'); replayAnim(ref.lv, 'bump'); }
+      if(ref._lv !== undefined && r.lv > ref._lv && !motionOff() && !(now - ref._lvAt < 1500)){ ref._lvAt = now; replayAnim(ref.el, 'lvUp'); replayAnim(ref.lv, 'bump'); if(window.GKFX) GKFX.sparkle(ref.lv); }
       ref._lv = r.lv;
       setText(ref.lv, 'Lv.' + r.lv);
       const eta = r.n ? fmtTime((G.levelTime(defs[i], r.lv) - r.prog) / (r.n * d.m.speed)) : 'ต้องมีร่างเงาก่อน';
@@ -839,6 +839,7 @@ function renderHud(d, full){
   setText($('hudAtk'), fmt(d.atk));
   setText($('hudDef'), fmt(d.def));
   setText($('hudDp'), fmt(s.dp));
+  if(window.GKFX) GKFX.watch($('hudDp'), s.dp, fmt);
   setText($('hudClones'), fmt(s.clones) + '/' + fmt(d.maxClones));
 }
 const TABS = ['train','skill','mon','create','temple','pets','gods','rebirth','log'];
@@ -890,6 +891,7 @@ function render(full){
 // ---------- engine events ----------
 let lastLost = 0, lastDeathToast = 0;
 function handleEvents(ev, quiet){
+  if(!quiet && ev.length && window.GKFX) GKFX.events(ev);
   for(const e of ev){
     if(e.type === 'rowUnlock'){
       const def = JOB_DEFS[e.kind][e.i];
@@ -1345,6 +1347,7 @@ function rebirthFx(){
   let o = $('rbFx');
   if(!o){ o = document.createElement('div'); o.id = 'rbFx'; o.setAttribute('aria-hidden', 'true'); document.body.appendChild(o); }
   replayAnim(o, 'show');
+  if(window.GKFX) GKFX.rebirth();
 }
 
 // ---------- big moments: victory / defeat banner ----------
@@ -1365,6 +1368,7 @@ function onStrike(){
   if(fx && activeTab === 'gods'){
     const g = centerOf($('godArt'));
     fx.burst(g.x, g.y, 24, '#ffd66b', 130);
+    if(window.GKFX) GKFX.shake($('arena'));
     if(!motionOff()){ const el = document.createElement('span'); el.className = 'dmg big'; el.textContent = '⚡-' + fmt(dmg); el.style.left = g.x + 'px'; el.style.top = (g.y - 34) + 'px'; $('arena').appendChild(el); setTimeout(()=>el.remove(), 800); }
   }
   render(true);
