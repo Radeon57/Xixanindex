@@ -11,7 +11,8 @@ function newMeta(){
   return { gp:0, gpTotal:0, rebirths:0, bestGods:0, dpLife:0, up:{}, ach:{},
            pets:{}, team:[], mats:{}, gear:{}, dgBest:{}, run:null, dgAuto:true,
            chal:{}, ub:[], mp:0, mpTotal:0, might:{},
-           tut:0, seen:{}, plan:{ on:false, train:40, skill:30, mon:30 }, autoFight:false, createPref:null };
+           tut:0, seen:{}, plan:{ on:false, train:40, skill:30, mon:30 }, autoFight:false, createPref:null,
+           splits:D.GODS.map(()=>0), lastSplits:[], lastGain:0 };
 }
 function newState(meta){
   return {
@@ -34,6 +35,7 @@ function newState(meta){
     hp: 100,
     clonesLost: 0,
     playTime: 0,
+    splits: [],
     strikeAt: 0,
     lastSave: Date.now(),
     log: []
@@ -377,6 +379,7 @@ function rebirthGain(s){ let g = 0; for(let i=0;i<s.gods;i++) g += D.GODS[i].gp;
 function resetRun(s, challenge){
   const gain = rebirthGain(s);
   const meta = s.meta, log = s.log, autoClone = s.create.autoClone;
+  rememberRun(s, gain);
   meta.gp += gain; meta.gpTotal += gain;
   if(gain) meta.rebirths++;
   const fresh = newState(meta);
@@ -394,6 +397,32 @@ function resetRun(s, challenge){
 function rebirth(s){
   if(!rebirthUnlocked(s) || !rebirthGain(s)) return 0;
   return resetRun(s, null);
+}
+
+// ---------- split times ----------
+// seconds into the run (s.playTime: reset by newState, advanced only in step, so offline catch-up counts too) at which each god fell.
+// s.splits = this run (0 = time unknown, e.g. an older save); meta.splits = best per god index (0 = never);
+// meta.lastSplits / lastGain = the previous paid rebirth, so the UI can show the run-over-run speed-up.
+function recordSplit(s, i){
+  const t = s.playTime, m = s.meta, prev = m.splits[i] || 0;
+  while(s.splits.length < i) s.splits.push(0);
+  s.splits[i] = t;
+  if(!prev || t < prev) m.splits[i] = t;
+  return { t, prev };
+}
+function rememberRun(s, gain){
+  if(!gain) return;
+  s.meta.lastSplits = s.splits.slice(0, D.GODS.length);
+  s.meta.lastGain = gain;
+}
+function sanitizeSplits(raw, rm, d){
+  const m = d.meta, list = (v, n, max) => Array.isArray(v) ? v.slice(0, n).map(x => Math.min(max, nonNeg(x, 0))) : [];
+  d.splits = list(raw.splits, d.gods, d.playTime);
+  const best = list(rm.splits, D.GODS.length, 1e200);
+  m.splits = D.GODS.map((g, i) => best[i] || 0);
+  d.splits.forEach((t, i) => { if(t && (!m.splits[i] || t < m.splits[i])) m.splits[i] = t; });
+  m.lastSplits = list(rm.lastSplits, D.GODS.length, 1e200);
+  m.lastGain = Math.min(1e200, nonNeg(rm.lastGain, 0));
 }
 
 // ---------- challenges ----------
@@ -649,7 +678,8 @@ const fightTarget = (s, f) => f.kind === 'ub' ? ubStats(s, f.i) : D.GODS[s.gods]
 function winGod(s, ev){
   s.gods++;
   if(s.gods > s.meta.bestGods) s.meta.bestGods = s.gods;
-  if(ev) ev.push({ type:'godWin', i:s.gods-1 });
+  const sp = recordSplit(s, s.gods-1);
+  if(ev) ev.push({ type:'godWin', i:s.gods-1, t:sp.t, best:sp.prev });
   const c = s.challenge;
   if(c && s.gods - 1 >= chalGoal(s, c)){
     s.meta.chal[c] = chalDone(s, c) + 1;
@@ -785,6 +815,7 @@ function sanitize(raw){
   m.tut = isNum(rm.tut) ? Math.floor(Math.max(0, rm.tut)) : (m.bestGods >= 2 || m.rebirths ? 999 : 0);
   m.createPref = typeof rm.createPref === 'string' && rm.createPref !== 'clone' && D.CREATIONS.some(c=>c.key===rm.createPref) ? rm.createPref : null;
   if(rm.seen && typeof rm.seen === 'object') for(const k in rm.seen) if(rm.seen[k] === 1) m.seen[k] = 1;
+  sanitizeSplits(raw, rm, d);
   const r = rm.run;
   if(r && typeof r === 'object' && Number.isInteger(r.i) && r.i >= 0 && r.i < D.DUNGEONS.length && Number.isInteger(r.depth) && r.depth >= 1 && r.depth <= D.MAX_DEPTH)
     m.run = { i:r.i, depth:r.depth, t: Math.min(nonNeg(r.t, 0), D.DUNGEONS[r.i].time) };

@@ -590,6 +590,7 @@ function renderRebirth(d, full){
   setText($('rbBtn'), !gain ? 'ต้องสังหารเทพอย่างน้อย 1 องค์ในรอบนี้' : armed ? 'แตะอีกครั้งเพื่อยืนยันการจุติ' : 'จุติใหม่ · +' + gain + ' ปราณเทพ');
   setDisabled($('rbBtn'), !gain);
   setClass($('rbBtn'), 'flee', armed);
+  renderRebirthPay();
   D.UPGRADES.forEach((u,i)=>{
     const ref = R.up[i], L = m.up[u.key] || 0, c = G.upgradeCost(s, u);
     setText(ref.lv, 'Lv.' + L);
@@ -910,7 +911,7 @@ function handleEvents(ev, quiet){
       if(r.unlock === 'rebirth') alerts.rebirth = true;
       if(r.unlock === 'pets') alerts.pets = true;
       alerts.mon = true;
-      if(!quiet){ toast('⚔ สังหาร ' + god.name + ' สำเร็จ!', 3); celebrate(); banner('⚔ สังหาร ' + god.name + '!'); sfx('win'); buzz([40,40,80]); }
+      if(!quiet){ toast(splitToast(e), 3); celebrate(); banner('⚔ สังหาร ' + god.name + '!'); sfx('win'); buzz([40,40,80]); }
       save();
     } else if(e.type === 'ach'){
       const a = D.ACHIEVEMENTS.find(x=>x.key===e.key);
@@ -1104,6 +1105,7 @@ function onMainClick(e){
         lastLost = s.clonesLost; shownArt = ''; arenaSel = 'god'; clearAlerts();
         addLog('⚔ เริ่มบททดสอบ ' + c.name + (gain ? ' (ได้ ' + gain + ' ปราณเทพ)' : ''));
         toast('เริ่มบททดสอบ: ' + c.name); save();
+        if(gain) showRebirthCard(gain);
       }
     }
   } else if(act === 'petView'){
@@ -1146,10 +1148,10 @@ function onRebirth(){
   G.rebirth(s);
   lastLost = s.clonesLost; shownArt = ''; arenaSel = 'god'; clearAlerts();
   addLog('🔄 จุติใหม่ครั้งที่ ' + s.meta.rebirths + ' — ได้รับ ' + gain + ' ปราณเทพ');
-  toast('จุติใหม่สำเร็จ! +' + gain + ' ปราณเทพ');
   celebrate(); rebirthFx();
   save();
   selectTab('rebirth');
+  showRebirthCard(gain);
 }
 function onFight(){
   const tg = arenaTarget();
@@ -1558,6 +1560,114 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 
+// ---------- rebirth payoff: split times, live GP preview, "จุติสำเร็จ" card ----------
+// run clock as m:ss or h:mm:ss; 0 means "no time" (never killed, or a kill from before split times were recorded)
+function fmtClock(sec){
+  if(!(sec > 0)) return '—';
+  sec = Math.floor(sec);
+  const h = Math.floor(sec/3600), mm = Math.floor(sec/60) % 60, ss = String(sec % 60).padStart(2, '0');
+  return h ? h + ':' + String(mm).padStart(2, '0') + ':' + ss : mm + ':' + ss;
+}
+const fmtMul = x => '×' + (x >= 100 ? fmt(x) : String(+x.toFixed(x < 10 ? 2 : 1)));
+function splitToast(e){
+  const name = D.GODS[e.i].name;
+  if(!(e.t > 0)) return '⚔ สังหาร ' + name + ' สำเร็จ!';
+  const head = '⚔ สังหาร ' + name + ' ใน ' + fmtClock(e.t);
+  if(!e.best) return head + '!';
+  return e.t < e.best ? head + ' · สถิติใหม่! (ดีสุดเดิม ' + fmtClock(e.best) + ')' : head + ' (ดีสุด ' + fmtClock(e.best) + ')';
+}
+function renderRebirthPay(){
+  const m = s.meta, gain = G.rebirthGain(s), next = s.gods < D.GODS.length ? D.GODS[s.gods] : null;
+  let h = '<div class="rpBig"><span>ปราณเทพที่จะได้ถ้าจุติตอนนี้</span><b>+' + fmt(gain) + '</b></div>';
+  if(m.lastGain) h += '<div class="rpLine">เทียบรอบก่อน (+' + fmt(m.lastGain) + '): <b class="' + (gain > m.lastGain ? 'up' : '') + '">' + fmtMul(gain / m.lastGain) + '</b></div>';
+  if(next){
+    const after = gain + next.gp, best = m.splits[s.gods];
+    h += '<div class="rpLine">สังหาร ' + next.name + ' อีกองค์ → <b class="up">+' + fmt(after) + '</b> (เพิ่ม ' + next.gp + (gain ? ', ' + fmtMul(after / gain) : '') + ')' +
+      (best ? ' · สถิติเดิมถึงองค์นี้ ' + fmtClock(best) : '') + '</div>';
+  } else h += '<div class="rpLine">สังหารเทพครบทุกองค์แล้ว — จุติเพื่อเก็บปราณเทพเต็มจำนวน</div>';
+  setHTML($('rbPay'), h);
+  setText($('spSub'), 'รอบนี้ ' + fmtClock(s.playTime) + (s.challenge ? ' · อยู่ในบททดสอบ' : ''));
+  const n = Math.min(D.GODS.length, Math.max(m.bestGods, s.gods + 1));
+  let t = '<div class="spRow"><span>เทพ</span><span>รอบนี้</span><span>รอบก่อน</span><span>ดีสุด</span></div>';
+  for(let i = 0; i < n; i++){
+    const cur = s.splits[i] || 0, pb = cur && cur <= m.splits[i];
+    t += '<div class="spRow' + (i === s.gods ? ' next' : '') + '"><span>' + D.GODS[i].name + '</span>' +
+      '<span class="' + (pb ? 'pb' : '') + '">' + (i === s.gods ? 'กำลังไล่' : fmtClock(cur)) + '</span>' +
+      '<span>' + fmtClock(m.lastSplits[i]) + '</span><span>' + fmtClock(m.splits[i]) + '</span></div>';
+  }
+  setHTML($('spTable'), t);
+}
+const RB_CHEERS = ['ร่างใหม่ แต่ปราณเทพยังอยู่ครบ — รอบนี้จะเร็วกว่าเดิมมาก',
+  'ทุกการจุติคือก้าวที่ไกลขึ้น ไปทวงบัลลังก์สวรรค์อีกครั้ง!',
+  'เทพที่เคยล้มเราได้ จะล้มลงเร็วกว่าเดิม',
+  'ปราณเทพสะสมแน่นขึ้นทุกรอบ ลองทำลายสถิติเวลาของตัวเองดู!'];
+function showRebirthCard(gain){
+  if($('welcome')) $('welcome').remove();
+  const m = s.meta, mu = G.mults(s);
+  const canBuy = D.UPGRADES.filter(u => G.upgradeCost(s, u) <= m.gp).length;
+  const rows = [
+    ['ปราณเทพที่ได้', '+' + fmt(gain)],
+    ['ปราณเทพพร้อมใช้', fmt(m.gp) + ' (สะสมตลอดกาล ' + fmt(m.gpTotal) + ')'],
+    ['โบนัสถาวร: ค่าสถานะ', fmtMul(mu.stat)]
+  ];
+  if(mu.dp > 1) rows.push(['โบนัสถาวร: พลังเทวะ', fmtMul(mu.dp)]);
+  if(mu.speed > 1) rows.push(['โบนัสถาวร: ความเร็วฝึก', fmtMul(mu.speed)]);
+  if(mu.clone > 1) rows.push(['โบนัสถาวร: พลังร่างเงา', fmtMul(mu.clone)]);
+  const first = m.lastSplits[0] || m.splits[0];
+  if(first) rows.push(['เป้าหมายแรก', D.GODS[0].name + ' ให้เร็วกว่า ' + fmtClock(first)]);
+  const cheer = canBuy ? 'ซื้ออัปเกรดถาวรได้ทันที ' + canBuy + ' รายการ — ใช้ก่อนเริ่ม แล้วรอบนี้จะพุ่งไปไกลกว่าเดิม'
+                       : RB_CHEERS[m.rebirths % RB_CHEERS.length];
+  const box = document.createElement('div');
+  box.id = 'welcome'; box.className = 'wbWrap';
+  box.innerHTML = '<div class="wbCard rbCard" role="dialog" aria-label="จุติสำเร็จ"><div class="wbTitle">🔄 จุติสำเร็จ · ครั้งที่ ' + m.rebirths + '</div>' +
+    rows.map(r=>'<div class="wbRow"><span>' + r[0] + '</span><b>' + r[1] + '</b></div>').join('') +
+    '<div class="rbCheer">' + cheer + '</div>' +
+    '<button class="b bPrimary" id="wbClose" style="margin-top:10px">' + (canBuy ? 'ไปซื้ออัปเกรด' : 'เริ่มรอบใหม่') + '</button></div>';
+  document.body.appendChild(box);
+  box.addEventListener('click', e=>{ if(e.target === box || e.target.id === 'wbClose') box.remove(); });
+  $('wbClose').focus();
+}
+
+// ---------- welcome back after the tab was hidden ----------
+// the 1s timer keeps ticking while hidden, and a tab the browser froze catches up on its first tick (tick is wall-clock based),
+// so progress is already applied exactly once: this only compares a snapshot from when the tab was hidden with now
+let hiddenSnap = null;
+function welcomeOnReturn(){
+  if(document.hidden){
+    const d = G.derive(s);
+    hiddenSnap = { at: Date.now(), play: s.playTime, rb: s.meta.rebirths, gods: s.gods, dp: s.dpTotal, phys: d.phys, myst: d.myst, atk: d.atk,
+      lost: s.clonesLost, mp: s.meta.mp, ub: s.meta.ub.reduce((a, b) => a + b, 0), ach: G.achCount(s), mats: Object.values(s.meta.mats).reduce((a, b) => a + b, 0) };
+    return;
+  }
+  const w = hiddenSnap; hiddenSnap = null;
+  const away = w ? (Date.now() - w.at)/1000 : 0;
+  if(!w || away <= 60 || $('welcome') || s.meta.rebirths !== w.rb) return;
+  tick(); render(true);   // count any time a frozen timer has not ticked yet
+  const d = G.derive(s), counted = s.playTime - w.play;
+  const rows = [
+    ['พลังเทวะ', '+' + fmt(s.dpTotal - w.dp)],
+    ['กาย', '+' + fmt(d.phys - w.phys)],
+    ['เวท', '+' + fmt(d.myst - w.myst)],
+    ['พลังโจมตี', fmt(w.atk) + ' → ' + fmt(d.atk)]
+  ];
+  if(s.gods > w.gods){
+    const names = []; for(let i = w.gods; i < s.gods; i++) names.push(D.GODS[i].name + (s.splits[i] ? ' (' + fmtClock(s.splits[i]) + ')' : ''));
+    rows.push(['สังหารเทพ', names.length + ' องค์: ' + names.join(', ')]);
+  }
+  if(s.clonesLost > w.lost) rows.push(['ร่างเงาตาย', fmt(s.clonesLost - w.lost) + ' ร่าง']);
+  const mats = Object.values(s.meta.mats).reduce((a, b) => a + b, 0);
+  if(mats > w.mats) rows.push(['วัตถุดิบจากแดนลับ', '+' + fmt(mats - w.mats)]);
+  const ub = s.meta.ub.reduce((a, b) => a + b, 0);
+  if(ub > w.ub) rows.push(['สิ่งสูงสุด', 'ชนะ ' + (ub - w.ub) + ' ครั้ง · บารมี +' + fmt(s.meta.mp - w.mp)]);
+  if(G.achCount(s) > w.ach) rows.push(['ความสำเร็จใหม่', (G.achCount(s) - w.ach) + ' รายการ']);
+  const esc = t => String(t).replace(/[&<>]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' })[c]);
+  welcomeHTML = '<div class="wbCard" role="dialog" aria-label="สรุปผลขณะไม่อยู่"><div class="wbTitle">ยินดีต้อนรับกลับมา!</div>' +
+    '<div class="note">ห่างหายไป ' + fmtTime(away) + (counted < away - 60 ? ' (นับได้ ' + fmtTime(counted) + ')' : '') + '</div>' +
+    rows.map(r=>'<div class="wbRow"><span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b></div>').join('') +
+    '<button class="b bPrimary" id="wbClose" style="margin-top:10px">เล่นต่อ</button></div>';
+  showWelcome();
+}
+
 function boot(saved){
   if(saved && typeof saved === 'object' && saved.v === G.SAVE_VERSION) s = G.sanitize(saved);
   else if(load()) catchUp();
@@ -1609,6 +1719,7 @@ function boot(saved){
   window.addEventListener('pagehide', save);
   window.addEventListener('beforeunload', save);
   document.addEventListener('visibilitychange', ()=>{ if(document.hidden) save(); });
+  document.addEventListener('visibilitychange', welcomeOnReturn);
   try{ window.claude?.hot?.snapshot(() => s); }catch(e){}
 }
 

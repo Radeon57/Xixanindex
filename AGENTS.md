@@ -42,4 +42,3 @@ Player settings live in localStorage key `godKillerSettings` (separate from the 
 
 ## Not done yet (ideas for next work)
 - `sw.js` caches network-first; bump `CACHE` if the caching strategy changes.
-- Welcome-back card shows only after a reload, not when returning to a tab left open.
