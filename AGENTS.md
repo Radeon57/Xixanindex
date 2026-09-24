@@ -2,6 +2,8 @@
 
 > สรุปภาษาไทย: ไฟล์นี้อธิบายโครงสร้างเกม God Killer, วิธีรัน/ทดสอบ, กติกาการแก้โค้ด และงานที่ยังค้าง
 > ให้ AI ตัวอื่นอ่านก่อนเริ่มแก้งาน
+>
+> **Start here:** the full continuation guide (setup, tests, art pipeline, backlog with ready-to-paste prompts) is [HANDOFF.md](HANDOFF.md).
 
 An idle game in Thai, modeled on *Idling to Rule the Gods*. It is plain HTML, CSS and JS with no build step, hosted on GitHub Pages:
 https://radeon57.github.io/Xixanindex/god-killer.html (`index.html` redirects there).
@@ -17,6 +19,7 @@ https://radeon57.github.io/Xixanindex/god-killer.html (`index.html` redirects th
 | `god-killer/icons.js` | Inline SVG art as `window.GKICONS`: icons for trainings, skills, creations, gear and materials, plus the hero portrait fallback. |
 | `god-killer/img/<set>/<NN>.webp` | 256×256 portraits for `gods`, `ultimates`, `monsters`, `pets`, `dungeons` and `hero`, plus 128px Canva medallions for `train`, `skill`, `create` and `gear` rows. A missing file falls back to a drawn sigil. The prompts used are in `img/PROMPTS.md`. |
 | `tests/engine_fuzz.js` | Engine invariant, fuzz and long-run test. Run it with `node tests/engine_fuzz.js`, about 5s. |
+| `tests/ui_smoke.py` | Playwright click-through of every tab at 360×740 and 1366×768 with a fresh, early and late save (`tests/fixtures/`). Run `python3 tests/ui_smoke.py`; it must print `ALL PASS`. |
 
 ## Rules that keep the game working
 - **Saves.** The localStorage key is `godKillerSave2` and the save has `v:2`.
@@ -38,7 +41,8 @@ https://radeon57.github.io/Xixanindex/god-killer.html (`index.html` redirects th
 ## Test before pushing
 1. `node --check god-killer/ui.js god-killer/engine.js god-killer/data.js`
 2. `node tests/engine_fuzz.js`
-3. Serve locally with `python3 -m http.server 8000`, then open `http://localhost:8000/god-killer.html`:
+3. `python3 tests/ui_smoke.py` (must print `ALL PASS`)
+4. Serve locally with `python3 -m http.server 8000`, then open `http://localhost:8000/god-killer.html`:
    - at phone size (360×740) and PC size (1366×768)
    - visit every tab
    - check the console shows no errors
