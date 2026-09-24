@@ -222,7 +222,7 @@ textarea:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
 .wbRow{display:flex;justify-content:space-between;gap:10px;font-size:.74rem;color:var(--sub);padding:5px 0;border-bottom:1px solid var(--border)}
 .wbRow b{color:var(--text);font-weight:normal;text-align:right;overflow-wrap:anywhere}
 @media (prefers-reduced-motion: reduce){
-  *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+  :root:not([data-motion="full"]) *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
 }
 /* ---------- platform: every screen (safe areas, list grids, focus, kbd hints) ---------- */
 #side{display:contents}
@@ -382,8 +382,25 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
 #banner.show{animation:bannerIn 1.8s ease-out forwards}
 @keyframes bannerIn{0%{opacity:0;transform:scale(1.6)}15%{opacity:1;transform:scale(1)}75%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.96)}}
 #soundBtn{font-size:.8rem;line-height:1;padding:3px 6px}
-#guide{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(5,4,12,.7)}
-#guide.open{display:flex}
+#guide,#settings{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(5,4,12,.7)}
+#guide.open,#settings.open{display:flex}
+#settings .gBox{width:min(420px,100%)}
+.stRow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:.8rem;color:var(--text);cursor:pointer}
+.stRow input[type=checkbox]{width:20px;height:20px;accent-color:var(--violet)}
+.stRow input[type=range]{width:140px;accent-color:var(--gold)}
+.stRow select{background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px;font:inherit;font-size:.75rem;max-width:190px}
+#setBtn{font-size:.8rem;line-height:1;padding:3px 6px}
+.brand,.godCount{white-space:nowrap}
+@media (max-width:420px){.brand{font-size:.95rem;letter-spacing:.5px}.godCount{gap:3px;font-size:.7rem}.godCount .logBtn{margin-left:3px;padding:3px 5px}#keyBtn{display:none!important}}
+.portrait{position:relative}
+.portrait::after{content:'';position:absolute;inset:0;border-radius:50%;background:#fff;opacity:0;pointer-events:none}
+.portrait.hitFlash::after{animation:flashO .22s ease-out}
+.portrait.hurtFlash::after{background:#ff4a4a;animation:flashO .22s ease-out}
+@keyframes flashO{0%{opacity:.55}100%{opacity:0}}
+#rbFx{position:fixed;inset:0;z-index:58;pointer-events:none;opacity:0;background:radial-gradient(circle at 50% 45%,#fff3c4,#e8c76f 45%,#6941b3)}
+#rbFx.show{animation:rbFade 1.3s ease-in-out}
+@keyframes rbFade{0%{opacity:0}35%{opacity:.95}100%{opacity:0}}
+:root[data-motion="reduced"] *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
 .gBox{width:min(620px,100%);max-height:100%;overflow:auto;background:var(--panel);border:1px solid var(--gold);border-radius:14px;padding:12px 16px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
 .gBox .row b{color:var(--gold);font-size:1rem}
 .gBox h4{color:var(--gold);margin:14px 0 4px;font-size:.86rem}
@@ -481,6 +498,7 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
     <div class="hudTop">
       <div class="brand">God Killer</div>
       <div class="godCount"><svg class="ic" width="14" height="14"><use href="#icon-crown"></use></svg>สังหารเทพ <b id="hudGods">0/0</b>
+        <button class="logBtn" id="setBtn" aria-label="ตั้งค่า" title="ตั้งค่า">⚙</button>
         <button class="logBtn" id="soundBtn" aria-label="เปิด/ปิดเสียง"></button>
         <button class="logBtn" id="logBtn" aria-label="เปิดบันทึก"><svg class="ic" width="15" height="15"><use href="#icon-scroll"></use></svg></button></div>
     </div>
