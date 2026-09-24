@@ -730,7 +730,7 @@ function sanitize(raw){
     d[kind].forEach((r,i)=>{
       const x = raw[kind][i];
       if(!x || typeof x !== 'object') return;
-      r.lv = Math.floor(capped(x.lv, 1e6)); r.prog = nonNeg(x.prog, 0); r.n = Math.floor(capped(x.n, 1e9));
+      r.lv = Math.floor(capped(x.lv, 1e6)); r.prog = Math.min(nonNeg(x.prog, 0), levelTime((kind==='train' ? D.TRAININGS : D.SKILLS)[i], r.lv)); r.n = Math.floor(capped(x.n, 1e9));
     });
   });
   if(Array.isArray(raw.mon)) d.mon.forEach((r,i)=>{
@@ -788,6 +788,7 @@ function sanitize(raw){
   const r = rm.run;
   if(r && typeof r === 'object' && Number.isInteger(r.i) && r.i >= 0 && r.i < D.DUNGEONS.length && Number.isInteger(r.depth) && r.depth >= 1 && r.depth <= D.MAX_DEPTH)
     m.run = { i:r.i, depth:r.depth, t: Math.min(nonNeg(r.t, 0), D.DUNGEONS[r.i].time) };
+  if(m.run) m.run.depth = Math.min(m.run.depth, Math.min(D.MAX_DEPTH, (m.dgBest[D.DUNGEONS[m.run.i].key] || 0) + 1));   // never deeper than unlocked
   // never trust more assigned clones than exist
   let over = assigned(d) - d.clones;
   for(const kind of JOB_KINDS){ for(const r of d[kind]){ if(over <= 0) break; const k = Math.min(r.n, over); r.n -= k; over -= k; } }

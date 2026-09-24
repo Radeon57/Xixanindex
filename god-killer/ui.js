@@ -1385,6 +1385,7 @@ function initTouch(){
     holdT = setTimeout(()=>{ if(navigator.vibrate) try{ navigator.vibrate(8); }catch(x){} tick(start); }, 400);
   });
   ['pointerup','pointercancel','pointerleave'].forEach(t=>$('main').addEventListener(t, stop));
+  $('main').addEventListener('pointerout', e=>{ if(held && e.target === held) stop(); });   // finger slid off the button
   $('main').addEventListener('scroll', stop, { passive:true });
   // the click that ends a hold would count once more: swallow it
   $('main').addEventListener('click', e=>{ if(repeats && e.isTrusted && e.target.closest('.ctlBtn')){ repeats = 0; e.stopPropagation(); e.preventDefault(); } }, true);
