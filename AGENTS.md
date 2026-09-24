@@ -29,6 +29,7 @@ https://radeon57.github.io/Xixanindex/god-killer.html (`index.html` redirects th
 - **Destructive buttons** use a two-tap confirm (`confirmTap`), with the second tap at least 400ms after the first.
 - **UI text** is Thai. Keep new text in natural Thai.
 - **Balance.** A fresh-save bot kills gods 1–6 at about 4 / 10 / 17 / 27 / 38 / 52 minutes (`first god within ~4 min` keeps the opening fun). Late-save idle-bot timings were about 3.4 / 4.8 / 6.6 / 9.1 hours for gods 7–10. Re-check them if you change numbers in `data.js`.
+- **Fortune (โชควาสนา).** The spirit-treasure spawn timer lives in ui.js (`fortuneTick`) and counts only seconds when the tab is visible and no dialog is open, so offline catch-up never spawns one. Rewards are `G.claimFortune` in the engine, and the numbers are `FORTUNE` in data.js. On localhost or with `?debug`, `GKDebug.fortune('dp'|'speed'|'create')` spawns one right away.
 
 ## Test before pushing
 1. `node --check god-killer/ui.js god-killer/engine.js god-killer/data.js`
