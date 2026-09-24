@@ -1166,21 +1166,21 @@ function toggleLog(){
   selectTab('log');
 }
 const HUD_TIPS = {
-  hudHp:'พลังชีวิต — ลดลงระหว่างสู้กับเทพ และฟื้นเองเมื่อไม่ได้สู้ · เพิ่มได้จากกาย เวท และยุทธ์',
-  hudAtk:'พลังโจมตี — ดาเมจที่ทำใส่เทพต่อครั้ง · มาจากกาย (ฝึกกาย) และยุทธ์ (สนามรบ)',
-  hudDef:'พลังป้องกัน — ลดดาเมจที่ได้รับจากเทพ · มาจากเวท (วิชาเวท) และยุทธ์ (สนามรบ)',
+  hudHp:'พลังชีวิต — ลดลงเมื่อสู้กับเทพ และฟื้นฟูเองเมื่อพักรบ · เพิ่มได้จากกาย เวท และค่ายุทธ์',
+  hudAtk:'พลังโจมตี — ความเสียหายที่ทำต่อเทพในแต่ละครั้ง · มาจากกาย (ฝึกกาย) และค่ายุทธ์ (สนามรบ)',
+  hudDef:'พลังป้องกัน — ลดความเสียหายที่ได้รับจากเทพ · มาจากเวท (วิชาเวท) และค่ายุทธ์ (สนามรบ)',
   hudDp:'พลังเทวะ (DP) — ได้จากสนามรบและเครื่องผลิต · ใช้สร้างสรรพสิ่ง อัปเกรดเครื่องผลิต และสร้างอนุสรณ์',
-  hudClones:'ร่างเงาที่มี / สูงสุด — ส่งร่างเงาไปฝึกกาย วิชาเวท และสนามรบ · สร้างเพิ่มได้ที่แท็บสร้าง',
-  hudGods:'จำนวนเทพที่สังหารในรอบนี้ / ทั้งหมด'
+  hudClones:'ร่างเงาที่มี / สูงสุด — ส่งไปฝึกกาย ฝึกวิชาเวท หรือออกสนามรบ · สร้างเพิ่มได้ที่แท็บสร้าง',
+  hudGods:'เทพที่สังหารแล้วในรอบนี้ / ทั้งหมด'
 };
 const KEY_HELP = [
-  ['1 – 8', 'เปิดแท็บตามลำดับ (ฝึกกาย … เกิดใหม่)'],
+  ['1 – 8', 'เปิดแท็บตามลำดับ (ฝึกกาย … จุติ)'],
   ['L', 'เปิด/ปิดบันทึกและเซฟ'],
   ['F / Space', 'ท้าสู้หรือถอยหนี (ในแท็บท้าเทพ)'],
-  ['S', 'ฟาดฟันเทวะ ระหว่างต่อสู้'],
+  ['S', 'ใช้ฟาดฟันเทวะระหว่างต่อสู้'],
   ['H', 'เปิด/ปิดวิธีเล่น'],
-  ['[ ]', 'สลับมุมมองย่อย (คู่หู · เกิดใหม่)'],
-  ['Esc', 'ยกเลิกการยืนยันที่ค้างอยู่ / ปิดบันทึก'],
+  ['[ ]', 'สลับหน้าย่อย (คู่หู · จุติ)'],
+  ['Esc', 'ยกเลิกปุ่มที่รอยืนยัน / ปิดบันทึก'],
   ['?', 'เปิด/ปิดหน้านี้']
 ];
 function kbd(k){ const e = document.createElement('kbd'); e.className = 'kHint'; e.textContent = k; e.setAttribute('aria-hidden', 'true'); return e; }
@@ -1308,11 +1308,11 @@ function showSettings(on){
         <div class="row"><b id="stTitle">⚙ ตั้งค่า</b><button class="miniBtn" data-close>ปิด</button></div>
         <label class="stRow"><span>เสียงประกอบ</span><input type="checkbox" data-set="sound"></label>
         <label class="stRow"><span>ความดังเสียง</span><input type="range" min="0" max="1" step="0.05" data-set="vol"></label>
-        <label class="stRow"><span>สั่นเมื่อมีเหตุการณ์ (มือถือ)</span><input type="checkbox" data-set="vibrate"></label>
+        <label class="stRow"><span>สั่นเมื่อมีเหตุการณ์สำคัญ (มือถือ)</span><input type="checkbox" data-set="vibrate"></label>
         <label class="stRow"><span>รูปแบบตัวเลข</span><select data-set="sci"><option value="0">ย่อ (1.5M, 2.3B)</option><option value="1">วิทยาศาสตร์ (1.50e6)</option></select></label>
-        <label class="stRow"><span>อนิเมชัน</span><select data-set="motion"><option value="auto">ตามเครื่อง</option><option value="full">เต็ม</option><option value="reduced">ลดลง</option></select></label>
+        <label class="stRow"><span>แอนิเมชัน</span><select data-set="motion"><option value="auto">ตามเครื่อง</option><option value="full">เต็มที่</option><option value="reduced">ลดน้อยลง</option></select></label>
         <div class="btnPair"><button class="miniBtn" data-open="guide">📖 วิธีเล่น</button><button class="miniBtn" data-open="keys">⌨ ปุ่มลัด</button></div>
-        <div class="note">การตั้งค่าเก็บแยกจากเซฟเกม ไม่หายเมื่อเกิดใหม่หรือโหลดเซฟ</div>
+        <div class="note">การตั้งค่าเก็บแยกจากเซฟเกม จึงไม่หายเมื่อจุติใหม่หรือโหลดเซฟ</div>
       </div>`;
     document.body.appendChild(box);
     box.addEventListener('click', e=>{
@@ -1375,7 +1375,7 @@ function renderStrike(){
   if(!s.fight) return;
   const w = G.strikeWait(s);
   setDisabled(b, w > 0);
-  setText($('strikeLabel'), w > 0 ? '⚡ ฟาดฟันเทวะ (พร้อมใน ' + Math.ceil(w) + ' วิ)' : '⚡ ฟาดฟันเทวะ! (S)');
+  setText($('strikeLabel'), w > 0 ? '⚡ ฟาดฟันเทวะ (รออีก ' + Math.ceil(w) + ' วิ)' : '⚡ ฟาดฟันเทวะ! (S)');
 }
 
 // ---------- how-to-play guide ----------
