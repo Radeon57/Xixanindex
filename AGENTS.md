@@ -37,8 +37,9 @@ https://radeon57.github.io/Xixanindex/god-killer.html (`index.html` redirects th
    - visit every tab
    - check the console shows no errors
 
+## Settings
+Player settings live in localStorage key `godKillerSettings` (separate from the save): `sound`, `vol`, `vibrate`, `sci` (number format), `motion` (`auto` | `full` | `reduced`). Use `motionOff()` in ui.js before any JS effect.
+
 ## Not done yet (ideas for next work)
-- More combat animation (hero lunge, crit numbers) and a rebirth transition.
-- A settings panel beyond the sound toggle (number format, vibration, reduced motion).
-- Spoiler-free guide: hide sections for systems not unlocked yet.
 - `sw.js` caches network-first; bump `CACHE` if the caching strategy changes.
+- Welcome-back card shows only after a reload, not when returning to a tab left open.

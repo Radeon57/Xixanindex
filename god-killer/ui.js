@@ -25,7 +25,9 @@ function setShown(el, v, how){ const d = v ? (how||'block') : 'none'; if(el._d !
 function setClass(el, cls, on){ if(el.classList.contains(cls) !== on) el.classList.toggle(cls, on); }
 // 'on' marks the chosen button of a toggle or segmented control; mirror it for screen readers
 function setOn(el, on){ setClass(el, 'on', on); if(el.getAttribute('aria-pressed') !== String(on)) el.setAttribute('aria-pressed', String(on)); }
-const REDUCED_MOTION = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const OS_REDUCED = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+// effects off when the OS asks for less motion, or the player chose it in settings
+function motionOff(){ return settings.motion === 'reduced' || (settings.motion !== 'full' && OS_REDUCED); }
 // restart a one-shot CSS animation class
 function replayAnim(el, cls){ el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
 function setBar(el, frac){
@@ -40,6 +42,7 @@ function fmt(n){
   if(n < 0) return '-'+fmt(-n);
   if(n < 10) return String(+n.toFixed(n < 1 ? 2 : 1));
   if(n < 1000) return String(Math.floor(n));
+  if(settings.sci) return n.toExponential(2).replace('e+','e');
   let x = n, u = -1;
   while(x >= 1000 && u < UNITS.length-1){ x /= 1000; u++; }
   let str = x.toFixed(x < 100 ? 2 : 1);
@@ -224,7 +227,7 @@ function renderJobs(kind, d, full){
     } else {
       const mult = kind === 'train' ? d.m.phys : d.m.myst;
       const now = Date.now();   // at most one pulse per row every 1.5s, so fast late-game levels don't strobe
-      if(ref._lv !== undefined && r.lv > ref._lv && !REDUCED_MOTION && !(now - ref._lvAt < 1500)){ ref._lvAt = now; replayAnim(ref.el, 'lvUp'); replayAnim(ref.lv, 'bump'); }
+      if(ref._lv !== undefined && r.lv > ref._lv && !motionOff() && !(now - ref._lvAt < 1500)){ ref._lvAt = now; replayAnim(ref.el, 'lvUp'); replayAnim(ref.lv, 'bump'); }
       ref._lv = r.lv;
       setText(ref.lv, 'Lv.' + r.lv);
       const eta = r.n ? fmtTime((G.levelTime(defs[i], r.lv) - r.prog) / (r.n * d.m.speed)) : 'ไม่มีร่างเงา';
@@ -907,7 +910,7 @@ function handleEvents(ev, quiet){
       if(r.unlock === 'rebirth') alerts.rebirth = true;
       if(r.unlock === 'pets') alerts.pets = true;
       alerts.mon = true;
-      if(!quiet){ toast('⚔ สังหาร ' + god.name + ' สำเร็จ!', 3); celebrate(); banner('⚔ สังหาร ' + god.name + '!'); sfx('win'); }
+      if(!quiet){ toast('⚔ สังหาร ' + god.name + ' สำเร็จ!', 3); celebrate(); banner('⚔ สังหาร ' + god.name + '!'); sfx('win'); buzz([40,40,80]); }
       save();
     } else if(e.type === 'ach'){
       const a = D.ACHIEVEMENTS.find(x=>x.key===e.key);
@@ -977,7 +980,6 @@ function drawPixelHero(canvas){
 function initFX(canvas){
   const ctx = canvas.getContext('2d');
   const DPR = Math.min(window.devicePixelRatio || 1, 2);
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const MAX = 120;
   const parts = [];
   let w = 0, h = 0, running = false, last = 0;
@@ -1010,7 +1012,7 @@ function initFX(canvas){
   }
   return {
     burst(x, y, count, color, speed){
-      if(reduced || !(w > 0)) return;
+      if(motionOff() || !(w > 0)) return;
       for(let i=0;i<count && parts.length < MAX;i++){
         const a = Math.random()*Math.PI*2, v = speed*(0.4 + Math.random()*0.8);
         parts.push({ x, y, vx:Math.cos(a)*v, vy:Math.sin(a)*v, r:1.2 + Math.random()*2, life:0, max:0.4 + Math.random()*0.5, color });
@@ -1029,13 +1031,14 @@ function hitFx(){
   fx.burst(g.x, g.y, 6, '#ece7fb', 70);
   fx.burst(h.x, h.y, 4, '#ff6b6b', 50);
   sfx('hit');
+  if(!motionOff()){ replayAnim($('godArt'), 'hitFlash'); replayAnim($('heroPixel').parentNode, 'hurtFlash'); }
   const d = G.derive(s), tg = G.fightTarget(s, s.fight);
   floatDmg(g, G.blow(d.atk, tg.def), 'dealt');
   floatDmg(h, G.blow(tg.atk, d.def), 'taken');
 }
 // short-lived damage number; transform/opacity animation only, removed when it ends
 function floatDmg(pos, v, cls){
-  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if(motionOff()) return;
   const el = document.createElement('span');
   el.className = 'dmg ' + cls;
   el.textContent = '-' + fmt(v);
@@ -1097,6 +1100,7 @@ function onMainClick(e){
     else if(confirmTap('chal:' + key)){
       const gain = G.rebirthGain(s);
       if(G.startChallenge(s, key)){
+        rebirthFx();
         lastLost = s.clonesLost; shownArt = ''; arenaSel = 'god'; clearAlerts();
         addLog('⚔ เริ่มความท้าทาย ' + c.name + (gain ? ' (ได้ ' + gain + ' God Power)' : ''));
         toast('เริ่มความท้าทาย: ' + c.name); save();
@@ -1143,7 +1147,7 @@ function onRebirth(){
   lastLost = s.clonesLost; shownArt = ''; arenaSel = 'god'; clearAlerts();
   addLog('🔄 เกิดใหม่ครั้งที่ ' + s.meta.rebirths + ' — ได้รับ ' + gain + ' God Power');
   toast('เกิดใหม่สำเร็จ! +' + gain + ' God Power');
-  celebrate();
+  celebrate(); rebirthFx();
   save();
   selectTab('rebirth');
 }
@@ -1260,14 +1264,15 @@ function initPlatform(){
 
 // ---------- sound: tiny synthesized effects, remembered on/off ----------
 const SETTINGS_KEY = 'godKillerSettings';
-const settings = (()=>{ try{ return Object.assign({ sound:true }, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); }catch(e){ return { sound:true }; } })();
+const SETTINGS_DEFAULT = { sound:true, vol:0.8, vibrate:true, sci:false, motion:'auto' };
+const settings = (()=>{ try{ return Object.assign({}, SETTINGS_DEFAULT, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); }catch(e){ return Object.assign({}, SETTINGS_DEFAULT); } })();
 function saveSettings(){ try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }catch(e){} }
 let actx = null, lastSfx = {};
 function tone(f, dur, type, vol, f2, delay){
   const t = actx.currentTime + (delay || 0), o = actx.createOscillator(), g = actx.createGain();
   o.type = type || 'sine'; o.frequency.setValueAtTime(f, t);
   if(f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
-  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  g.gain.setValueAtTime(Math.max(0.0001, vol * settings.vol), t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   o.connect(g).connect(actx.destination); o.start(t); o.stop(t + dur + 0.02);
 }
 const SFX = {
@@ -1292,9 +1297,59 @@ function sfx(name){
 }
 function renderSoundBtn(){ const b = $('soundBtn'); b.textContent = settings.sound ? '🔊' : '🔇'; b.title = settings.sound ? 'ปิดเสียง' : 'เปิดเสียง'; b.setAttribute('aria-pressed', String(settings.sound)); }
 
+function buzz(ms){ if(settings.vibrate && navigator.vibrate) try{ navigator.vibrate(ms); }catch(e){} }
+function applyMotion(){ document.documentElement.dataset.motion = motionOff() ? 'reduced' : 'full'; }
+function showSettings(on){
+  let box = $('settings');
+  if(!box){
+    box = document.createElement('div');
+    box.id = 'settings'; box.className = 'modal';
+    box.innerHTML = `<div class="gBox" role="dialog" aria-modal="true" aria-labelledby="stTitle" tabindex="-1">
+        <div class="row"><b id="stTitle">⚙ ตั้งค่า</b><button class="miniBtn" data-close>ปิด</button></div>
+        <label class="stRow"><span>เสียงประกอบ</span><input type="checkbox" data-set="sound"></label>
+        <label class="stRow"><span>ความดังเสียง</span><input type="range" min="0" max="1" step="0.05" data-set="vol"></label>
+        <label class="stRow"><span>สั่นเมื่อมีเหตุการณ์ (มือถือ)</span><input type="checkbox" data-set="vibrate"></label>
+        <label class="stRow"><span>รูปแบบตัวเลข</span><select data-set="sci"><option value="0">ย่อ (1.5M, 2.3B)</option><option value="1">วิทยาศาสตร์ (1.50e6)</option></select></label>
+        <label class="stRow"><span>อนิเมชัน</span><select data-set="motion"><option value="auto">ตามเครื่อง</option><option value="full">เต็ม</option><option value="reduced">ลดลง</option></select></label>
+        <div class="btnPair"><button class="miniBtn" data-open="guide">📖 วิธีเล่น</button><button class="miniBtn" data-open="keys">⌨ ปุ่มลัด</button></div>
+        <div class="note">การตั้งค่าเก็บแยกจากเซฟเกม ไม่หายเมื่อเกิดใหม่หรือโหลดเซฟ</div>
+      </div>`;
+    document.body.appendChild(box);
+    box.addEventListener('click', e=>{
+      if(e.target === box || e.target.hasAttribute('data-close')){ showSettings(false); return; }
+      const o = e.target.dataset && e.target.dataset.open;
+      if(o){ showSettings(false); if(o === 'guide') showGuide(true); else showHelp(true); }
+    });
+    box.addEventListener('keydown', e=>{ if(e.key === 'Escape'){ e.stopPropagation(); showSettings(false); } });
+    box.addEventListener('input', e=>{
+      const k = e.target.dataset.set;
+      if(!k) return;
+      const el = e.target;
+      settings[k] = el.type === 'checkbox' ? el.checked : k === 'vol' ? +el.value : k === 'sci' ? el.value === '1' : el.value;
+      saveSettings(); renderSoundBtn(); applyMotion();
+      if(k === 'vol' || k === 'sound') sfx('ping');
+      if(k === 'vibrate' && settings.vibrate) buzz(30);
+      render(true);
+    });
+  }
+  box.querySelectorAll('[data-set]').forEach(el=>{
+    const v = settings[el.dataset.set];
+    if(el.type === 'checkbox') el.checked = !!v; else el.value = el.dataset.set === 'sci' ? (v ? '1' : '0') : String(v);
+  });
+  setClass(box, 'open', on);
+  if(on){ box._ret = document.activeElement; box.querySelector('.gBox').focus(); }
+  else if(box._ret && box._ret.focus) box._ret.focus();
+}
+function rebirthFx(){
+  if(motionOff()) return;
+  let o = $('rbFx');
+  if(!o){ o = document.createElement('div'); o.id = 'rbFx'; o.setAttribute('aria-hidden', 'true'); document.body.appendChild(o); }
+  replayAnim(o, 'show');
+}
+
 // ---------- big moments: victory / defeat banner ----------
 function banner(text, lose){
-  if(REDUCED_MOTION && lose) return;
+  if(motionOff() && lose) return;
   let b = $('banner');
   if(!b){ b = document.createElement('div'); b.id = 'banner'; b.setAttribute('aria-hidden', 'true'); document.body.appendChild(b); }
   b.textContent = text;
@@ -1306,11 +1361,11 @@ function banner(text, lose){
 function onStrike(){
   const dmg = G.strike(s);
   if(!dmg) return;
-  sfx('strike');
+  sfx('strike'); buzz(25);
   if(fx && activeTab === 'gods'){
     const g = centerOf($('godArt'));
     fx.burst(g.x, g.y, 24, '#ffd66b', 130);
-    if(!REDUCED_MOTION){ const el = document.createElement('span'); el.className = 'dmg big'; el.textContent = '⚡-' + fmt(dmg); el.style.left = g.x + 'px'; el.style.top = (g.y - 34) + 'px'; $('arena').appendChild(el); setTimeout(()=>el.remove(), 800); }
+    if(!motionOff()){ const el = document.createElement('span'); el.className = 'dmg big'; el.textContent = '⚡-' + fmt(dmg); el.style.left = g.x + 'px'; el.style.top = (g.y - 34) + 'px'; $('arena').appendChild(el); setTimeout(()=>el.remove(), 800); }
   }
   render(true);
 }
@@ -1344,17 +1399,30 @@ function guideSections(){
     ['เคล็ดลับ', `<ul><li>เปิด "จัดอัตโนมัติ" เพื่อให้เกมจัดร่างเงาเอง</li><li>บนคอมกด <b>?</b> ดูปุ่มลัด · บนมือถือปัดซ้าย/ขวาเพื่อเปลี่ยนแท็บ</li><li>ติดตั้งเกมเป็นแอปได้จากเมนูเบราว์เซอร์ "เพิ่มลงหน้าจอหลัก"</li></ul>`]
   ];
 }
+// sections for systems the player hasn't reached yet are shown locked, without spoilers
+const GUIDE_LOCK = { 'วิชาเวท':'skills', 'การสร้าง':'create', 'เทวาลัย':'gen', 'เกิดใหม่และ God Power':'rebirth', 'ความท้าทาย':'rebirth', 'คู่หู ดันเจี้ยน อุปกรณ์':'pets' };
+function guideLocked(title){
+  const m = s.meta;
+  if(title === 'สิ่งมีชีวิตสูงสุดและ Might') return G.ubUnlocked(s) || m.mpTotal > 0 ? '' : 'ปลดล็อกเมื่อสังหารเทพครบ ' + D.GODS.length + ' องค์ในรอบเดียว';
+  const k = GUIDE_LOCK[title];
+  if(!k || m.bestGods > D.UNLOCK_AT[k] || m.rebirths > 0 && (k === 'rebirth' || k === 'skills' || k === 'create' || k === 'gen')) return '';
+  return 'ปลดล็อกเมื่อสังหาร ' + D.GODS[D.UNLOCK_AT[k]].name;
+}
+function guideHTML(){
+  const secs = guideSections().map(([t,h])=>{ const lock = guideLocked(t); return [lock ? '🔒 ' + t : t, lock ? '<p class="note">' + lock + ' — รายละเอียดจะเปิดให้อ่านเมื่อปลดล็อก</p>' : h]; });
+  return `<div class="gBox" role="dialog" aria-modal="true" aria-labelledby="gTitle" tabindex="-1">
+      <div class="row"><b id="gTitle">📖 วิธีเล่น God Killer</b><button class="miniBtn" id="gClose">ปิด</button></div>
+      <div class="gToc">${secs.map((x,i)=>`<a href="#g${i}" data-g="${i}">${x[0]}</a>`).join('')}</div>
+      ${secs.map((x,i)=>`<h4 id="g${i}">${x[0]}</h4>${x[1]}`).join('')}
+    </div>`;
+}
 function showGuide(on){
   let box = $('guide');
+  if(box && on) box.innerHTML = guideHTML();
   if(!box){
-    const secs = guideSections();
     box = document.createElement('div');
     box.id = 'guide';
-    box.innerHTML = `<div class="gBox" role="dialog" aria-modal="true" aria-labelledby="gTitle" tabindex="-1">
-        <div class="row"><b id="gTitle">📖 วิธีเล่น God Killer</b><button class="miniBtn" id="gClose">ปิด</button></div>
-        <div class="gToc">${secs.map((x,i)=>`<a href="#g${i}" data-g="${i}">${x[0]}</a>`).join('')}</div>
-        ${secs.map((x,i)=>`<h4 id="g${i}">${x[0]}</h4>${x[1]}`).join('')}
-      </div>`;
+    box.innerHTML = guideHTML();
     document.body.appendChild(box);
     box.addEventListener('click', e=>{
       if(e.target === box || e.target.id === 'gClose'){ showGuide(false); return; }
@@ -1382,7 +1450,7 @@ function initTouch(){
     if(!b || e.button > 0) return;
     stop(); held = b; repeats = 0;
     const start = Date.now();
-    holdT = setTimeout(()=>{ if(navigator.vibrate) try{ navigator.vibrate(8); }catch(x){} tick(start); }, 400);
+    holdT = setTimeout(()=>{ buzz(8); tick(start); }, 400);
   });
   ['pointerup','pointercancel','pointerleave'].forEach(t=>$('main').addEventListener(t, stop));
   $('main').addEventListener('pointerout', e=>{ if(held && e.target === held) stop(); });   // finger slid off the button
@@ -1508,7 +1576,8 @@ function boot(saved){
   $('strikeBtn').addEventListener('click', onStrike);
   $('guideBtn').addEventListener('click', ()=>showGuide(true));
   $('soundBtn').addEventListener('click', ()=>{ settings.sound = !settings.sound; saveSettings(); renderSoundBtn(); sfx('ping'); });
-  renderSoundBtn();
+  renderSoundBtn(); applyMotion();
+  $('setBtn').addEventListener('click', ()=>showSettings(true));
   initTouch();
   if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(()=>{});
   $('backToGod').addEventListener('click', ()=>{ arenaSel = 'god'; render(true); });
