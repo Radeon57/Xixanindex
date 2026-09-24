@@ -416,16 +416,12 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
 .advKills{font-size:.7rem;color:var(--sub);white-space:nowrap}
 .advHud b{font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:600px){ .advRatio{display:none} }
-#adv3d{height:min(46vh,440px);margin-top:6px;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:#0b0a17;touch-action:none;position:relative}
-#adv3d::after{content:'';position:absolute;inset:0;background:#e8c76f;opacity:var(--advFlash,0);pointer-events:none}
-#adv3d canvas{display:block}
-.adv3dTxt{position:absolute;transform:translate(-50%,-50%);font-weight:bold;font-size:.8rem;text-shadow:0 1px 2px #000,0 0 3px #000;pointer-events:none;animation:dmgUp .75s ease-out forwards}
 #advGame{height:min(46vh,440px);margin-top:6px;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:#0b0a17;touch-action:none;position:relative}
 #advGame canvas{display:block}
 .advCtl{display:flex;align-items:center;gap:8px;margin-top:8px}
 .advCtl .note{flex:1;margin:0}
 .advCtl .b{width:auto;padding:12px 20px}
-@media (min-width:1024px){ #advGame,#adv3d{height:min(64vh,560px)} }
+@media (min-width:1024px){ #advGame{height:min(64vh,560px)} }
 </style>
 </head>
 <body>
@@ -673,7 +669,6 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
     </section>
 
     <section id="tab-adv" class="panel">
-      <div class="seg subSeg" role="group" aria-label="มุมมองโลก"><button data-act="advView" data-v="2d">2D แผนที่</button><button data-act="advView" data-v="3d">3D โลกสามมิติ</button></div>
       <div class="advHud">
         <button class="miniBtn" id="advPrev" aria-label="เขตก่อนหน้า">◀</button>
         <b id="advZone">—</b>
@@ -682,7 +677,6 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
       </div>
       <div class="bar hp"><i id="advHp"></i></div>
       <div id="advGame"></div>
-      <div id="adv3d" style="display:none"></div>
       <div class="advCtl"><span class="note" id="advMsg"></span><button class="b bPrimary" id="advAtk">⚔ โจมตี</button></div>
       <div class="note" id="advHelp">คอม: WASD หรือลูกศรเพื่อเดิน · J หรือ Space โจมตี · มือถือ: แตะพื้นเพื่อเดิน แตะมอนสเตอร์เพื่อเข้าโจมตี · ฆ่ามอนสเตอร์ได้ DP และค่ายุทธ์เข้าเกมหลัก · เดินเข้าประตูทองขวาสุดเพื่อไปเขตถัดไป</div>
     </section>
