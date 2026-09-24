@@ -13,7 +13,9 @@ https://radeon57.github.io/Xixanindex/god-killer.html (`index.html` redirects th
 | `god-killer/data.js` | Every tunable number and name: trainings, monsters, creations, gods, upgrades, pets, dungeons, gear, challenges, ultimates, might, achievements. |
 | `god-killer/engine.js` | Pure game rules with no DOM access, exported as `globalThis.GK`. It also runs in Node via `vm.runInThisContext`. |
 | `god-killer/ui.js` | Rendering and input, in one IIFE. |
-| `god-killer/img/<set>/<NN>.webp` | 256×256 portraits for `gods`, `ultimates`, `monsters`, `pets` and `dungeons`. A missing file falls back to a drawn sigil. The prompts used are in `img/PROMPTS.md`. |
+| `god-killer/fx.js` | Decorative effects exposed as `window.GKFX` (loaded before ui.js): a full-screen particle canvas, floating gains, seal stamps, the rebirth wheel and background qi motes. It reads `<html data-motion>` (set by ui.js `applyMotion`) to respect `motionOff()`, and ui.js calls it through a few `if(window.GKFX)` one-liners. |
+| `god-killer/icons.js` | Inline SVG art as `window.GKICONS`: icons for trainings, skills, creations, gear and materials, plus the hero portrait fallback. |
+| `god-killer/img/<set>/<NN>.webp` | 256×256 portraits for `gods`, `ultimates`, `monsters`, `pets`, `dungeons` and `hero`. A missing file falls back to a drawn sigil. The prompts used are in `img/PROMPTS.md`. |
 | `tests/engine_fuzz.js` | Engine invariant, fuzz and long-run test. Run it with `node tests/engine_fuzz.js`, about 5s. |
 
 ## Rules that keep the game working
@@ -24,10 +26,13 @@ https://radeon57.github.io/Xixanindex/god-killer.html (`index.html` redirects th
   - `render(full)` runs with `full` set every 200ms and without it every frame. Without `full`, it only updates bars.
   - Use the change-checked setters (`setText`, `setHTML`, `setShown`, `setClass`, `setBar`). Don't write to the DOM every frame.
 - **Animations** use transform and opacity only, and must respect `prefers-reduced-motion`.
+- **Theme** is "ink, lacquer & gold": use the `:root` tokens (`--ink*`, `--gold0/1/2`, `--jade`/`--jade2` for progress, `--cinnabar` for main actions and danger, `--paper`, `--muted`), never new purples. `--violet`/`--violetDim` are legacy aliases of cinnabar. Headings use `var(--fHead)` (Chonburi), body `var(--fBody)` (Sarabun), seal glyphs `var(--fSeal)` (Ma Shan Zheng, subset by the `&text=` list in the `<head>` link, so add any new glyph there). The background paintings are `img/bg/scene_tall|wide.webp`; `title.webp` is the banner on the welcome-back card and the guide.
 - **Offline progress** is `G.advance`, which runs in 1s chunks up to 8h. `G.step` must give the same results as `advance`.
+- **Sect missions** (ภารกิจสำนัก) are checked and paid in the engine every second (`checkMissions`), so offline play counts. The guide chain is `MISSION_CHAIN` in data.js and its position is `meta.mchain`; the UI is the "sect missions" block near the end of ui.js.
 - **Destructive buttons** use a two-tap confirm (`confirmTap`), with the second tap at least 400ms after the first.
 - **UI text** is Thai. Keep new text in natural Thai.
-- **Balance.** Idle-bot timings are about 3.4 / 4.8 / 6.6 / 9.1 hours for gods 7–10. Re-check them if you change numbers in `data.js`.
+- **Balance.** A fresh-save bot kills gods 1–6 at about 4 / 10 / 17 / 27 / 38 / 52 minutes (`first god within ~4 min` keeps the opening fun). Late-save idle-bot timings were about 3.4 / 4.8 / 6.6 / 9.1 hours for gods 7–10. Re-check them if you change numbers in `data.js`.
+- **Fortune (โชควาสนา).** The spirit-treasure spawn timer lives in ui.js (`fortuneTick`) and counts only seconds when the tab is visible and no dialog is open, so offline catch-up never spawns one. Rewards are `G.claimFortune` in the engine, and the numbers are `FORTUNE` in data.js. On localhost or with `?debug`, `GKDebug.fortune('dp'|'speed'|'create')` spawns one right away.
 
 ## Test before pushing
 1. `node --check god-killer/ui.js god-killer/engine.js god-killer/data.js`
@@ -42,4 +47,3 @@ Player settings live in localStorage key `godKillerSettings` (separate from the 
 
 ## Not done yet (ideas for next work)
 - `sw.js` caches network-first; bump `CACHE` if the caching strategy changes.
-- Welcome-back card shows only after a reload, not when returning to a tab left open.

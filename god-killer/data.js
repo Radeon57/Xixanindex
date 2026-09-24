@@ -63,12 +63,12 @@ const STRIKE_CD = 12, STRIKE_SHARE = 0.04, STRIKE_BLOWS = 5;
 // unlock: 'skills' | 'create' | 'gen' | 'monuments' | 'pets' | 'rebirth'; monsters unlock two at a time per god.
 // gp: God Power paid out on rebirth for every god killed in that run.
 const GODS = [
-  { name:'จอมเทพอัสนี',   hp:34000, atk:160, def:810,       gp:3,  reward:{ unlock:'skills', maxClones:10, stat:1.3 } },
+  { name:'จอมเทพอัสนี',   hp:7800, atk:37, def:190,       gp:3,  reward:{ unlock:'skills', maxClones:10, stat:1.3 } },
   { name:'เทพสงครามกระบี่โลหิต',   hp:3.7e5, atk:4400, def:8800,     gp:3,  reward:{ unlock:'create', maxClones:20, stat:1.3 } },
   { name:'ราชันยมโลก',    hp:2.4e7, atk:3.3e5, def:5.8e5,   gp:6,  reward:{ unlock:'gen', maxClones:30, stat:1.3, clone:2 } },
-  { name:'เทพีลิขิตฟ้า',  hp:2.9e9, atk:4e7, def:7e7,       gp:9,  reward:{ unlock:'monuments', maxClones:40, stat:1.3, dp:2 } },
-  { name:'ราชามังกรทะเลบูรพา',    hp:3.1e11, atk:4.3e9, def:7.4e9,  gp:12,  reward:{ unlock:'pets', maxClones:50, stat:1.3, speed:2 } },
-  { name:'เทพเพลิงจูหรง',    hp:1.3e12, atk:1.7e10, def:3e10,  gp:18,  reward:{ unlock:'rebirth', maxClones:60, stat:1.5 } },
+  { name:'เทพีลิขิตฟ้า',  hp:2.7e9, atk:3.7e7, def:6.5e7,       gp:9,  reward:{ unlock:'monuments', maxClones:40, stat:1.3, dp:2 } },
+  { name:'ราชามังกรทะเลบูรพา',    hp:2.5e11, atk:3.5e9, def:6.1e9,  gp:12,  reward:{ unlock:'pets', maxClones:50, stat:1.3, speed:2 } },
+  { name:'เทพเพลิงจูหรง',    hp:9.5e11, atk:1.2e10, def:2.2e10,  gp:18,  reward:{ unlock:'rebirth', maxClones:60, stat:1.5 } },
   { name:'เซียนเฒ่ากาลเวลา',  hp:8.9e14, atk:1.2e13, def:2.1e13,  gp:30, reward:{ maxClones:80, stat:1.5, speed:2 } },
   { name:'เทพธิดาฉางเอ๋อ',   hp:5.8e15, atk:7.9e13, def:1.4e14,gp:45, reward:{ maxClones:100, stat:1.5, dp:3 } },
   { name:'จักรพรรดิสุริยัน',   hp:2.8e16, atk:3.8e14, def:6.7e14,  gp:75, reward:{ maxClones:120, stat:1.5, clone:3 } },
@@ -180,6 +180,43 @@ const PLAN_UNLOCK_GODS = 1, AUTOFIGHT_UNLOCK_REBIRTHS = 1;
 // MP refunded to saves that bought the old auto-fight Might perk (it is now a free toggle)
 const MIGHT_AUTOFIGHT_REFUND = 1;
 
+// Fortune (โชควาสนา): while the page is open, a spirit treasure appears every few minutes for a short time; tapping it
+// pays one reward. Spawning and the timer are UI-side only (never during offline catch-up); the rewards are engine rules.
+// Balance: about one treasure per ~4.7 min, each reward type worth ~40s of its resource, so a player who taps every one
+// gains roughly +5-9% in one resource at a time; the idle bot never taps, so its god timings are unchanged.
+//   every: [min, max] seconds of visible play between treasures; life: seconds a treasure stays before it fades
+//   dpSecs: 'dp' pays this many seconds of the current Divinity income (at least dpMin)
+//   boostSecs/boostMult/boostCap: 'speed' multiplies training and skill speed for boostSecs (stacks up to boostCap seconds)
+//   createSecs: 'create' finishes this many seconds of creation work at once
+//   each catch in a row adds streakBonus to the next reward (up to streakMax catches); a treasure left to fade breaks the streak
+const FORTUNE = {
+  unlockGods: 1, first: [60, 120], every: [180, 360], life: 12,
+  dpSecs: 40, dpMin: 10, boostSecs: 40, boostMult: 2, boostCap: 120, createSecs: 40,
+  streakBonus: 0.05, streakMax: 5,
+  items: [
+    { kind:'dp',     name:'ผลท้อเซียน',  color:'#ff9ab8', desc:'พลังเทวะเท่ากับรายได้หลายสิบวินาที' },
+    { kind:'speed',  name:'คัมภีร์ลับ',   color:'#9fe7ff', desc:'ความเร็วฝึกกายและวิชาเวท ×2 ชั่วครู่' },
+    { kind:'create', name:'เม็ดยาทิพย์', color:'#e8c76f', desc:'เร่งการสร้างให้เสร็จทันที' }
+  ]
+};
+// ---------- cultivation realms (per run) ----------
+// Qi is the total of every training and skill level in this run, so it needs no grind of its own.
+// Realm r ends at qi REALMS[r].qi; the span from the previous realm's end is split into REALM_STAGES equal minor stages
+// that pass by themselves. Crossing into the next realm needs a heavenly tribulation: TRIB_BOLTS bolts, each dealing
+// blow(REALMS[r].trib, def); the hero passes when their sum is below max HP. A failed try only waits TRIB_COOLDOWN seconds.
+// Every realm past the first multiplies all stats by REALM_STAT (compounding).
+const REALMS = [
+  { name:'ฝึกปราณ',       qi:90,   trib:40 },
+  { name:'สร้างรากฐาน',    qi:240,  trib:2.5e9 },
+  { name:'แก่นทอง',        qi:540,  trib:1e15 },
+  { name:'กำเนิดวิญญาณ',   qi:1100, trib:3e16 },
+  { name:'แปรเทพ',         qi:1900, trib:2e17 },
+  { name:'ข้ามพ้นมิติ',     qi:3100, trib:6e17 },
+  { name:'มหายาน',         qi:4900, trib:3e18 },
+  { name:'เซียนสวรรค์',     qi:7500, trib:0 }
+];
+const REALM_STAGES = 9, REALM_STAT = 1.05, TRIB_TIME = 6, TRIB_BOLTS = 9, TRIB_COOLDOWN = 60;
+
 // Achievements are permanent and each adds ACH_BONUS to all stats.
 // type: what is measured (see engine.achValue); n: the target.
 const ACH_BONUS = 0.03;
@@ -203,7 +240,49 @@ const ACHIEVEMENTS = [
   { key:'dp1e9',  name:'ผู้มั่งคั่งศรัทธา',      type:'dpLife',   n:1e9 },
   { key:'dp1e15', name:'ทะเลแห่งศรัทธา',      type:'dpLife',   n:1e15 },
   { key:'mo10',   name:'สถาปนิกสวรรค์',      type:'monuments',n:10 },
-  { key:'gen10',  name:'ต้นธารเทวะ',      type:'genLv',    n:10 }
+  { key:'gen10',  name:'ต้นธารเทวะ',      type:'genLv',    n:10 },
+  { key:'rl2',    name:'ก่อแก่นทอง',        type:'realm',    n:2 },
+  { key:'rl7',    name:'บรรลุเซียนสวรรค์',    type:'realm',    n:7 }
+];
+
+// ---------- sect missions (ภารกิจสำนัก) ----------
+// MISSION_SLOTS missions are always open. The chain below runs first (its position lives in meta, so it never repeats
+// after rebirth) and doubles as a guide; after it, missions are generated from the current progress (engine.js).
+// t: 'job' = clones working in row i of kind or higher · 'lv' = row i of kind reaches Lv.n · 'kills' = n more kills (i: of that
+//    monster or stronger, omitted = any) · 'gods' = n gods slain this run · 'made' = n more of item key · 'clones' = n clones
+//    · 'gen' = generator Lv.n · 'mono' = n monument levels · 'dp' = earn n more พลังเทวะ
+// r: reward, 'dp' = MISSION_DP_SECS of current พลังเทวะ income, 'buff' = training speed ×MISSION_BUFF for MISSION_BUFF_SECS
+// req: the chain waits (generated missions fill in) until this many gods have fallen in the run
+const MISSION_SLOTS = 3;
+const MISSION_DP_SECS = 45, MISSION_DP_FLOOR_KILLS = 10;
+const MISSION_BUFF = 1.25, MISSION_BUFF_SECS = 20, MISSION_BUFF_MAX = 120;
+const MISSION_TARGET_SECS = 150;   // generated missions aim at about this much play at the current pace
+const MISSION_CHAIN = [
+  { t:'job',    kind:'train', i:0, r:'dp',   text:`ส่งร่างเงาไป${TRAININGS[0].name}` },
+  { t:'job',    kind:'mon',   i:0, r:'dp',   text:`ส่งร่างเงาไปปราบ${MONSTERS[0].name}` },
+  { t:'lv',     kind:'train', i:0, n:10, r:'buff' },
+  { t:'kills',  n:20, r:'dp' },
+  { t:'job',    kind:'train', i:1, r:'dp',   text:`ย้ายร่างเงาไป${TRAININGS[1].name}` },
+  { t:'clones', n:10, r:'dp',   text:'รวบรวมร่างเงาให้ครบ 10 ร่าง' },
+  { t:'lv',     kind:'train', i:1, n:10, r:'buff' },
+  { t:'kills',  n:100, r:'dp' },
+  { t:'gods',   n:1, r:'dp',   text:`สังหารเทพองค์แรก ${GODS[0].name}` },
+  { t:'job',    kind:'skill', i:0, r:'buff', req:1, text:'เรียนวิชาเวทขั้นแรก' },
+  { t:'clones', n:20, r:'dp', req:1, text:'รวบรวมร่างเงาให้ครบ 20 ร่าง' },
+  { t:'lv',     kind:'skill', i:0, n:10, r:'buff', req:1 },
+  { t:'lv',     kind:'train', i:2, n:10, r:'buff' },
+  { t:'kills',  i:3, n:50, r:'dp', req:1 },
+  { t:'gods',   n:2, r:'dp',   text:`สังหาร${GODS[1].name} เพื่อปลดล็อกการสร้าง` },
+  { t:'made',   key:'light', n:3, r:'buff', req:2 },
+  { t:'made',   key:'stone', n:2, r:'dp', req:2 },
+  { t:'lv',     kind:'skill', i:2, n:10, r:'buff', req:2 },
+  { t:'gods',   n:3, r:'dp' },
+  { t:'gen',    n:1, r:'dp', req:3, text:'สร้างเครื่องผลิตพลังเทวะในเทวาลัย' },
+  { t:'made',   key:'soil', n:2, r:'buff', req:3 },
+  { t:'gods',   n:4, r:'dp' },
+  { t:'mono',   n:1, r:'dp', req:4, text:'สร้างอนุสรณ์ชิ้นแรกในเทวาลัย' },
+  { t:'gods',   n:5, r:'buff' },
+  { t:'gods',   n:6, r:'dp',   text:`สังหาร${GODS[5].name} เพื่อปลดล็อกการจุติ` }
 ];
 
 root.GKDATA = {
@@ -214,6 +293,8 @@ root.GKDATA = {
   PETS, PET_GROWTH, PET_EXP_BASE, PET_EXP_GROWTH, PET_MAX_LV, TEAM_SIZE,
   DUNGEONS, DEPTH_GROWTH, MAX_DEPTH, DUNGEON_UNLOCK_DEPTH, MATERIALS, GEAR, FORGE_COST, FORGE_GROWTH, FORGE_MIN_CHANCE,
   CHALLENGES, CHAL_MAX, CHAL_FIRST_GOAL, FEW_CLONES, ULTIMATES, UB_GROWTH, UB_UNLOCK_LV, MIGHT,
-  PLAN_PRESETS, PLAN_UNLOCK_GODS, AUTOFIGHT_UNLOCK_REBIRTHS, MIGHT_AUTOFIGHT_REFUND
+  PLAN_PRESETS, PLAN_UNLOCK_GODS, AUTOFIGHT_UNLOCK_REBIRTHS, MIGHT_AUTOFIGHT_REFUND, FORTUNE,
+  REALMS, REALM_STAGES, REALM_STAT, TRIB_TIME, TRIB_BOLTS, TRIB_COOLDOWN,
+  MISSION_SLOTS, MISSION_DP_SECS, MISSION_DP_FLOOR_KILLS, MISSION_BUFF, MISSION_BUFF_SECS, MISSION_BUFF_MAX, MISSION_TARGET_SECS, MISSION_CHAIN
 };
 })(typeof window !== 'undefined' ? window : globalThis);

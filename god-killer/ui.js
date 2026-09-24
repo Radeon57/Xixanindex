@@ -5,7 +5,7 @@ const G = window.GK, D = G.D;
 const SAVE_KEY = 'godKillerSave2';
 const UI_INTERVAL_MS = 200;   // text refresh; bars move every frame
 const JOB_DEFS = { train: D.TRAININGS, skill: D.SKILLS, mon: D.MONSTERS };
-const GOD_COLORS = ['#7fb0ff','#ff6b6b','#b6a8d6','#e8c76f','#4fd1c5','#ff9a3c'];
+const GOD_COLORS = ['#7fb0ff','#ff6b6b','#b8c4cc','#e8c76f','#4fd1c5','#ff9a3c'];
 
 let s = G.newState();
 let storageOk = true;
@@ -166,7 +166,7 @@ function buildJobs(kind){
   const rows = JOB_DEFS[kind].map((d,i)=>{
     const head = kind === 'mon'
       ? `<span class="jobName">${artHTML('monsters', i, GOD_COLORS[i % GOD_COLORS.length], sigil(d.name))}${d.name}</span><span class="jobLv pow"></span>`
-      : `<span class="jobName">${d.name}</span><span class="jobLv"></span>`;
+      : `<span class="jobName">${iconHTML(kind, i)}${d.name}</span><span class="jobLv"></span>`;
     const info = kind === 'mon'
       ? `<div class="jobSub s1"></div><div class="jobSub s2"></div>`
       : `<div class="bar thin"><i></i></div><div class="jobSub s1"></div>`;
@@ -227,7 +227,7 @@ function renderJobs(kind, d, full){
     } else {
       const mult = kind === 'train' ? d.m.phys : d.m.myst;
       const now = Date.now();   // at most one pulse per row every 1.5s, so fast late-game levels don't strobe
-      if(ref._lv !== undefined && r.lv > ref._lv && !motionOff() && !(now - ref._lvAt < 1500)){ ref._lvAt = now; replayAnim(ref.el, 'lvUp'); replayAnim(ref.lv, 'bump'); }
+      if(ref._lv !== undefined && r.lv > ref._lv && !motionOff() && !(now - ref._lvAt < 1500)){ ref._lvAt = now; replayAnim(ref.el, 'lvUp'); replayAnim(ref.lv, 'bump'); if(window.GKFX) GKFX.sparkle(ref.lv); }
       ref._lv = r.lv;
       setText(ref.lv, 'Lv.' + r.lv);
       const eta = r.n ? fmtTime((G.levelTime(defs[i], r.lv) - r.prog) / (r.n * d.m.speed)) : 'ต้องมีร่างเงาก่อน';
@@ -269,7 +269,7 @@ function costHTML(c, d){
 }
 function buildCreate(){
   $('createList').innerHTML = D.CREATIONS.map((c,i)=>`<div class="cItem" data-i="${i}">
-      <div class="jobHead"><span class="jobName">${c.name}</span><span class="cOwn"></span></div>
+      <div class="jobHead"><span class="jobName">${iconHTML('create', c.key)}${c.name}</span><span class="cOwn"></span></div>
       <div class="cDesc">${c.bonus ? c.desc + ' ต่อชิ้น (สูงสุด ' + c.bonus.cap + ' ชิ้น)' : c.desc + ' (ใช้เพียงเวลา)'}</div>
       <div class="cFoot"><span class="cCost"></span><button class="selBtn" data-act="target" data-key="${c.key}">เลือกสร้าง</button></div>
       <div class="lockTxt"></div>
@@ -341,6 +341,9 @@ function renderCreate(d, full){
 const artOk = {};   // path -> true once loaded, false once it failed
 function artPath(set, i){ return 'god-killer/img/' + set + '/' + String(i+1).padStart(2,'0') + '.webp'; }
 function sigil(name){ return '<span class="sigil">' + (name.match(/[ก-ฮ]/) || [name[0]])[0] + '</span>'; }
+// drawn icons for rows without portraits (god-killer/icons.js); rows just go without if that file is missing
+function iconHTML(set, k){ return window.GKICONS ? GKICONS.badge(set, k) : ''; }
+function matIcon(k){ return window.GKICONS ? GKICONS.mat(k) : ''; }
 function artHTML(set, i, color, fallback){ return `<span class="art" style="--c:${color}" data-art="${artPath(set, i)}">${fallback}</span>`; }
 function loadArt(root){
   root.querySelectorAll('.art[data-art]').forEach(el=>{
@@ -360,7 +363,7 @@ function godSVG(i, color){
     <circle cx="42" cy="42" r="40" fill="url(#godGlow${i})"/>
     <circle cx="42" cy="42" r="30" fill="none" stroke="${c}" stroke-width="1.2" opacity=".55"/>
     <path d="M25 31 L28 15 L35 24 L42 10 L49 24 L56 15 L59 31 Z" fill="${c}"/>
-    <path d="M28 34 Q42 30 56 34 L56 50 Q42 68 28 50 Z" fill="#1c1832" stroke="${c}" stroke-width="1.5"/>
+    <path d="M28 34 Q42 30 56 34 L56 50 Q42 68 28 50 Z" fill="#1a140e" stroke="${c}" stroke-width="1.5"/>
     <rect x="33" y="41" width="6" height="3" rx="1" fill="${c}"/><rect x="45" y="41" width="6" height="3" rx="1" fill="${c}"/>
     <path d="M37 55 L47 55" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>
   </svg>`;
@@ -590,6 +593,7 @@ function renderRebirth(d, full){
   setText($('rbBtn'), !gain ? 'ต้องสังหารเทพอย่างน้อย 1 องค์ในรอบนี้' : armed ? 'แตะอีกครั้งเพื่อยืนยันการจุติ' : 'จุติใหม่ · +' + gain + ' ปราณเทพ');
   setDisabled($('rbBtn'), !gain);
   setClass($('rbBtn'), 'flee', armed);
+  renderRebirthPay();
   D.UPGRADES.forEach((u,i)=>{
     const ref = R.up[i], L = m.up[u.key] || 0, c = G.upgradeCost(s, u);
     setText(ref.lv, 'Lv.' + L);
@@ -641,7 +645,7 @@ function buildPets(){
   R.pet = [...document.querySelectorAll('#petList .cItem')].map(el=>({ el, lv: el.querySelector('.jobLv'), bar: el.querySelector('.bar>i'),
     desc: el.querySelector('.cDesc'), cost: el.querySelector('.cCost'), btn: el.querySelector('.selBtn'), lock: el.querySelector('.lockTxt') }));
   $('gearList').innerHTML = D.GEAR.map(g=>`<div class="cItem">
-      <div class="jobHead"><span class="jobName">${g.name}</span><span class="jobLv"></span></div>
+      <div class="jobHead"><span class="jobName">${iconHTML('gear', g.key)}${g.name}</span><span class="jobLv"></span></div>
       <div class="cDesc"></div>
       <div class="cFoot"><span class="cCost"></span><button class="selBtn" data-act="forge" data-key="${g.key}"></button></div>
     </div>`).join('');
@@ -649,7 +653,7 @@ function buildPets(){
     cost: el.querySelector('.cCost'), btn: el.querySelector('.selBtn') }));
 }
 function matsText(){
-  return Object.keys(D.MATERIALS).map(k=>D.MATERIALS[k] + ' ' + fmt(s.meta.mats[k] || 0)).join(' · ');
+  return Object.keys(D.MATERIALS).map(k=>matIcon(k) + D.MATERIALS[k] + ' ' + fmt(s.meta.mats[k] || 0)).join(' · ');
 }
 function renderPets(d, full){
   const m = s.meta, run = m.run;
@@ -665,7 +669,7 @@ function renderPets(d, full){
     if($('dgAuto').checked !== m.dgAuto) $('dgAuto').checked = m.dgAuto;
     setShown($('dgStop'), !!run);
     setText($('teamPow'), 'พลังทีม ' + fmt(tp));
-    setText($('matLine'), matsText());
+    setHTML($('matLine'), matsText());
     let lockedShown = false;
     D.DUNGEONS.forEach((g,i)=>{
       const ref = R.dg[i], open = G.dungeonUnlocked(s, i);
@@ -709,12 +713,12 @@ function renderPets(d, full){
       setDisabled(ref.btn, !inTeam && m.team.length >= D.TEAM_SIZE);
     });
   } else {
-    setText($('matLine2'), matsText());
+    setHTML($('matLine2'), matsText());
     D.GEAR.forEach((g,i)=>{
       const ref = R.gear[i], L = m.gear[g.key] || 0, cost = G.forgeCost(L), have = m.mats[g.mat] || 0;
       setText(ref.lv, L ? '+' + L : 'ยังไม่มี');
       setText(ref.desc, g.desc + ' ต่อเลเวล (ทบต้น)' + (L ? ' · ตอนนี้ ×' + fmt(Math.pow(1+g.per, L)) : ''));
-      setHTML(ref.cost, '<span class="' + (have < cost ? 'short' : '') + '">' + D.MATERIALS[g.mat] + ' ' + fmt(have) + '/' + fmt(cost) + '</span> · โอกาสสำเร็จ ' + Math.round(G.forgeChance(L)*100) + '%');
+      setHTML(ref.cost, '<span class="' + (have < cost ? 'short' : '') + '">' + matIcon(g.mat) + D.MATERIALS[g.mat] + ' ' + fmt(have) + '/' + fmt(cost) + '</span> · โอกาสสำเร็จ ' + Math.round(G.forgeChance(L)*100) + '%');
       setText(ref.btn, L ? 'ตีบวก' : 'หลอม');
       setDisabled(ref.btn, have < cost);
     });
@@ -831,6 +835,7 @@ function initSaveTools(){
 function renderHud(d, full){
   setBar($('hudHpBar'), s.hp / d.maxHp);
   if(!full) return;
+  renderRealm(d);
   setText($('hudGods'), s.gods + '/' + D.GODS.length);
   const ch = s.challenge && D.CHALLENGES.find(c=>c.key===s.challenge);
   setShown($('chalBar'), !!ch);
@@ -839,6 +844,7 @@ function renderHud(d, full){
   setText($('hudAtk'), fmt(d.atk));
   setText($('hudDef'), fmt(d.def));
   setText($('hudDp'), fmt(s.dp));
+  if(window.GKFX) GKFX.watch($('hudDp'), s.dp, fmt);
   setText($('hudClones'), fmt(s.clones) + '/' + fmt(d.maxClones));
 }
 const TABS = ['train','skill','mon','create','temple','pets','gods','rebirth','log'];
@@ -884,13 +890,15 @@ function render(full){
   else if(activeTab === 'rebirth') renderRebirth(d, full);
   else if(activeTab === 'pets') renderPets(d, full);
   else if(activeTab === 'log'){ if(logDirty) renderLog(); if(full) setText($('wipeBtn'), isArmed('wipe') ? 'แตะอีกครั้งเพื่อลบทุกอย่าง' : 'เริ่มใหม่ทั้งหมด'); }
-  if(full){ renderTabs(d); renderTutor(); }
+  if(full){ renderTabs(d); renderTutor(); renderMissions(); }
 }
 
 // ---------- engine events ----------
 let lastLost = 0, lastDeathToast = 0;
 function handleEvents(ev, quiet){
+  if(!quiet && ev.length && window.GKFX) GKFX.events(ev);
   for(const e of ev){
+    if(realmEvent(e, quiet)) continue;
     if(e.type === 'rowUnlock'){
       const def = JOB_DEFS[e.kind][e.i];
       addLog('ปลดล็อก' + (e.kind === 'train' ? 'การฝึกกาย' : 'วิชาเวท') + 'ใหม่: ' + def.name);
@@ -910,7 +918,7 @@ function handleEvents(ev, quiet){
       if(r.unlock === 'rebirth') alerts.rebirth = true;
       if(r.unlock === 'pets') alerts.pets = true;
       alerts.mon = true;
-      if(!quiet){ toast('⚔ สังหาร ' + god.name + ' สำเร็จ!', 3); celebrate(); banner('⚔ สังหาร ' + god.name + '!'); sfx('win'); buzz([40,40,80]); }
+      if(!quiet){ toast(splitToast(e), 3); celebrate(); banner('⚔ สังหาร ' + god.name + '!'); sfx('win'); buzz([40,40,80]); }
       save();
     } else if(e.type === 'ach'){
       const a = D.ACHIEVEMENTS.find(x=>x.key===e.key);
@@ -945,7 +953,7 @@ function handleEvents(ev, quiet){
     } else if(e.type === 'godLose'){
       addLog('พ่ายแพ้ต่อ ' + D.GODS[e.i].name + ' — ฝึกให้แข็งแกร่งขึ้นแล้วกลับมาใหม่');
       if(!quiet){ toast('พ่ายแพ้... ต้องแข็งแกร่งกว่านี้', 2); banner('พ่ายแพ้...', true); sfx('lose'); }
-    }
+    } else if(e.type === 'mission') onMissionDone(e, quiet);
   }
   ev.length = 0;
   if(s.clonesLost > lastLost){
@@ -962,18 +970,12 @@ function handleEvents(ev, quiet){
 }
 
 // ---------- effects ----------
-const HERO_PALETTE = { hair:'#241a3d', skin:'#e8c49a', eye:'#1a1420', armor:'#6941b3', armorLight:'#8b5cf6', gold:'#e8c76f', blade:'#fff3d0', dark:'#1c1832' };
-const HERO_BLOCKS = [
-  [3,0,4,1,'hair'],[2,1,6,1,'hair'],[2,2,1,3,'hair'],[7,2,1,3,'hair'],[3,2,4,3,'skin'],[3,3,1,1,'eye'],[6,3,1,1,'eye'],
-  [4,5,2,1,'skin'],[2,6,6,4,'armor'],[2,7,1,1,'armorLight'],[4,6,2,1,'gold'],[2,10,6,1,'gold'],[2,11,2,4,'dark'],[6,11,2,4,'dark'],
-  [2,15,2,1,'gold'],[6,15,2,1,'gold'],[1,7,1,3,'armor'],[1,10,1,1,'skin'],[8,6,1,2,'armor'],[8,4,1,2,'skin'],[7,3,3,1,'gold'],[8,0,1,3,'blade']
-];
-function drawPixelHero(canvas){
-  const unit = 8;
-  canvas.width = 10*unit; canvas.height = 16*unit;
-  const ctx = canvas.getContext('2d');
-  ctx.imageSmoothingEnabled = false;
-  HERO_BLOCKS.forEach(([x,y,w,h,c])=>{ ctx.fillStyle = HERO_PALETTE[c]; ctx.fillRect(x*unit, y*unit, w*unit, h*unit); });
+// Hero portrait: img/hero/01.webp when it loads, else the drawn SVG from icons.js. Keeps the #heroPixel id the hit effects use.
+function drawHero(){
+  const el = $('heroPixel');
+  el.style.setProperty('--c', '#e8c76f'); el.dataset.art = artPath('hero', 0);
+  el.innerHTML = window.GKICONS ? GKICONS.hero() : '';
+  loadArt(el.parentNode);
 }
 
 // particle bursts; the loop only runs while particles are alive and the canvas is visible
@@ -1028,7 +1030,7 @@ function centerOf(el){
 function hitFx(){
   if(!fx || activeTab !== 'gods' || !s.fight) return;
   const g = centerOf($('godArt')), h = centerOf($('heroPixel').parentNode);
-  fx.burst(g.x, g.y, 6, '#ece7fb', 70);
+  fx.burst(g.x, g.y, 6, '#ede3cc', 70);
   fx.burst(h.x, h.y, 4, '#ff6b6b', 50);
   sfx('hit');
   if(!motionOff()){ replayAnim($('godArt'), 'hitFlash'); replayAnim($('heroPixel').parentNode, 'hurtFlash'); }
@@ -1104,6 +1106,7 @@ function onMainClick(e){
         lastLost = s.clonesLost; shownArt = ''; arenaSel = 'god'; clearAlerts();
         addLog('⚔ เริ่มบททดสอบ ' + c.name + (gain ? ' (ได้ ' + gain + ' ปราณเทพ)' : ''));
         toast('เริ่มบททดสอบ: ' + c.name); save();
+        if(gain) showRebirthCard(gain);
       }
     }
   } else if(act === 'petView'){
@@ -1146,10 +1149,10 @@ function onRebirth(){
   G.rebirth(s);
   lastLost = s.clonesLost; shownArt = ''; arenaSel = 'god'; clearAlerts();
   addLog('🔄 จุติใหม่ครั้งที่ ' + s.meta.rebirths + ' — ได้รับ ' + gain + ' ปราณเทพ');
-  toast('จุติใหม่สำเร็จ! +' + gain + ' ปราณเทพ');
   celebrate(); rebirthFx();
   save();
   selectTab('rebirth');
+  showRebirthCard(gain);
 }
 function onFight(){
   const tg = arenaTarget();
@@ -1345,6 +1348,7 @@ function rebirthFx(){
   let o = $('rbFx');
   if(!o){ o = document.createElement('div'); o.id = 'rbFx'; o.setAttribute('aria-hidden', 'true'); document.body.appendChild(o); }
   replayAnim(o, 'show');
+  if(window.GKFX) GKFX.rebirth();
 }
 
 // ---------- big moments: victory / defeat banner ----------
@@ -1365,6 +1369,7 @@ function onStrike(){
   if(fx && activeTab === 'gods'){
     const g = centerOf($('godArt'));
     fx.burst(g.x, g.y, 24, '#ffd66b', 130);
+    if(window.GKFX) GKFX.shake($('arena'));
     if(!motionOff()){ const el = document.createElement('span'); el.className = 'dmg big'; el.textContent = '⚡-' + fmt(dmg); el.style.left = g.x + 'px'; el.style.top = (g.y - 34) + 'px'; $('arena').appendChild(el); setTimeout(()=>el.remove(), 800); }
   }
   render(true);
@@ -1387,6 +1392,9 @@ function guideSections(){
     ['ฝึกกาย / วิชาเวท', `<p>ฝึกกายเสริม <b>พลังโจมตี</b> วิชาเวทเสริม <b>พลังป้องกัน</b> ขั้นถัดไปจะเปิดเมื่อขั้นก่อนหน้าถึง Lv.${D.ROW_UNLOCK_LEVEL} และให้พลังมากกว่าเดิมหลายเท่า จึงควรย้ายร่างเงาไปขั้นสูงสุดเสมอ (ปุ่ม "ย้ายไปขั้นที่ดีที่สุด")</p><p>วิชาเวทจะเปิดเมื่อสังหาร ${god('skills')}</p>`],
     ['สนามรบ', `<p>ส่งร่างเงาไปปราบอสูรเพื่อเก็บ <b>พลังเทวะ (DP)</b> และค่ายุทธ์ ดูสีพลังของศัตรูก่อนส่ง:</p><ul><li><b style="color:var(--ok)">เขียว</b> ปลอดภัย</li><li><b style="color:var(--warn)">เหลือง</b> ร่างเงาบางส่วนจะล้มตาย</li><li><b style="color:var(--danger)">แดง</b> ร่างเงาล้มตายอย่างรวดเร็ว</li></ul>`],
     ['การสร้าง', `<p>เลือกสิ่งที่ต้องการสร้าง แล้วตัวละครจะหลอมวัตถุดิบที่ขาดให้เอง ทุกชิ้นที่สร้างไว้ให้โบนัสไปจนจบรอบ ปลดล็อกเมื่อสังหาร ${god('create')} และเกมจะจำสิ่งที่เลือกไว้แม้จุติใหม่</p>`],
+    ['ขอบเขตบำเพ็ญ', `<p>ทุกเลเวลฝึกกายและวิชาเวทสะสมเป็นปราณ ขั้นย่อยจะขยับขึ้นเอง ${D.REALM_STAGES} ขั้นต่อขอบเขต เมื่อถึงยอดขอบเขต ปุ่ม <b>⚡ ฝ่าทัณฑ์สวรรค์</b> จะปรากฏใต้ชื่อเกม ผ่านได้เมื่อรับสายฟ้าทั้ง ${D.TRIB_BOLTS} สายไหว (ป้องกันและพลังชีวิตยิ่งสูงยิ่งปลอดภัย) ทะลวงแล้วค่าสถานะทั้งหมด ×${D.REALM_STAT} ต่อขอบเขต หากล้มเหลวปราณไม่หาย รอ ${D.TRIB_COOLDOWN} วินาทีแล้วลองใหม่</p>`],
+    ['ภารกิจสำนัก', `<p>ภารกิจสั้น ๆ 3 ข้ออยู่ใต้แถบสถานะเสมอ (บนคอมพิวเตอร์อยู่ใต้เมนู) แตะภารกิจเพื่อไปยังแท็บที่ต้องทำ ทำสำเร็จแล้วรับรางวัลทันที และภารกิจใหม่จะเข้ามาแทน ช่วงแรกเป็นภารกิจนำทางที่สอนระบบทีละขั้น</p>`],
+    ['โชควาสนา', `<p>หลังสังหารเทพองค์แรก สมบัติวิญญาณจะปรากฏบนจอเป็นระยะขณะเปิดเกมอยู่ แตะก่อนมันสลายไปใน ${D.FORTUNE.life} วินาที <b>ผลท้อเซียน</b> ให้พลังเทวะ <b>คัมภีร์ลับ</b> เร่งการฝึก ×${D.FORTUNE.boostMult} <b>เม็ดยาทิพย์</b> เร่งการสร้าง เก็บต่อเนื่องได้รางวัลเพิ่มขึ้น</p>`],
     ['ท้าเทพ', `<p>ดูบรรทัด <b>คาดการณ์</b> เมื่อขึ้นว่า "ชนะ" ก็กดท้าสู้ได้ ระหว่างสู้กด <b>⚡ ฟาดฟันเทวะ</b> เพื่อปล่อยการโจมตีรุนแรง (ใช้ได้ทุก ${D.STRIKE_CD} วินาที) หากพ่ายแพ้ พลังชีวิตจะฟื้นคืนเองเมื่อออกจากการต่อสู้</p>`],
     ['เทวาลัย', `<p><b>เครื่องผลิต</b> หลั่งพลังเทวะให้ตลอดเวลา (ปลดล็อกเมื่อสังหาร ${god('gen')}) · <b>อนุสรณ์</b> ใช้พลังเทวะกับของที่สร้างไว้แลกตัวคูณ (ปลดล็อกเมื่อสังหาร ${god('monuments')}) ทั้งสองอย่างรีเซ็ตเมื่อจุติใหม่ ปุ่ม "สูงสุด" จะซื้อรวดเดียวจนทรัพยากรหมด</p>`],
     ['จุติใหม่และปราณเทพ', `<p>ปลดล็อกเมื่อสังหาร ${god('rebirth')} การจุติใหม่จะเริ่มรอบใหม่ แต่ได้ <b>ปราณเทพ (GP)</b> ตามจำนวนเทพที่สังหารในรอบนั้น ใช้ซื้ออัปเกรดถาวร หากแถบเป้าหมายบอกว่า "ยังห่างอีกมาก" แปลว่าถึงเวลาจุติแล้ว</p>`],
@@ -1538,6 +1546,193 @@ function showWelcome(){
   $('wbClose').focus();
 }
 
+// ---------- cultivation realms: HUD title and bar, tribulation button, lightning overlay, breakthrough banner ----------
+ACH_LABEL.realm = 'ทะลวงขอบเขตในรอบเดียว';
+SFX.thunder = ()=>{ tone(70, 0.45, 'sawtooth', 0.07, 35); tone(1400, 0.08, 'square', 0.02, 300); };
+const realmName = r => D.REALMS[r].name;
+let tribBolt = 0;
+function initRealm(){
+  const row = document.createElement('div');
+  row.className = 'realmRow'; row.id = 'realmRow';
+  row.innerHTML = '<button class="realmTitle" id="realmTitle" type="button"></button>' +
+    '<div class="bar realm" id="realmBarWrap"><i id="realmBar"></i></div>' +
+    '<button class="realmBtn" id="tribBtn" type="button"><b>⚡ ฝ่าทัณฑ์สวรรค์</b><small id="tribHint"></small></button>';
+  document.querySelector('#hud .hudTop').after(row);
+  const o = document.createElement('div');
+  o.id = 'tribFx'; o.setAttribute('aria-hidden', 'true');
+  o.innerHTML = '<div class="tribFlash"></div><div class="tribBolt" id="tribBoltEl"></div>' +
+    '<div class="tribBox"><b>ทัณฑ์สวรรค์</b><span id="tribCount"></span><div class="bar hp"><i id="tribBar"></i></div><small id="tribDmg"></small></div>';
+  document.body.appendChild(o);
+  $('tribBtn').addEventListener('click', ()=>{
+    if(!G.startTribulation(s)) return;
+    addLog('⚡ เริ่มฝ่าทัณฑ์สวรรค์ เพื่อทะลวงสู่ขั้น' + realmName(s.realm.r + 1));
+    tribBolt = 0;
+    render(true);
+  });
+  $('realmTitle').addEventListener('click', ()=>toast(realmInfo()));
+}
+function realmInfo(){
+  const R = s.realm, last = R.r >= D.REALMS.length - 1;
+  return realmName(R.r) + ' ขั้น ' + R.st + ' · ปราณ ' + fmt(G.realmQi(s)) + (last ? '' : '/' + fmt(D.REALMS[R.r].qi)) +
+    ' (เลเวลฝึกกาย+วิชาเวทรวม) · ค่าสถานะทั้งหมด ×' + Math.pow(D.REALM_STAT, R.r).toFixed(2);
+}
+function renderRealm(d){
+  const R = s.realm, last = R.r >= D.REALMS.length - 1, peak = G.atRealmPeak(s), inTrib = R.trib !== null;
+  setText($('realmTitle'), realmName(R.r) + ' · ขั้น ' + R.st + (last && G.realmQi(s) >= D.REALMS[R.r].qi ? ' สมบูรณ์' : ''));
+  const info = realmInfo();
+  if($('realmTitle').title !== info) $('realmTitle').title = info;
+  setShown($('realmBarWrap'), !peak && !inTrib);
+  setShown($('tribBtn'), peak || inTrib, 'flex');
+  if(!peak && !inTrib) setBar($('realmBar'), G.stageFrac(s));
+  else {
+    const wait = G.tribWait(s), o = G.tribOutlook(s, d);
+    setDisabled($('tribBtn'), !G.canTribulate(s));
+    setClass($('tribBtn'), 'risky', !o.ok && !inTrib && wait <= 0);
+    setText($('tribHint'), inTrib ? 'สายฟ้ากำลังฟาด…' : wait > 0 ? 'พักฟื้นลมปราณ ' + Math.ceil(wait) + ' วินาที' :
+      o.ok ? 'สู่ขั้น' + realmName(R.r + 1) + ' · คาดว่าผ่าน' : 'ร่างยังต้านไม่ไหว · เสริมพลังชีวิต/ป้องกัน');
+  }
+  // the 6-second storm follows the engine's clock, so a reload mid-storm shows the same moment
+  const box = $('tribFx');
+  setClass(box, 'show', inTrib);
+  if(!inTrib){ tribBolt = 0; return; }
+  const bolt = Math.min(D.TRIB_BOLTS, 1 + Math.floor(R.trib / D.TRIB_TIME * D.TRIB_BOLTS));
+  const o = G.tribOutlook(s, d);
+  setText($('tribCount'), 'สายฟ้าสายที่ ' + bolt + '/' + D.TRIB_BOLTS);
+  setBar($('tribBar'), Math.min(1, o.bolt * bolt / o.hp));
+  setText($('tribDmg'), 'ความเสียหายรวม ' + fmt(o.bolt * bolt) + ' / พลังชีวิต ' + fmt(o.hp));
+  if(bolt !== tribBolt){
+    tribBolt = bolt;
+    if(!motionOff()){
+      const b = $('tribBoltEl');
+      b.style.left = (18 + ((bolt * 37) % 64)) + '%';   // bolts land in a fixed, varied pattern
+      replayAnim(box.querySelector('.tribFlash'), 'hit'); replayAnim(b, 'hit');
+    }
+    sfx('thunder'); buzz(20);
+  }
+}
+function realmBanner(title, sub){
+  if(motionOff()){ toast(title + ' ' + sub, 3); return; }
+  let b = $('realmBanner');
+  if(!b){ b = document.createElement('div'); b.id = 'realmBanner'; b.setAttribute('aria-hidden', 'true'); b.innerHTML = '<b></b><span></span>'; document.body.appendChild(b); }
+  b.firstChild.textContent = title; b.lastChild.textContent = sub;
+  replayAnim(b, 'show');
+  if(window.GKFX && !GKFX.off()){
+    const x = innerWidth / 2, y = innerHeight * 0.4, R = Math.min(innerWidth, 520);
+    GKFX.ring(x, y, 12, R * 0.45, '#fff3c4', 6, 0.9);
+    GKFX.ring(x, y, 10, R * 0.3, '#d2503f', 4, 1.0, 0.15);
+    GKFX.burst(x, y, { n:48, colors:['#fff3d0','#f1d38a','#8fd6be','#7fd4ff'], speed:380, size:13, life:1.1, drag:0.93 });
+  }
+}
+// engine events for realms; returns true when the event was one of them
+function realmEvent(e, quiet){
+  if(e.type === 'realmStage'){
+    addLog('🌀 ลมปราณก้าวหน้า: ' + realmName(e.r) + ' ขั้น ' + e.st);
+    if(!quiet) toast('🌀 ' + realmName(e.r) + ' ขั้น ' + e.st);
+  } else if(e.type === 'realmPeak'){
+    addLog('⛈ ถึงจุดสูงสุดของขั้น' + realmName(e.r) + ' — กด "ฝ่าทัณฑ์สวรรค์" เพื่อทะลวงสู่ขั้น' + realmName(e.r + 1));
+    if(!quiet){ toast('⛈ ถึงจุดสูงสุดของขั้น' + realmName(e.r) + ' พร้อมฝ่าทัณฑ์สวรรค์แล้ว!', 2); sfx('ping'); }
+  } else if(e.type === 'realmUp'){
+    addLog('⚡ ฝ่าทัณฑ์สวรรค์สำเร็จ! ทะลวงสู่ขั้น' + realmName(e.r) + ' — ค่าสถานะทั้งหมด ×' + D.REALM_STAT + ' และฟื้นพลังชีวิตเต็ม');
+    if(!quiet){ realmBanner('ทะลวงสู่ขั้น' + realmName(e.r) + '!', 'ค่าสถานะทั้งหมด ×' + D.REALM_STAT + ' · ฟื้นพลังชีวิตเต็ม'); celebrate(); sfx('win'); buzz([60,40,120]); }
+    save();
+  } else if(e.type === 'tribFail'){
+    addLog('ฝ่าทัณฑ์สวรรค์ไม่สำเร็จ ร่างยังต้านสายฟ้าไม่ไหว — ปราณไม่หายไป พักฟื้น ' + D.TRIB_COOLDOWN + ' วินาทีแล้วลองใหม่');
+    if(!quiet){ toast('ทัณฑ์สวรรค์แรงเกินต้าน... ปราณยังอยู่ครบ พักฟื้นแล้วลองใหม่', 2); banner('ฝ่าทัณฑ์ไม่สำเร็จ...', true); sfx('lose'); }
+  } else return false;
+  return true;
+}
+
+// ---------- sect missions (ภารกิจสำนัก) ----------
+// three short goals, always in view: a collapsible strip under the HUD on phones, open in the sidebar on wide screens.
+// The engine tracks them (offline too) and pays the reward itself; this block only shows them and reports completions.
+const MIS_KEY = 'godKillerMissions';   // per-device open/closed choice, not part of the save
+const MIS_TAB = { kills:'mon', gods:'gods', made:'create', clones:'create', gen:'temple', mono:'temple', dp:'mon' };
+const misRows = [], misIds = [];
+let misQuietN = 0, misQuietT = 0;
+function missionText(m){
+  const c = m.c !== undefined && D.MISSION_CHAIN[m.c];
+  if(c && c.text) return c.text;
+  const n = fmt(m.n);
+  switch(m.t){
+    case 'job': return (m.kind === 'mon' ? 'ส่งร่างเงาไปปราบ' : 'ส่งร่างเงาไปฝึก') + JOB_DEFS[m.kind][m.i].name;
+    case 'lv': return JOB_DEFS[m.kind][m.i].name + 'ถึง Lv.' + m.n;
+    case 'kills': return m.i === undefined ? 'ปราบอสูร ' + n + ' ตัว' : 'ปราบ' + D.MONSTERS[m.i].name + 'ขึ้นไป ' + n + ' ตัว';
+    case 'gods': return D.GODS[m.n-1] ? 'สังหาร' + D.GODS[m.n-1].name : 'สังหารเทพ ' + m.n + ' องค์';
+    case 'made': return 'สร้าง' + G.creationByKey(m.key).name + ' ' + n + ' ชิ้น';
+    case 'clones': return 'รวบรวมร่างเงาให้ครบ ' + n + ' ร่าง';
+    case 'gen': return 'ยกระดับเครื่องผลิตพลังเทวะถึง Lv.' + m.n;
+    case 'mono': return 'สร้างอนุสรณ์รวม ' + n + ' เลเวล';
+    case 'dp': return 'สะสมพลังเทวะอีก ' + n;
+  }
+  return '';
+}
+function missionRewardText(rw){ return rw.buff ? 'ฝึกเร็วขึ้น ×' + D.MISSION_BUFF + ' นาน ' + fmtTime(rw.buff) : '+' + fmt(rw.dp) + ' พลังเทวะ'; }
+function setMisOpen(open){
+  setClass($('missions'), 'closed', !open);
+  $('misHead').setAttribute('aria-expanded', String(open || !$('misPeek').offsetParent));
+}
+function initMissions(){
+  const list = $('misList');
+  for(let j=0;j<D.MISSION_SLOTS;j++){
+    const b = document.createElement('button');
+    b.className = 'misRow'; b.dataset.slot = j;
+    b.innerHTML = '<i class="misRw"></i><span class="misText"></span><b class="misNum"></b><span class="bar thin"><i></i></span>';
+    list.appendChild(b);
+    misRows.push({ el:b, rw:b.querySelector('.misRw'), text:b.querySelector('.misText'), num:b.querySelector('.misNum'), bar:b.querySelector('.bar>i') });
+  }
+  // a mission is also a shortcut to the tab where it is done
+  list.addEventListener('click', e=>{
+    const b = e.target.closest('.misRow'), m = b && s.missions[+b.dataset.slot];
+    if(m) selectTab(MIS_TAB[m.t] || m.kind);
+  });
+  let open = !(window.matchMedia && matchMedia('(max-width:599px)').matches);   // phones start closed to keep the screen for play
+  try{ const v = localStorage.getItem(MIS_KEY); if(v) open = v === 'open'; }catch(e){}
+  setMisOpen(open);
+  $('misHead').addEventListener('click', ()=>{
+    if(!$('misPeek').offsetParent) return;   // the split layout always shows the list
+    const next = $('missions').classList.contains('closed');
+    setMisOpen(next);
+    try{ localStorage.setItem(MIS_KEY, next ? 'open' : 'closed'); }catch(e){}
+  });
+}
+function renderMissions(){
+  const ms = s.missions;
+  let peek = '', best = -1;
+  misRows.forEach((r,j)=>{
+    const m = ms[j];
+    setShown(r.el, !!m, 'grid');
+    if(!m) return;
+    const p = G.missionProgress(s, m), f = p.v / p.n, text = missionText(m);
+    const num = m.t === 'job' ? '' : fmt(p.v) + '/' + fmt(p.n);
+    if(misIds[j] !== m.id){
+      // the next mission slides into the slot the finished one left
+      if(misIds[j] !== undefined && !motionOff()) replayAnim(r.el, 'misIn');
+      misIds[j] = m.id;
+      setClass(r.rw, 'buff', m.r === 'buff');
+      r.el.title = 'รางวัล: ' + (m.r === 'buff' ? 'ความเร็วฝึก ×' + D.MISSION_BUFF + ' นาน ' + fmtTime(D.MISSION_BUFF_SECS) : 'พลังเทวะเท่ารายได้ราว ' + D.MISSION_DP_SECS + ' วินาที');
+    }
+    setText(r.text, text);
+    setText(r.num, num);
+    setBar(r.bar, f);
+    if(f > best){ best = f; peek = text + (num ? ' · ' + num : ''); }
+  });
+  const buff = $('misBuff');
+  setShown(buff, s.buff > 0, 'inline-block');
+  if(s.buff > 0) setText(buff, 'ฝึก ×' + D.MISSION_BUFF + ' ' + Math.ceil(s.buff) + ' วิ');
+  setText($('misPeek'), peek);
+}
+function onMissionDone(e, quiet){
+  if(quiet){   // offline catch-up or a long background gap: one log line instead of a flood
+    misQuietN++;
+    if(!misQuietT) misQuietT = setTimeout(()=>{ addLog('ภารกิจสำนักสำเร็จ ' + misQuietN + ' ภารกิจระหว่างที่ไม่อยู่ รับรางวัลแล้ว'); misQuietN = 0; misQuietT = 0; }, 0);
+    return;
+  }
+  const t = missionText(e.m), rw = missionRewardText(e.reward);
+  addLog('📜 ภารกิจสำนักสำเร็จ: ' + t + ' · ' + rw);
+  toast('📜 ภารกิจสำเร็จ: ' + t + ' · ' + rw);
+  sfx('ping');
+}
+
 // ---------- main loop ----------
 // the game advances every frame (wall-clock based); a 1s timer takes over when frames stop (background tab)
 const ev = [];
@@ -1558,15 +1753,237 @@ function loop(now){
   requestAnimationFrame(loop);
 }
 
+// ---------- fortune (โชควาสนา): a spirit treasure appears now and then while the page is open ----------
+// the timer counts only seconds the tab is visible and no dialog is open, so offline catch-up never makes one;
+// which reward it pays, and how much, is decided by the engine (G.rollFortune / G.claimFortune)
+const FORTUNE_ART = {
+  dp: '<svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 13C16 6 5 12 7 25c2 10 11 17 17 17s15-7 17-17c2-13-9-19-17-12z" fill="#ffb3c8"/><path d="M24 13c-3 7-3 19 0 29" stroke="#e0708f" stroke-width="2" fill="none"/><path d="M24 13c2-5 6-8 12-8-1 5-6 8-12 8z" fill="#6fd49a"/><ellipse cx="15" cy="23" rx="3.5" ry="6" fill="#fff" opacity=".4"/></svg>',
+  speed: '<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="10" y="10" width="28" height="28" rx="2" fill="#f2e6c8"/><rect x="6" y="7" width="6" height="34" rx="3" fill="#b0763a"/><rect x="36" y="7" width="6" height="34" rx="3" fill="#b0763a"/><path d="M16 17h16M16 23h16M16 29h9" stroke="#3f7fa8" stroke-width="2.4" stroke-linecap="round"/><circle cx="31" cy="31" r="3.5" fill="#d9534f"/></svg>',
+  create: '<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="25" r="14" fill="#e8c76f"/><circle cx="24" cy="25" r="10" fill="none" stroke="#a8873e" stroke-width="1.6"/><path d="M18 27c2 4 9 4 11-1s-4-8-7-5 1 6 4 4" fill="none" stroke="#8a6420" stroke-width="1.8" stroke-linecap="round"/><ellipse cx="18.5" cy="19" rx="4" ry="2.6" fill="#fff" opacity=".55"/></svg>'
+};
+// painted treasures (img/fortune/NN.webp); the drawn SVG above stands in when a file is missing
+const FORTUNE_IMG = { dp: '01', speed: '02', create: '03' };
+function fortuneArt(kind){ return FORTUNE_IMG[kind] ? '<img src="god-killer/img/fortune/' + FORTUNE_IMG[kind] + '.webp" alt="" decoding="async">' : FORTUNE_ART[kind]; }
+const fortune = { wait: 0, cur: null, lastAt: 0, bar: null };
+const fortuneRand = r => r[0] + Math.random() * (r[1] - r[0]);
+function fortunePaused(){ return document.hidden || !!$('welcome') || !!document.querySelector('#guide.open,#settings.open,#keyHelp.open'); }
+function removeFortune(c, cls){
+  if(!cls || motionOff()){ c.el.remove(); return; }
+  c.el.classList.add(cls);
+  setTimeout(()=>c.el.remove(), 650);
+}
+function spawnFortune(kind){
+  if(fortune.cur){ removeFortune(fortune.cur, ''); fortune.cur = null; }
+  if(!G.fortuneItem(kind)) kind = G.rollFortune(s, Math.random());
+  const item = G.fortuneItem(kind), F = D.FORTUNE;
+  // somewhere inside the content area, clear of the HUD and the toast
+  const w = window.innerWidth, h = window.innerHeight, box = $('main').getBoundingClientRect();
+  const x0 = Math.max(box.left, 0) + 50, x1 = Math.min(box.right, w) - 50;
+  const y0 = Math.max(box.top, 0) + 56, y1 = Math.min(box.bottom, h) - 96;
+  const x = x1 > x0 ? x0 + Math.random() * (x1 - x0) : w / 2, y = y1 > y0 ? y0 + Math.random() * (y1 - y0) : h / 2;
+  const el = document.createElement('button');
+  el.type = 'button'; el.className = 'fortune';
+  el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.setProperty('--fc', item.color);
+  el.title = item.name + ' — ' + item.desc;
+  el.setAttribute('aria-label', 'แตะเพื่อรับ' + item.name + ': ' + item.desc);
+  el.innerHTML = '<span class="fortuneHalo"></span><span class="fortuneBob">' + fortuneArt(kind) + '</span><span class="fortuneName">' + item.name + '</span><span class="fortuneLife"><i></i></span>';
+  const art = el.querySelector('.fortuneBob img');
+  if(art) art.onerror = ()=>{ art.parentNode.innerHTML = FORTUNE_ART[kind]; };
+  el.addEventListener('click', onFortuneTap);
+  document.body.appendChild(el);
+  fortune.cur = { el, kind, x, y, left: F.life, life: el.querySelector('.fortuneLife>i') };
+  sfx('ping');
+  if(!s.meta.fortune.caught) toast('✨ โชควาสนา! สมบัติวิญญาณปรากฏ แตะเพื่อรับก่อนมันสลายไป', 2);
+}
+function onFortuneTap(e){
+  const c = fortune.cur;
+  if(!c || e.currentTarget !== c.el) return;
+  fortune.cur = null;
+  fortune.wait = fortuneRand(D.FORTUNE.every);
+  removeFortune(c, 'got');
+  const r = G.claimFortune(s, c.kind, ev);
+  if(!r) return;
+  const name = G.fortuneItem(r.kind).name;
+  let msg, pop;
+  if(r.kind === 'dp'){ msg = 'พลังเทวะ +' + fmt(r.dp); pop = '+' + fmt(r.dp); }
+  else if(r.kind === 'speed'){ msg = 'ความเร็วฝึก ×' + D.FORTUNE.boostMult + ' อีก ' + Math.round(r.secs) + ' วิ'; pop = 'ฝึก ×' + D.FORTUNE.boostMult; }
+  else { msg = 'เร่งการสร้าง ' + Math.round(r.secs) + ' วิ' + (r.made ? ' ได้ ' + fmt(r.made) + ' ชิ้น' : ''); pop = r.made ? 'สร้าง +' + fmt(r.made) : 'เร่งสร้าง'; }
+  const streak = r.mult > 1 ? ' · โชคต่อเนื่อง ' + r.streak + ' ครั้ง (รางวัล +' + Math.round((r.mult - 1) * 100) + '%)' : '';
+  addLog('✨ โชควาสนา: ' + name + ' — ' + msg + streak);
+  toast('✨ ' + name + ': ' + msg + streak, 2);
+  sfx('fortune'); buzz(20);
+  if(!motionOff()){
+    const g = document.createElement('span');
+    g.className = 'fortuneGain'; g.textContent = pop;
+    g.style.left = c.x + 'px'; g.style.top = (c.y - 30) + 'px';
+    document.body.appendChild(g);
+    setTimeout(()=>g.remove(), 1300);
+  }
+  render(true);
+  save();
+}
+function renderBuff(){
+  if(!fortune.bar){
+    const b = document.createElement('div');
+    b.id = 'buffBar'; b.className = 'buffBar';
+    $('chalBar').after(b);
+    fortune.bar = b;
+  }
+  const t = s.boostT || 0;
+  setShown(fortune.bar, t > 0);
+  if(t > 0) setText(fortune.bar, '📜 ' + G.fortuneItem('speed').name + ': ความเร็วฝึก ×' + D.FORTUNE.boostMult + ' · เหลือ ' + Math.ceil(t) + ' วิ');
+}
+function fortuneTick(){
+  const now = performance.now(), dt = Math.min(1, (now - fortune.lastAt) / 1000);   // a throttled background timer never counts as play
+  fortune.lastAt = now;
+  renderBuff();
+  if(fortunePaused()) return;
+  const c = fortune.cur;
+  if(c){
+    c.left -= dt;
+    setBar(c.life, c.left / D.FORTUNE.life);
+    setClass(c.el, 'ending', c.left <= 3);
+    if(c.left > 0) return;
+    fortune.cur = null;
+    fortune.wait = fortuneRand(D.FORTUNE.every);
+    const had = s.meta.fortune.streak;
+    G.missFortune(s);
+    removeFortune(c, 'gone');
+    if(had >= 2){ addLog(G.fortuneItem(c.kind).name + 'สลายไป — โชคต่อเนื่อง ' + had + ' ครั้งขาดตอน'); toast(G.fortuneItem(c.kind).name + 'สลายไป... โชคต่อเนื่องขาดตอน'); }
+    return;
+  }
+  if(!G.fortuneUnlocked(s)) return;
+  fortune.wait -= dt;
+  if(fortune.wait <= 0) spawnFortune();
+}
+function initFortune(){
+  SFX.fortune = ()=>[784, 988, 1319, 1568].forEach((f,i)=>tone(f, 0.22, 'sine', 0.05, 0, i*0.07));
+  fortune.wait = fortuneRand(D.FORTUNE.first);
+  fortune.lastAt = performance.now();
+  renderBuff();
+  setInterval(fortuneTick, 250);
+  // test hook (local or ?debug only): GKDebug.fortune('dp' | 'speed' | 'create') makes a treasure appear now
+  if(/^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /[?&]debug\b/.test(location.search))
+    window.GKDebug = Object.assign(window.GKDebug || {}, { fortune: kind=>{ spawnFortune(kind); return fortune.cur.kind; } });
+}
+
+// ---------- rebirth payoff: split times, live GP preview, "จุติสำเร็จ" card ----------
+// run clock as m:ss or h:mm:ss; 0 means "no time" (never killed, or a kill from before split times were recorded)
+function fmtClock(sec){
+  if(!(sec > 0)) return '—';
+  sec = Math.floor(sec);
+  const h = Math.floor(sec/3600), mm = Math.floor(sec/60) % 60, ss = String(sec % 60).padStart(2, '0');
+  return h ? h + ':' + String(mm).padStart(2, '0') + ':' + ss : mm + ':' + ss;
+}
+const fmtMul = x => '×' + (x >= 100 ? fmt(x) : String(+x.toFixed(x < 10 ? 2 : 1)));
+function splitToast(e){
+  const name = D.GODS[e.i].name;
+  if(!(e.t > 0)) return '⚔ สังหาร ' + name + ' สำเร็จ!';
+  const head = '⚔ สังหาร ' + name + ' ใน ' + fmtClock(e.t);
+  if(!e.best) return head + '!';
+  return e.t < e.best ? head + ' · สถิติใหม่! (ดีสุดเดิม ' + fmtClock(e.best) + ')' : head + ' (ดีสุด ' + fmtClock(e.best) + ')';
+}
+function renderRebirthPay(){
+  const m = s.meta, gain = G.rebirthGain(s), next = s.gods < D.GODS.length ? D.GODS[s.gods] : null;
+  let h = '<div class="rpBig"><span>ปราณเทพที่จะได้ถ้าจุติตอนนี้</span><b>+' + fmt(gain) + '</b></div>';
+  if(m.lastGain) h += '<div class="rpLine">เทียบรอบก่อน (+' + fmt(m.lastGain) + '): <b class="' + (gain > m.lastGain ? 'up' : '') + '">' + fmtMul(gain / m.lastGain) + '</b></div>';
+  if(next){
+    const after = gain + next.gp, best = m.splits[s.gods];
+    h += '<div class="rpLine">สังหาร ' + next.name + ' อีกองค์ → <b class="up">+' + fmt(after) + '</b> (เพิ่ม ' + next.gp + (gain ? ', ' + fmtMul(after / gain) : '') + ')' +
+      (best ? ' · สถิติเดิมถึงองค์นี้ ' + fmtClock(best) : '') + '</div>';
+  } else h += '<div class="rpLine">สังหารเทพครบทุกองค์แล้ว — จุติเพื่อเก็บปราณเทพเต็มจำนวน</div>';
+  setHTML($('rbPay'), h);
+  setText($('spSub'), 'รอบนี้ ' + fmtClock(s.playTime) + (s.challenge ? ' · อยู่ในบททดสอบ' : ''));
+  const n = Math.min(D.GODS.length, Math.max(m.bestGods, s.gods + 1));
+  let t = '<div class="spRow"><span>เทพ</span><span>รอบนี้</span><span>รอบก่อน</span><span>ดีสุด</span></div>';
+  for(let i = 0; i < n; i++){
+    const cur = s.splits[i] || 0, pb = cur && cur <= m.splits[i];
+    t += '<div class="spRow' + (i === s.gods ? ' next' : '') + '"><span>' + D.GODS[i].name + '</span>' +
+      '<span class="' + (pb ? 'pb' : '') + '">' + (i === s.gods ? 'กำลังไล่' : fmtClock(cur)) + '</span>' +
+      '<span>' + fmtClock(m.lastSplits[i]) + '</span><span>' + fmtClock(m.splits[i]) + '</span></div>';
+  }
+  setHTML($('spTable'), t);
+}
+const RB_CHEERS = ['ร่างใหม่ แต่ปราณเทพยังอยู่ครบ — รอบนี้จะเร็วกว่าเดิมมาก',
+  'ทุกการจุติคือก้าวที่ไกลขึ้น ไปทวงบัลลังก์สวรรค์อีกครั้ง!',
+  'เทพที่เคยล้มเราได้ จะล้มลงเร็วกว่าเดิม',
+  'ปราณเทพสะสมแน่นขึ้นทุกรอบ ลองทำลายสถิติเวลาของตัวเองดู!'];
+function showRebirthCard(gain){
+  if($('welcome')) $('welcome').remove();
+  const m = s.meta, mu = G.mults(s);
+  const canBuy = D.UPGRADES.filter(u => G.upgradeCost(s, u) <= m.gp).length;
+  const rows = [
+    ['ปราณเทพที่ได้', '+' + fmt(gain)],
+    ['ปราณเทพพร้อมใช้', fmt(m.gp) + ' (สะสมตลอดกาล ' + fmt(m.gpTotal) + ')'],
+    ['โบนัสถาวร: ค่าสถานะ', fmtMul(mu.stat)]
+  ];
+  if(mu.dp > 1) rows.push(['โบนัสถาวร: พลังเทวะ', fmtMul(mu.dp)]);
+  if(mu.speed > 1) rows.push(['โบนัสถาวร: ความเร็วฝึก', fmtMul(mu.speed)]);
+  if(mu.clone > 1) rows.push(['โบนัสถาวร: พลังร่างเงา', fmtMul(mu.clone)]);
+  const first = m.lastSplits[0] || m.splits[0];
+  if(first) rows.push(['เป้าหมายแรก', D.GODS[0].name + ' ให้เร็วกว่า ' + fmtClock(first)]);
+  const cheer = canBuy ? 'ซื้ออัปเกรดถาวรได้ทันที ' + canBuy + ' รายการ — ใช้ก่อนเริ่ม แล้วรอบนี้จะพุ่งไปไกลกว่าเดิม'
+                       : RB_CHEERS[m.rebirths % RB_CHEERS.length];
+  const box = document.createElement('div');
+  box.id = 'welcome'; box.className = 'wbWrap';
+  box.innerHTML = '<div class="wbCard rbCard" role="dialog" aria-label="จุติสำเร็จ"><div class="wbTitle">🔄 จุติสำเร็จ · ครั้งที่ ' + m.rebirths + '</div>' +
+    rows.map(r=>'<div class="wbRow"><span>' + r[0] + '</span><b>' + r[1] + '</b></div>').join('') +
+    '<div class="rbCheer">' + cheer + '</div>' +
+    '<button class="b bPrimary" id="wbClose" style="margin-top:10px">' + (canBuy ? 'ไปซื้ออัปเกรด' : 'เริ่มรอบใหม่') + '</button></div>';
+  document.body.appendChild(box);
+  box.addEventListener('click', e=>{ if(e.target === box || e.target.id === 'wbClose') box.remove(); });
+  $('wbClose').focus();
+}
+
+// ---------- welcome back after the tab was hidden ----------
+// the 1s timer keeps ticking while hidden, and a tab the browser froze catches up on its first tick (tick is wall-clock based),
+// so progress is already applied exactly once: this only compares a snapshot from when the tab was hidden with now
+let hiddenSnap = null;
+function welcomeOnReturn(){
+  if(document.hidden){
+    const d = G.derive(s);
+    hiddenSnap = { at: Date.now(), play: s.playTime, rb: s.meta.rebirths, gods: s.gods, dp: s.dpTotal, phys: d.phys, myst: d.myst, atk: d.atk,
+      lost: s.clonesLost, mp: s.meta.mp, ub: s.meta.ub.reduce((a, b) => a + b, 0), ach: G.achCount(s), mats: Object.values(s.meta.mats).reduce((a, b) => a + b, 0) };
+    return;
+  }
+  const w = hiddenSnap; hiddenSnap = null;
+  const away = w ? (Date.now() - w.at)/1000 : 0;
+  if(!w || away <= 60 || $('welcome') || s.meta.rebirths !== w.rb) return;
+  tick(); render(true);   // count any time a frozen timer has not ticked yet
+  const d = G.derive(s), counted = s.playTime - w.play;
+  const rows = [
+    ['พลังเทวะ', '+' + fmt(s.dpTotal - w.dp)],
+    ['กาย', '+' + fmt(d.phys - w.phys)],
+    ['เวท', '+' + fmt(d.myst - w.myst)],
+    ['พลังโจมตี', fmt(w.atk) + ' → ' + fmt(d.atk)]
+  ];
+  if(s.gods > w.gods){
+    const names = []; for(let i = w.gods; i < s.gods; i++) names.push(D.GODS[i].name + (s.splits[i] ? ' (' + fmtClock(s.splits[i]) + ')' : ''));
+    rows.push(['สังหารเทพ', names.length + ' องค์: ' + names.join(', ')]);
+  }
+  if(s.clonesLost > w.lost) rows.push(['ร่างเงาตาย', fmt(s.clonesLost - w.lost) + ' ร่าง']);
+  const mats = Object.values(s.meta.mats).reduce((a, b) => a + b, 0);
+  if(mats > w.mats) rows.push(['วัตถุดิบจากแดนลับ', '+' + fmt(mats - w.mats)]);
+  const ub = s.meta.ub.reduce((a, b) => a + b, 0);
+  if(ub > w.ub) rows.push(['สิ่งสูงสุด', 'ชนะ ' + (ub - w.ub) + ' ครั้ง · บารมี +' + fmt(s.meta.mp - w.mp)]);
+  if(G.achCount(s) > w.ach) rows.push(['ความสำเร็จใหม่', (G.achCount(s) - w.ach) + ' รายการ']);
+  const esc = t => String(t).replace(/[&<>]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' })[c]);
+  welcomeHTML = '<div class="wbCard" role="dialog" aria-label="สรุปผลขณะไม่อยู่"><div class="wbTitle">ยินดีต้อนรับกลับมา!</div>' +
+    '<div class="note">ห่างหายไป ' + fmtTime(away) + (counted < away - 60 ? ' (นับได้ ' + fmtTime(counted) + ')' : '') + '</div>' +
+    rows.map(r=>'<div class="wbRow"><span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b></div>').join('') +
+    '<button class="b bPrimary" id="wbClose" style="margin-top:10px">เล่นต่อ</button></div>';
+  showWelcome();
+}
+
 function boot(saved){
   if(saved && typeof saved === 'object' && saved.v === G.SAVE_VERSION) s = G.sanitize(saved);
   else if(load()) catchUp();
   lastLost = s.clonesLost;
 
   buildJobs('train'); buildJobs('skill'); buildJobs('mon');
-  buildCreate(); buildGods(); buildTemple(); buildRebirth(); buildPets(); buildUltimates(); buildPhase4();
+  buildCreate(); buildGods(); buildTemple(); buildRebirth(); buildPets(); buildUltimates(); buildPhase4(); initRealm();
   renderSteps();
-  drawPixelHero($('heroPixel'));
+  drawHero();
   fx = initFX($('fx'));
 
   $('main').addEventListener('click', onMainClick);
@@ -1585,6 +2002,7 @@ function boot(saved){
   $('tutorBtn').addEventListener('click', ()=>{ s.meta.tut = 999; save(); render(true); });
   $('tabTipBtn').addEventListener('click', ()=>{ s.meta.seen[activeTab] = 1; save(); render(true); });
   initSaveTools();
+  initMissions();
   document.querySelectorAll('svg.ic').forEach(i=>i.setAttribute('aria-hidden', 'true'));   // decorative icons next to text
   $('dgStop').addEventListener('click', ()=>{ G.stopDungeon(s); addLog('หยุดสำรวจแดนลับ'); render(true); });
   $('dgAuto').addEventListener('change', e=>{ s.meta.dgAuto = e.target.checked; render(true); });
@@ -1600,6 +2018,7 @@ function boot(saved){
   if(!storageOk) addLog('เบราว์เซอร์นี้ไม่อนุญาตให้บันทึกเกม — ความคืบหน้าจะหายไปเมื่อปิดหน้า');
   selectTab('train');
   initPlatform();
+  initFortune();
   showWelcome();
 
   lastTickAt = Date.now();
@@ -1609,6 +2028,7 @@ function boot(saved){
   window.addEventListener('pagehide', save);
   window.addEventListener('beforeunload', save);
   document.addEventListener('visibilitychange', ()=>{ if(document.hidden) save(); });
+  document.addEventListener('visibilitychange', welcomeOnReturn);
   try{ window.claude?.hot?.snapshot(() => s); }catch(e){}
 }
 

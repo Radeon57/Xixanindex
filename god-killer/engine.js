@@ -11,7 +11,10 @@ function newMeta(){
   return { gp:0, gpTotal:0, rebirths:0, bestGods:0, dpLife:0, up:{}, ach:{},
            pets:{}, team:[], mats:{}, gear:{}, dgBest:{}, run:null, dgAuto:true,
            chal:{}, ub:[], mp:0, mpTotal:0, might:{},
-           tut:0, seen:{}, plan:{ on:false, train:40, skill:30, mon:30 }, autoFight:false, createPref:null };
+           tut:0, seen:{}, plan:{ on:false, train:40, skill:30, mon:30 }, autoFight:false, createPref:null,
+           fortune:{ streak:0, best:0, caught:0 },
+           splits:D.GODS.map(()=>0), lastSplits:[], lastGain:0, bestRealm:0,
+           mchain:0 };
 }
 function newState(meta){
   return {
@@ -34,8 +37,12 @@ function newState(meta){
     hp: 100,
     clonesLost: 0,
     playTime: 0,
+    splits: [],
     strikeAt: 0,
+    boostT: 0,          // seconds of play left on a fortune training boost
+    realm: { r:0, st:1, trib:null, cdAt:0, peak:0 },   // realm, minor stage, tribulation clock (null = none), retry time, peak noted
     lastSave: Date.now(),
+    missions: [], mseq: 0, buff: 0,
     log: []
   };
 }
@@ -94,6 +101,7 @@ function mults(s){
     compound(D.CHALLENGES.filter(c=>c.stat === 'stat'), c => s.meta.chal[c.key] || 0);
   }
   m.stat *= 1 + D.ACH_BONUS * achCount(s);
+  m.stat *= Math.pow(D.REALM_STAT, s.realm.r);
   m.phys = m.myst = m.battle = m.stat;
   apply(D.MONUMENTS, mo => s.mono[mo.key] || 0);
   // gear and pet bonuses compound per level, so they stay noticeable on the game's exponential scale
@@ -110,6 +118,8 @@ function mults(s){
     if(c.bonus.add) m[c.bonus.stat] += n*c.bonus.per;
     else m[c.bonus.stat] *= 1 + n*c.bonus.per;
   });
+  if(s.boostT > 0) m.speed *= D.FORTUNE.boostMult;   // fortune boost: a short burst, so it counts even in 'mortal'
+  if(s.buff > 0) m.speed *= D.MISSION_BUFF;   // sect-mission reward
   // applied last so no bonus can lift the challenge's cap
   if(inChallenge(s, 'few')) m.maxClones = Math.min(m.maxClones, D.FEW_CLONES);
   return m;
@@ -156,6 +166,7 @@ function achValue(s, type){
     case 'dpLife': return s.meta.dpLife;
     case 'monuments': return sumMono(s);
     case 'genLv': return s.gen;
+    case 'realm': return s.meta.bestRealm;
   }
   return 0;
 }
@@ -376,7 +387,9 @@ function rebirthGain(s){ let g = 0; for(let i=0;i<s.gods;i++) g += D.GODS[i].gp;
 // start a new run in place: pays God Power for this run's gods; meta, the log and the auto-clone choice carry over
 function resetRun(s, challenge){
   const gain = rebirthGain(s);
+  requeueChain(s);
   const meta = s.meta, log = s.log, autoClone = s.create.autoClone;
+  rememberRun(s, gain);
   meta.gp += gain; meta.gpTotal += gain;
   if(gain) meta.rebirths++;
   const fresh = newState(meta);
@@ -394,6 +407,32 @@ function resetRun(s, challenge){
 function rebirth(s){
   if(!rebirthUnlocked(s) || !rebirthGain(s)) return 0;
   return resetRun(s, null);
+}
+
+// ---------- split times ----------
+// seconds into the run (s.playTime: reset by newState, advanced only in step, so offline catch-up counts too) at which each god fell.
+// s.splits = this run (0 = time unknown, e.g. an older save); meta.splits = best per god index (0 = never);
+// meta.lastSplits / lastGain = the previous paid rebirth, so the UI can show the run-over-run speed-up.
+function recordSplit(s, i){
+  const t = s.playTime, m = s.meta, prev = m.splits[i] || 0;
+  while(s.splits.length < i) s.splits.push(0);
+  s.splits[i] = t;
+  if(!prev || t < prev) m.splits[i] = t;
+  return { t, prev };
+}
+function rememberRun(s, gain){
+  if(!gain) return;
+  s.meta.lastSplits = s.splits.slice(0, D.GODS.length);
+  s.meta.lastGain = gain;
+}
+function sanitizeSplits(raw, rm, d){
+  const m = d.meta, list = (v, n, max) => Array.isArray(v) ? v.slice(0, n).map(x => Math.min(max, nonNeg(x, 0))) : [];
+  d.splits = list(raw.splits, d.gods, d.playTime);
+  const best = list(rm.splits, D.GODS.length, 1e200);
+  m.splits = D.GODS.map((g, i) => best[i] || 0);
+  d.splits.forEach((t, i) => { if(t && (!m.splits[i] || t < m.splits[i])) m.splits[i] = t; });
+  m.lastSplits = list(rm.lastSplits, D.GODS.length, 1e200);
+  m.lastGain = Math.min(1e200, nonNeg(rm.lastGain, 0));
 }
 
 // ---------- challenges ----------
@@ -454,11 +493,258 @@ function pay(s, c, n){
 }
 const creationByKey = key => D.CREATIONS.find(c=>c.key===key);
 
+// ---------- cultivation realms (per run; meta.bestRealm is kept) ----------
+// qi is every training and skill level of this run; minor stages pass by themselves, a realm needs a tribulation
+function realmQi(s){ return sumLv(s.train) + sumLv(s.skill); }
+const realmStart = r => r > 0 ? D.REALMS[r-1].qi : 0;
+function realmStage(s, qi){
+  const r = s.realm.r, lo = realmStart(r), span = D.REALMS[r].qi - lo;
+  if(qi === undefined) qi = realmQi(s);
+  return Math.max(1, Math.min(D.REALM_STAGES, 1 + Math.floor(D.REALM_STAGES * (qi - lo) / span)));
+}
+// share of the current minor stage done (1 once the realm's end is reached)
+function stageFrac(s, qi){
+  const r = s.realm.r, lo = realmStart(r), per = (D.REALMS[r].qi - lo) / D.REALM_STAGES;
+  if(qi === undefined) qi = realmQi(s);
+  return Math.max(0, Math.min(1, (qi - lo - (realmStage(s, qi) - 1) * per) / per));
+}
+const lastRealm = s => s.realm.r >= D.REALMS.length - 1;
+const atRealmPeak = s => !lastRealm(s) && realmQi(s) >= D.REALMS[s.realm.r].qi;
+const tribWait = s => Math.max(0, s.realm.cdAt - s.playTime);
+const canTribulate = s => atRealmPeak(s) && s.realm.trib === null && tribWait(s) <= 0;
+// the tribulation's verdict is a pure function of the hero's stats: total bolt damage against max HP
+function tribOutlook(s, d){
+  d = d || derive(s);
+  const r = s.realm.r, atk = lastRealm(s) ? 0 : D.REALMS[r].trib;
+  const bolt = blow(atk, d.def), dmg = bolt * D.TRIB_BOLTS;
+  return { bolt, dmg, hp: d.maxHp, ok: dmg < d.maxHp };
+}
+function startTribulation(s){
+  if(!canTribulate(s)) return false;
+  s.realm.trib = 0;
+  return true;
+}
+function stepRealm(s, dt, ev){
+  const R = s.realm;
+  if(R.trib !== null){
+    R.trib += dt;
+    if(R.trib >= D.TRIB_TIME){
+      R.trib = null;
+      if(tribOutlook(s).ok){
+        R.r++;
+        if(R.r > s.meta.bestRealm) s.meta.bestRealm = R.r;
+        R.st = realmStage(s);
+        s.hp = derive(s).maxHp;   // the breakthrough renews the body
+        if(ev) ev.push({ type:'realmUp', r:R.r });
+      } else {
+        R.cdAt = s.playTime + D.TRIB_COOLDOWN;
+        if(ev) ev.push({ type:'tribFail', r:R.r });
+      }
+    }
+  }
+  const st = realmStage(s);
+  if(st > R.st){ R.st = st; if(ev) ev.push({ type:'realmStage', r:R.r, st }); }
+  // reaching the realm's peak is worth one note (the stage number stays 9)
+  const peak = atRealmPeak(s) ? 1 : 0;
+  if(peak !== R.peak){ R.peak = peak; if(peak && ev) ev.push({ type:'realmPeak', r:R.r }); }
+}
+function sanitizeRealm(raw, d){
+  const x = raw.realm && typeof raw.realm === 'object' ? raw.realm : {};
+  const R = d.realm, qi = realmQi(d);
+  R.r = Math.min(D.REALMS.length - 1, Math.floor(nonNeg(x.r, 0)));
+  while(R.r > 0 && qi < realmStart(R.r)) R.r--;   // never above what this run's qi allows
+  R.st = realmStage(d, qi);
+  R.trib = isNum(x.trib) && !lastRealm(d) && qi >= D.REALMS[R.r].qi ? Math.min(Math.max(0, x.trib), D.TRIB_TIME) : null;
+  R.cdAt = Math.min(nonNeg(x.cdAt, 0), d.playTime + D.TRIB_COOLDOWN);
+  R.peak = atRealmPeak(d) ? 1 : 0;   // a loaded save already at a peak shows its button without a fresh note
+  const rm = raw.meta && typeof raw.meta === 'object' ? raw.meta : {};
+  d.meta.bestRealm = Math.max(R.r, Math.min(D.REALMS.length - 1, Math.floor(nonNeg(rm.bestRealm, 0))));
+}
+
+// ---------- sect missions (ภารกิจสำนัก) ----------
+// D.MISSION_SLOTS missions stay open. Each free slot takes the next hand-written chain mission (meta.mchain, so the
+// guide never repeats after rebirth) once it can be done, otherwise a mission generated from the current progress.
+// Missions are checked with achievements (every second, also offline) and pay out by themselves.
+const MISSION_TYPES = ['job','lv','kills','gods','made','clones','gen','mono','dp'];
+const MISSION_DELTA = { kills:1, made:1, dp:1 };   // counted from the moment the mission opened
+function missionValue(s, m){
+  switch(m.t){
+    case 'job': return s[m.kind].some((r, i) => i >= m.i && r.n > 0) ? 1 : 0;   // that row or a higher one
+    case 'lv': return s[m.kind][m.i].lv;
+    case 'kills': { let t = 0; for(let i=m.i || 0;i<s.mon.length;i++) t += s.mon[i].kills; return t; }   // monster i or stronger
+    case 'gods': return s.gods;
+    case 'made': return s.made[m.key] || 0;
+    case 'clones': return s.clones;
+    case 'gen': return s.gen;
+    case 'mono': return sumMono(s);
+    case 'dp': return s.dpTotal;
+  }
+  return 0;
+}
+function missionProgress(s, m){
+  const n = m.t === 'job' ? 1 : m.n;
+  return { v: Math.min(n, Math.max(0, missionValue(s, m) - (m.base || 0))), n };
+}
+// steady พลังเทวะ per second right now: the generator plus monsters fought without losses (unlike dpRate, clones
+// that are dying don't count, so a reward can't swing on which second a clone falls)
+function dpIncome(s, d){
+  let inc = genRate(s, d);
+  for(let i=0;i<s.mon.length;i++){
+    if(!s.mon[i].n) continue;
+    const rt = monsterRates(s, i, d);
+    if(rt.ratio >= 1) inc += rt.kills * D.MONSTERS[i].dp * d.m.dp;
+  }
+  return inc;
+}
+function missionReward(s, m, d){
+  if(m.r === 'buff') return { buff: D.MISSION_BUFF_SECS };
+  d = d || derive(s);
+  const mi = Math.max(0, bestSafeMonster(s, d));
+  return { dp: Math.max(dpIncome(s, d) * D.MISSION_DP_SECS, D.MISSION_DP_FLOOR_KILLS * D.MONSTERS[mi].dp * d.m.dp) };
+}
+function makeMission(s, spec, c){
+  const m = { id: ++s.mseq, t: spec.t, n: spec.t === 'job' ? 1 : spec.n, base: 0, r: spec.r === 'buff' ? 'buff' : 'dp' };
+  if(spec.kind !== undefined) m.kind = spec.kind;
+  if(spec.i !== undefined) m.i = spec.i;
+  if(spec.key !== undefined) m.key = spec.key;
+  if(c !== undefined) m.c = c;
+  if(MISSION_DELTA[m.t]) m.base = missionValue(s, m);
+  return m;
+}
+const sameMission = (a, b) => a.t === b.t && a.kind === b.kind && a.i === b.i && a.key === b.key;
+// 2 significant digits, so targets read like 150 or 2.4K
+function niceNum(x){
+  if(!(x > 10)) return Math.max(1, Math.round(x || 0));
+  const p = Math.pow(10, Math.floor(Math.log10(x)) - 1);
+  return Math.round(x / p) * p;
+}
+function chainReady(s, c){
+  if((c.req || 0) > s.gods) return false;
+  const ci = c.key ? D.CREATIONS.findIndex(x=>x.key===c.key) : -1;
+  switch(c.t){
+    case 'job': return rowUnlocked(s, c.kind, c.i);
+    case 'lv': return rowUnlocked(s, c.kind, c.i) || (c.i > 0 && rowUnlocked(s, c.kind, c.i-1));
+    case 'kills': return c.i === undefined || c.i < monstersUnlocked(s);
+    case 'made': return creationUnlocked(s, ci) || (ci > 1 && creationUnlocked(s, ci-1));
+    case 'gen': return genUnlocked(s);
+    case 'mono': return monumentsUnlocked(s);
+  }
+  return true;
+}
+function nextChainMission(s){
+  const k = s.meta.mchain, c = D.MISSION_CHAIN[k];
+  if(!c || !chainReady(s, c) || s.missions.some(m=>sameMission(m, c))) return null;
+  s.meta.mchain++;
+  return makeMission(s, c, k);
+}
+// templates, tried in turn from a rotating start so consecutive missions differ
+const MISSION_GEN = [
+  (s, d) => genLevel(s, d, 'train'),
+  (s, d) => {
+    const i = bestSafeMonster(s, d);
+    if(i < 0) return null;
+    const per = D.KILL_RATE * Math.min(d.clonePower / D.MONSTERS[i].power, D.KILL_RATIO_CAP);
+    const n = Math.max(s.mon[i].n, Math.floor(s.clones*0.3), 1);
+    return { t:'kills', i, n: niceNum(Math.max(10, per * n * D.MISSION_TARGET_SECS)), r:'dp' };
+  },
+  (s, d) => genLevel(s, d, 'skill'),
+  (s, d) => {
+    if(!createUnlocked(s)) return null;
+    const inc = dpIncome(s, d), keys = [];
+    if(s.create.target !== 'clone') keys.push(s.create.target);
+    for(let i=D.CREATIONS.length-1;i>=1;i--) if(creationUnlocked(s, i)) keys.push(D.CREATIONS[i].key);
+    for(const key of keys){
+      const tree = recipeTree(key);
+      let n = Math.floor(D.MISSION_TARGET_SECS * d.m.create / tree.time);
+      if(tree.dp) n = Math.min(n, Math.floor((s.dp + inc * D.MISSION_TARGET_SECS) / tree.dp));
+      n = Math.min(n, 50);
+      if(n >= 1) return { t:'made', key, n: n > 10 ? niceNum(n) : n, r:'dp' };
+    }
+    return null;
+  },
+  (s, d) => { const inc = dpIncome(s, d); return inc > 0 ? { t:'dp', n: niceNum(inc * D.MISSION_TARGET_SECS), r:'dp' } : null; },
+  (s, d) => s.gods < D.GODS.length && neededFactor(s, d, D.GODS[s.gods]) <= 2 ? { t:'gods', n: s.gods + 1, r:'dp' } : null
+];
+// the top open row of `kind`: up to Lv.10 (opens the next row) or about MISSION_TARGET_SECS of training
+function genLevel(s, d, kind){
+  if(kind === 'skill' && !skillsUnlocked(s)) return null;
+  const i = topRow(s, kind);
+  if(i < 0) return null;
+  const r = s[kind][i], def = (kind === 'train' ? D.TRAININGS : D.SKILLS)[i];
+  const budget = Math.max(r.n, Math.floor(s.clones*0.4), 1) * d.m.speed * D.MISSION_TARGET_SECS + r.prog;
+  let L = r.lv, used = 0;
+  while(L < r.lv + 500){ used += levelTime(def, L); if(used > budget) break; L++; }
+  let n = Math.max(r.lv + 2, L);
+  if(r.lv < D.ROW_UNLOCK_LEVEL && i + 1 < s[kind].length) n = Math.min(n, D.ROW_UNLOCK_LEVEL);
+  return { t:'lv', kind, i, n: n > 20 ? Math.max(r.lv + 2, niceNum(n)) : n, r:'buff' };
+}
+function genMission(s){
+  const d = derive(s), T = MISSION_GEN.length;
+  for(let k=0;k<T;k++){
+    const spec = MISSION_GEN[(s.mseq + k) % T](s, d);
+    if(spec && !s.missions.some(m=>sameMission(m, spec))) return makeMission(s, spec);
+  }
+  return null;
+}
+function nextMission(s){ return nextChainMission(s) || genMission(s); }
+function checkMissions(s, ev){
+  const ms = s.missions;
+  let d = null;
+  for(let j=0;j<ms.length;j++){
+    const m = ms[j], p = missionProgress(s, m);
+    if(p.v < p.n) continue;
+    const rw = missionReward(s, m, d || (d = derive(s)));
+    if(rw.dp){
+      s.dp += rw.dp; s.dpTotal += rw.dp; s.meta.dpLife += rw.dp; d = null;
+      for(const o of ms) if(o.t === 'dp') o.base += rw.dp;   // rewards don't count as earned
+    }
+    if(rw.buff){ s.buff = Math.min(D.MISSION_BUFF_MAX, s.buff + rw.buff); d = null; }
+    if(ev) ev.push({ type:'mission', m, reward:rw });
+    const next = nextMission(s);
+    if(next) ms[j] = next; else { ms.splice(j, 1); j--; }
+  }
+  while(ms.length < D.MISSION_SLOTS){ const m = nextMission(s); if(!m) break; ms.push(m); }
+}
+// chain missions still open when a run ends come back in the next run
+function requeueChain(s){
+  for(const m of s.missions) if(m.c !== undefined) s.meta.mchain = Math.min(s.meta.mchain, m.c);
+}
+function sanitizeMissions(d, raw, rm){
+  const CH = D.MISSION_CHAIN.length, kinds = ['train','skill','mon'];
+  d.meta.mchain = isNum(rm.mchain) ? Math.min(CH, Math.floor(Math.max(0, rm.mchain))) : (d.meta.bestGods >= 2 || d.meta.rebirths ? CH : 0);
+  d.buff = Math.min(D.MISSION_BUFF_MAX, nonNeg(raw.buff, 0));
+  d.mseq = Math.floor(capped(raw.mseq, 1e12));
+  if(!Array.isArray(raw.missions)) return;
+  const ok = x => {
+    if(!x || typeof x !== 'object' || !MISSION_TYPES.includes(x.t)) return null;
+    const m = { id: Math.floor(capped(x.id, 1e12)), t:x.t, n: Math.max(1, Math.floor(capped(x.n, 1e300))), base: Math.min(1e300, nonNeg(x.base, 0)), r: x.r === 'buff' ? 'buff' : 'dp' };
+    if(m.t === 'job' || m.t === 'lv'){
+      if(!(m.t === 'job' ? kinds : kinds.slice(0, 2)).includes(x.kind) || !Number.isInteger(x.i) || x.i < 0 || x.i >= d[x.kind].length) return null;
+      m.kind = x.kind; m.i = x.i;
+      if(m.t === 'job') m.n = 1;
+    }
+    if(m.t === 'kills' && x.i !== undefined){
+      if(!Number.isInteger(x.i) || x.i < 0 || x.i >= D.MONSTERS.length) return null;
+      m.i = x.i;
+    }
+    if(m.t === 'made'){ if(!D.CREATIONS.some(c=>c.key===x.key)) return null; m.key = x.key; }
+    if(Number.isInteger(x.c) && x.c >= 0 && x.c < CH) m.c = x.c;
+    return m;
+  };
+  d.missions = raw.missions.map(ok).filter(Boolean).slice(0, D.MISSION_SLOTS);
+  for(const m of d.missions) d.mseq = Math.max(d.mseq, m.id);
+  const ids = new Set();
+  for(const m of d.missions){ if(!m.id || ids.has(m.id)) m.id = ++d.mseq; ids.add(m.id); }   // ids tell the UI which slot is new
+}
+
 // ---------- simulation ----------
 // ev collects things worth telling the player: {type, ...}
 function step(s, dt, ev){
   if(!(dt > 0)) return;
   dt = Math.min(dt, MAX_OFFLINE_SEC);
+  // a fortune boost that runs out inside this step: split the step there, so any step size gives the same result
+  if(s.boostT > 0 && s.boostT < dt){ const a = s.boostT; step(s, a, ev); step(s, dt - a, ev); return; }
+  if(s.buff > 0 && s.buff < dt){ const a = s.buff; step(s, a, ev); step(s, dt - a, ev); return; }   // same for a mission buff
   s.playTime += dt;
   let d = derive(s);
 
@@ -518,9 +804,12 @@ function step(s, dt, ev){
       }
     }
   }
+  stepRealm(s, dt, ev);
   stepDungeon(s, dt, ev);
+  if(s.boostT > 0) s.boostT = Math.max(0, s.boostT - dt);
+  if(s.buff > 0) s.buff = Math.max(0, s.buff - dt);
   s.achT = (s.achT || 0) + dt;
-  if(s.achT >= 1){ s.achT = 0; checkAchievements(s, ev); checkPets(s, ev); applyPlan(s); }
+  if(s.achT >= 1){ s.achT = 0; checkAchievements(s, ev); checkPets(s, ev); applyPlan(s); checkMissions(s, ev); }
 }
 
 // what to make next for `key`: the item itself if affordable, otherwise the first missing ingredient (recursively);
@@ -649,7 +938,8 @@ const fightTarget = (s, f) => f.kind === 'ub' ? ubStats(s, f.i) : D.GODS[s.gods]
 function winGod(s, ev){
   s.gods++;
   if(s.gods > s.meta.bestGods) s.meta.bestGods = s.gods;
-  if(ev) ev.push({ type:'godWin', i:s.gods-1 });
+  const sp = recordSplit(s, s.gods-1);
+  if(ev) ev.push({ type:'godWin', i:s.gods-1, t:sp.t, best:sp.prev });
   const c = s.challenge;
   if(c && s.gods - 1 >= chalGoal(s, c)){
     s.meta.chal[c] = chalDone(s, c) + 1;
@@ -676,6 +966,61 @@ function advance(s, sec, ev){
   const CHUNK = 1;
   while(sec > 0){ const dt = Math.min(CHUNK, sec); step(s, dt, ev); sec -= dt; }
 }
+
+// ---------- fortune: spirit treasures the player taps (the UI decides when one appears) ----------
+const fortuneUnlocked = s => s.meta.bestGods >= D.FORTUNE.unlockGods;
+const fortuneItem = kind => D.FORTUNE.items.find(x=>x.kind===kind) || null;
+// expected Divinity per second right now: monster kills plus the generator
+function dpRate(s, d){
+  d = d || derive(s);
+  let r = genRate(s, d);
+  for(let i=0;i<s.mon.length;i++) if(s.mon[i].n) r += monsterRates(s, i, d).kills * D.MONSTERS[i].dp * d.m.dp;
+  return r;
+}
+// rewards that would help right now; never empty
+function fortuneKinds(s){
+  const out = [];
+  if(createUnlocked(s) || genUnlocked(s)) out.push('dp');   // before that, Divinity has no use yet
+  if((s.train.some(r=>r.n) || s.skill.some(r=>r.n)) && s.boostT + D.FORTUNE.boostSecs <= D.FORTUNE.boostCap) out.push('speed');
+  if(createUnlocked(s) && nextCreation(s, derive(s))) out.push('create');
+  return out.length ? out : ['speed'];
+}
+// pick the treasure that appears, from a random number in [0,1)
+function rollFortune(s, r){
+  const k = fortuneKinds(s);
+  r = isNum(r) ? r : 0;
+  return k[Math.min(k.length - 1, Math.max(0, Math.floor(r * k.length)))];
+}
+// reward multiplier from treasures caught in a row
+const fortuneMult = s => 1 + D.FORTUNE.streakBonus * Math.min(s.meta.fortune.streak, D.FORTUNE.streakMax);
+// tap a treasure: pays its reward (or, if that stopped being useful since it appeared, another one) and extends the streak.
+// returns what was paid: { kind, mult, streak, dp | secs, made }, or null for an unknown kind
+function claimFortune(s, kind, ev){
+  if(!fortuneItem(kind)) return null;
+  const F = D.FORTUNE, f = s.meta.fortune, kinds = fortuneKinds(s);
+  if(!kinds.includes(kind)) kind = kinds[0];
+  const mult = fortuneMult(s), d = derive(s), out = { kind, mult };
+  if(kind === 'dp'){
+    const g = Math.max(F.dpMin, dpRate(s, d) * F.dpSecs) * mult;
+    s.dp += g; s.dpTotal += g; s.meta.dpLife += g;
+    out.dp = g;
+  } else if(kind === 'speed'){
+    out.secs = Math.max(0, Math.min(F.boostCap, s.boostT + F.boostSecs * mult) - s.boostT);
+    s.boostT += out.secs;
+  } else {
+    let before = 0; for(const k in s.made) before += s.made[k];
+    out.secs = F.createSecs * mult;
+    stepCreate(s, out.secs, d, ev);
+    let after = 0; for(const k in s.made) after += s.made[k];
+    out.made = after - before;
+  }
+  f.streak++; f.caught++;
+  if(f.streak > f.best) f.best = f.streak;
+  out.streak = f.streak;
+  return out;
+}
+// a treasure faded before it was tapped: the streak starts over
+function missFortune(s){ s.meta.fortune.streak = 0; }
 
 // ---------- player actions ----------
 function assign(s, kind, i, delta){
@@ -722,6 +1067,7 @@ function sanitize(raw){
   if(!raw || typeof raw !== 'object' || raw.v !== SAVE_VERSION) return d;
   ['dp','dpTotal','battleRaw','clonesLost','playTime','hp'].forEach(k=>{ d[k] = Math.min(1e200, nonNeg(raw[k], d[k])); });   // far above real play, low enough that multipliers stay finite
   d.strikeAt = Math.min(nonNeg(raw.strikeAt, 0), d.playTime + D.STRIKE_CD);
+  d.boostT = Math.min(nonNeg(raw.boostT, 0), D.FORTUNE.boostCap);
   d.clones = Math.floor(capped(raw.clones, 1e9));
   d.gods = Math.min(D.GODS.length, Math.floor(nonNeg(raw.gods, 0)));
   d.lastSave = isNum(raw.lastSave) && raw.lastSave > 0 && raw.lastSave <= Date.now() ? raw.lastSave : Date.now();
@@ -784,7 +1130,12 @@ function sanitize(raw){
   if(rm.might && rm.might.autoFight) m.mp += D.MIGHT_AUTOFIGHT_REFUND;   // that perk became a free toggle: give its cost back once
   m.tut = isNum(rm.tut) ? Math.floor(Math.max(0, rm.tut)) : (m.bestGods >= 2 || m.rebirths ? 999 : 0);
   m.createPref = typeof rm.createPref === 'string' && rm.createPref !== 'clone' && D.CREATIONS.some(c=>c.key===rm.createPref) ? rm.createPref : null;
+  const rf = rm.fortune && typeof rm.fortune === 'object' ? rm.fortune : {};
+  ['streak','best','caught'].forEach(k=>{ m.fortune[k] = Math.floor(capped(rf[k], 1e9)); });
+  m.fortune.best = Math.max(m.fortune.best, m.fortune.streak);
+  m.fortune.caught = Math.max(m.fortune.caught, m.fortune.best);
   if(rm.seen && typeof rm.seen === 'object') for(const k in rm.seen) if(rm.seen[k] === 1) m.seen[k] = 1;
+  sanitizeSplits(raw, rm, d);
   const r = rm.run;
   if(r && typeof r === 'object' && Number.isInteger(r.i) && r.i >= 0 && r.i < D.DUNGEONS.length && Number.isInteger(r.depth) && r.depth >= 1 && r.depth <= D.MAX_DEPTH)
     m.run = { i:r.i, depth:r.depth, t: Math.min(nonNeg(r.t, 0), D.DUNGEONS[r.i].time) };
@@ -801,7 +1152,9 @@ function sanitize(raw){
   if(d.create.cur) d.create.prog = Math.min(d.create.prog, creationByKey(d.create.cur).time);
   over = assigned(d) - d.clones;
   for(const kind of JOB_KINDS){ for(const r of d[kind]){ if(over <= 0) break; const k = Math.min(r.n, over); r.n -= k; over -= k; } }
-  d.hp = Math.min(d.hp, dd.maxHp);
+  sanitizeRealm(raw, d);
+  d.hp = Math.min(d.hp, derive(d).maxHp);
+  sanitizeMissions(d, raw, rm);
   return d;
 }
 
@@ -817,6 +1170,9 @@ root.GK = {
   chalDone, chalGoal, startChallenge, abandonChallenge, ubUnlocked, ubOpen, ubLevel, ubStats, startUbFight, fightTarget, outlook,
   mightUnlocked, mightLv, mightCost, buyMight,
   planUnlocked, autoFightUnlocked, topRow, bestSafeMonster, bestRowFor, moveToBest, applyPlan, setPlan, togglePlan, neededFactor,
-  strike, strikeWait, step, advance, assign, unassignKind, setCreateTarget, startFight, flee
+  fortuneUnlocked, fortuneItem, dpRate, fortuneKinds, rollFortune, fortuneMult, claimFortune, missFortune,
+  realmQi, realmStage, stageFrac, atRealmPeak, tribWait, canTribulate, tribOutlook, startTribulation,
+  strike, strikeWait, step, advance, assign, unassignKind, setCreateTarget, startFight, flee,
+  missionValue, missionProgress, missionReward, dpIncome, checkMissions
 };
 })(typeof window !== 'undefined' ? window : globalThis);
