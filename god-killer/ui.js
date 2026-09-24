@@ -890,7 +890,7 @@ function render(full){
   else if(activeTab === 'rebirth') renderRebirth(d, full);
   else if(activeTab === 'pets') renderPets(d, full);
   else if(activeTab === 'log'){ if(logDirty) renderLog(); if(full) setText($('wipeBtn'), isArmed('wipe') ? 'แตะอีกครั้งเพื่อลบทุกอย่าง' : 'เริ่มใหม่ทั้งหมด'); }
-  if(full){ renderTabs(d); renderTutor(); }
+  if(full){ renderTabs(d); renderTutor(); renderMissions(); }
 }
 
 // ---------- engine events ----------
@@ -953,7 +953,7 @@ function handleEvents(ev, quiet){
     } else if(e.type === 'godLose'){
       addLog('พ่ายแพ้ต่อ ' + D.GODS[e.i].name + ' — ฝึกให้แข็งแกร่งขึ้นแล้วกลับมาใหม่');
       if(!quiet){ toast('พ่ายแพ้... ต้องแข็งแกร่งกว่านี้', 2); banner('พ่ายแพ้...', true); sfx('lose'); }
-    }
+    } else if(e.type === 'mission') onMissionDone(e, quiet);
   }
   ev.length = 0;
   if(s.clonesLost > lastLost){
@@ -1639,6 +1639,97 @@ function realmEvent(e, quiet){
   return true;
 }
 
+// ---------- sect missions (ภารกิจสำนัก) ----------
+// three short goals, always in view: a collapsible strip under the HUD on phones, open in the sidebar on wide screens.
+// The engine tracks them (offline too) and pays the reward itself; this block only shows them and reports completions.
+const MIS_KEY = 'godKillerMissions';   // per-device open/closed choice, not part of the save
+const MIS_TAB = { kills:'mon', gods:'gods', made:'create', clones:'create', gen:'temple', mono:'temple', dp:'mon' };
+const misRows = [], misIds = [];
+let misQuietN = 0, misQuietT = 0;
+function missionText(m){
+  const c = m.c !== undefined && D.MISSION_CHAIN[m.c];
+  if(c && c.text) return c.text;
+  const n = fmt(m.n);
+  switch(m.t){
+    case 'job': return (m.kind === 'mon' ? 'ส่งร่างเงาไปปราบ' : 'ส่งร่างเงาไปฝึก') + JOB_DEFS[m.kind][m.i].name;
+    case 'lv': return JOB_DEFS[m.kind][m.i].name + 'ถึง Lv.' + m.n;
+    case 'kills': return m.i === undefined ? 'ปราบอสูร ' + n + ' ตัว' : 'ปราบ' + D.MONSTERS[m.i].name + 'ขึ้นไป ' + n + ' ตัว';
+    case 'gods': return D.GODS[m.n-1] ? 'สังหาร' + D.GODS[m.n-1].name : 'สังหารเทพ ' + m.n + ' องค์';
+    case 'made': return 'สร้าง' + G.creationByKey(m.key).name + ' ' + n + ' ชิ้น';
+    case 'clones': return 'รวบรวมร่างเงาให้ครบ ' + n + ' ร่าง';
+    case 'gen': return 'ยกระดับเครื่องผลิตพลังเทวะถึง Lv.' + m.n;
+    case 'mono': return 'สร้างอนุสรณ์รวม ' + n + ' เลเวล';
+    case 'dp': return 'สะสมพลังเทวะอีก ' + n;
+  }
+  return '';
+}
+function missionRewardText(rw){ return rw.buff ? 'ฝึกเร็วขึ้น ×' + D.MISSION_BUFF + ' นาน ' + fmtTime(rw.buff) : '+' + fmt(rw.dp) + ' พลังเทวะ'; }
+function setMisOpen(open){
+  setClass($('missions'), 'closed', !open);
+  $('misHead').setAttribute('aria-expanded', String(open || !$('misPeek').offsetParent));
+}
+function initMissions(){
+  const list = $('misList');
+  for(let j=0;j<D.MISSION_SLOTS;j++){
+    const b = document.createElement('button');
+    b.className = 'misRow'; b.dataset.slot = j;
+    b.innerHTML = '<i class="misRw"></i><span class="misText"></span><b class="misNum"></b><span class="bar thin"><i></i></span>';
+    list.appendChild(b);
+    misRows.push({ el:b, rw:b.querySelector('.misRw'), text:b.querySelector('.misText'), num:b.querySelector('.misNum'), bar:b.querySelector('.bar>i') });
+  }
+  // a mission is also a shortcut to the tab where it is done
+  list.addEventListener('click', e=>{
+    const b = e.target.closest('.misRow'), m = b && s.missions[+b.dataset.slot];
+    if(m) selectTab(MIS_TAB[m.t] || m.kind);
+  });
+  let open = !(window.matchMedia && matchMedia('(max-width:599px)').matches);   // phones start closed to keep the screen for play
+  try{ const v = localStorage.getItem(MIS_KEY); if(v) open = v === 'open'; }catch(e){}
+  setMisOpen(open);
+  $('misHead').addEventListener('click', ()=>{
+    if(!$('misPeek').offsetParent) return;   // the split layout always shows the list
+    const next = $('missions').classList.contains('closed');
+    setMisOpen(next);
+    try{ localStorage.setItem(MIS_KEY, next ? 'open' : 'closed'); }catch(e){}
+  });
+}
+function renderMissions(){
+  const ms = s.missions;
+  let peek = '', best = -1;
+  misRows.forEach((r,j)=>{
+    const m = ms[j];
+    setShown(r.el, !!m, 'grid');
+    if(!m) return;
+    const p = G.missionProgress(s, m), f = p.v / p.n, text = missionText(m);
+    const num = m.t === 'job' ? '' : fmt(p.v) + '/' + fmt(p.n);
+    if(misIds[j] !== m.id){
+      // the next mission slides into the slot the finished one left
+      if(misIds[j] !== undefined && !motionOff()) replayAnim(r.el, 'misIn');
+      misIds[j] = m.id;
+      setClass(r.rw, 'buff', m.r === 'buff');
+      r.el.title = 'รางวัล: ' + (m.r === 'buff' ? 'ความเร็วฝึก ×' + D.MISSION_BUFF + ' นาน ' + fmtTime(D.MISSION_BUFF_SECS) : 'พลังเทวะเท่ารายได้ราว ' + D.MISSION_DP_SECS + ' วินาที');
+    }
+    setText(r.text, text);
+    setText(r.num, num);
+    setBar(r.bar, f);
+    if(f > best){ best = f; peek = text + (num ? ' · ' + num : ''); }
+  });
+  const buff = $('misBuff');
+  setShown(buff, s.buff > 0, 'inline-block');
+  if(s.buff > 0) setText(buff, 'ฝึก ×' + D.MISSION_BUFF + ' ' + Math.ceil(s.buff) + ' วิ');
+  setText($('misPeek'), peek);
+}
+function onMissionDone(e, quiet){
+  if(quiet){   // offline catch-up or a long background gap: one log line instead of a flood
+    misQuietN++;
+    if(!misQuietT) misQuietT = setTimeout(()=>{ addLog('ภารกิจสำนักสำเร็จ ' + misQuietN + ' ภารกิจระหว่างที่ไม่อยู่ รับรางวัลแล้ว'); misQuietN = 0; misQuietT = 0; }, 0);
+    return;
+  }
+  const t = missionText(e.m), rw = missionRewardText(e.reward);
+  addLog('📜 ภารกิจสำนักสำเร็จ: ' + t + ' · ' + rw);
+  toast('📜 ภารกิจสำเร็จ: ' + t + ' · ' + rw);
+  sfx('ping');
+}
+
 // ---------- main loop ----------
 // the game advances every frame (wall-clock based); a 1s timer takes over when frames stop (background tab)
 const ev = [];
@@ -1903,6 +1994,7 @@ function boot(saved){
   $('tutorBtn').addEventListener('click', ()=>{ s.meta.tut = 999; save(); render(true); });
   $('tabTipBtn').addEventListener('click', ()=>{ s.meta.seen[activeTab] = 1; save(); render(true); });
   initSaveTools();
+  initMissions();
   document.querySelectorAll('svg.ic').forEach(i=>i.setAttribute('aria-hidden', 'true'));   // decorative icons next to text
   $('dgStop').addEventListener('click', ()=>{ G.stopDungeon(s); addLog('หยุดสำรวจแดนลับ'); render(true); });
   $('dgAuto').addEventListener('change', e=>{ s.meta.dgAuto = e.target.checked; render(true); });

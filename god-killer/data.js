@@ -245,6 +245,46 @@ const ACHIEVEMENTS = [
   { key:'rl7',    name:'บรรลุเซียนสวรรค์',    type:'realm',    n:7 }
 ];
 
+// ---------- sect missions (ภารกิจสำนัก) ----------
+// MISSION_SLOTS missions are always open. The chain below runs first (its position lives in meta, so it never repeats
+// after rebirth) and doubles as a guide; after it, missions are generated from the current progress (engine.js).
+// t: 'job' = clones working in row i of kind or higher · 'lv' = row i of kind reaches Lv.n · 'kills' = n more kills (i: of that
+//    monster or stronger, omitted = any) · 'gods' = n gods slain this run · 'made' = n more of item key · 'clones' = n clones
+//    · 'gen' = generator Lv.n · 'mono' = n monument levels · 'dp' = earn n more พลังเทวะ
+// r: reward, 'dp' = MISSION_DP_SECS of current พลังเทวะ income, 'buff' = training speed ×MISSION_BUFF for MISSION_BUFF_SECS
+// req: the chain waits (generated missions fill in) until this many gods have fallen in the run
+const MISSION_SLOTS = 3;
+const MISSION_DP_SECS = 45, MISSION_DP_FLOOR_KILLS = 10;
+const MISSION_BUFF = 1.25, MISSION_BUFF_SECS = 20, MISSION_BUFF_MAX = 120;
+const MISSION_TARGET_SECS = 150;   // generated missions aim at about this much play at the current pace
+const MISSION_CHAIN = [
+  { t:'job',    kind:'train', i:0, r:'dp',   text:`ส่งร่างเงาไป${TRAININGS[0].name}` },
+  { t:'job',    kind:'mon',   i:0, r:'dp',   text:`ส่งร่างเงาไปปราบ${MONSTERS[0].name}` },
+  { t:'lv',     kind:'train', i:0, n:10, r:'buff' },
+  { t:'kills',  n:20, r:'dp' },
+  { t:'job',    kind:'train', i:1, r:'dp',   text:`ย้ายร่างเงาไป${TRAININGS[1].name}` },
+  { t:'clones', n:10, r:'dp',   text:'รวบรวมร่างเงาให้ครบ 10 ร่าง' },
+  { t:'lv',     kind:'train', i:1, n:10, r:'buff' },
+  { t:'kills',  n:100, r:'dp' },
+  { t:'gods',   n:1, r:'dp',   text:`สังหารเทพองค์แรก ${GODS[0].name}` },
+  { t:'job',    kind:'skill', i:0, r:'buff', req:1, text:'เรียนวิชาเวทขั้นแรก' },
+  { t:'clones', n:20, r:'dp', req:1, text:'รวบรวมร่างเงาให้ครบ 20 ร่าง' },
+  { t:'lv',     kind:'skill', i:0, n:10, r:'buff', req:1 },
+  { t:'lv',     kind:'train', i:2, n:10, r:'buff' },
+  { t:'kills',  i:3, n:50, r:'dp', req:1 },
+  { t:'gods',   n:2, r:'dp',   text:`สังหาร${GODS[1].name} เพื่อปลดล็อกการสร้าง` },
+  { t:'made',   key:'light', n:3, r:'buff', req:2 },
+  { t:'made',   key:'stone', n:2, r:'dp', req:2 },
+  { t:'lv',     kind:'skill', i:2, n:10, r:'buff', req:2 },
+  { t:'gods',   n:3, r:'dp' },
+  { t:'gen',    n:1, r:'dp', req:3, text:'สร้างเครื่องผลิตพลังเทวะในเทวาลัย' },
+  { t:'made',   key:'soil', n:2, r:'buff', req:3 },
+  { t:'gods',   n:4, r:'dp' },
+  { t:'mono',   n:1, r:'dp', req:4, text:'สร้างอนุสรณ์ชิ้นแรกในเทวาลัย' },
+  { t:'gods',   n:5, r:'buff' },
+  { t:'gods',   n:6, r:'dp',   text:`สังหาร${GODS[5].name} เพื่อปลดล็อกการจุติ` }
+];
+
 root.GKDATA = {
   LEVEL_TIME_GROWTH, ROW_UNLOCK_LEVEL, TRAININGS, SKILLS,
   KILL_RATE, KILL_RATIO_CAP, DEATH_RATE, MONSTERS,
@@ -254,6 +294,7 @@ root.GKDATA = {
   DUNGEONS, DEPTH_GROWTH, MAX_DEPTH, DUNGEON_UNLOCK_DEPTH, MATERIALS, GEAR, FORGE_COST, FORGE_GROWTH, FORGE_MIN_CHANCE,
   CHALLENGES, CHAL_MAX, CHAL_FIRST_GOAL, FEW_CLONES, ULTIMATES, UB_GROWTH, UB_UNLOCK_LV, MIGHT,
   PLAN_PRESETS, PLAN_UNLOCK_GODS, AUTOFIGHT_UNLOCK_REBIRTHS, MIGHT_AUTOFIGHT_REFUND, FORTUNE,
-  REALMS, REALM_STAGES, REALM_STAT, TRIB_TIME, TRIB_BOLTS, TRIB_COOLDOWN
+  REALMS, REALM_STAGES, REALM_STAT, TRIB_TIME, TRIB_BOLTS, TRIB_COOLDOWN,
+  MISSION_SLOTS, MISSION_DP_SECS, MISSION_DP_FLOOR_KILLS, MISSION_BUFF, MISSION_BUFF_SECS, MISSION_BUFF_MAX, MISSION_TARGET_SECS, MISSION_CHAIN
 };
 })(typeof window !== 'undefined' ? window : globalThis);

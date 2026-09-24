@@ -103,6 +103,23 @@ function invariants(s, where){
     if(s.fight.kind === 'god' && s.gods >= D.GODS.length) bad.push('god fight with no god left');
     if(s.fight.kind === 'ub' && !G.ubOpen(s, s.fight.i)) bad.push('ub fight not open');
   }
+  // sect missions
+  if(!Array.isArray(s.missions) || s.missions.length > D.MISSION_SLOTS) bad.push('missions ' + JSON.stringify(s.missions));
+  else {
+    const ids = new Set();
+    for(const x of s.missions){
+      if(!x || !['job','lv','kills','gods','made','clones','gen','mono','dp'].includes(x.t)) { bad.push('mission type ' + JSON.stringify(x)); continue; }
+      if(!(x.n >= 1) || !isInt(x.id) || x.id > s.mseq || ids.has(x.id)) bad.push('mission n/id ' + JSON.stringify(x));
+      ids.add(x.id);
+      if((x.t === 'job' || x.t === 'lv') && !(s[x.kind] && isInt(x.i) && x.i < s[x.kind].length)) bad.push('mission row ' + JSON.stringify(x));
+      if(x.t === 'made' && !G.creationByKey(x.key)) bad.push('mission item ' + x.key);
+      if(x.c !== undefined && !(isInt(x.c) && x.c < D.MISSION_CHAIN.length)) bad.push('mission chain ' + x.c);
+      const p = G.missionProgress(s, x);
+      if(!(p.v >= 0 && p.v <= p.n)) bad.push('mission progress ' + JSON.stringify(p));
+    }
+  }
+  if(!isInt(m.mchain) || m.mchain > D.MISSION_CHAIN.length) bad.push('mchain ' + m.mchain);
+  if(!(s.buff <= D.MISSION_BUFF_MAX)) bad.push('buff ' + s.buff);
   if(bad.length) fail(where + ': ' + bad.slice(0, 8).join('; '), JSON.stringify(s).slice(0, 1500));
 }
 
@@ -239,7 +256,7 @@ function compareRuns(name, make, secs, dt, prep){
   const cmp = [['gods', a.gods, b.gods, 0], ['dpTotal', a.dpTotal, b.dpTotal, 0.05],
     ['phys', G.derive(a).phys, G.derive(b).phys, 0.05], ['myst', G.derive(a).myst, G.derive(b).myst, 0.05],
     ['ub0', a.meta.ub[0] || 0, b.meta.ub[0] || 0, 0], ['lastSplit', a.splits[a.splits.length - 1] || 0, b.splits[b.splits.length - 1] || 0, 0], ['realm', a.realm.r + '/' + a.realm.st, b.realm.r + '/' + b.realm.st],
-    ['bestRealm', a.meta.bestRealm, b.meta.bestRealm, 0], ['clonesLost', a.clonesLost, b.clonesLost, 0.1],
+    ['bestRealm', a.meta.bestRealm, b.meta.bestRealm, 0], ['clonesLost', a.clonesLost, b.clonesLost, 0.1], ['mchain', a.meta.mchain, b.meta.mchain, 0],
     ['dgBest', JSON.stringify(a.meta.dgBest), JSON.stringify(b.meta.dgBest)],
     ['petLv', D.PETS.map(p => a.meta.pets[p.key] ? a.meta.pets[p.key].lv : 0).join(), D.PETS.map(p => b.meta.pets[p.key] ? b.meta.pets[p.key].lv : 0).join()]];
   for(const [k, x, y, tol] of cmp){
@@ -350,8 +367,9 @@ console.log('C sanitize ok', ((Date.now() - T0) / 1000).toFixed(1) + 's');
     if(r.kind !== 'dp' || !near(r.dp, want) || !near(s.dp - dp0, want) || !near(s.meta.dpLife - life0, want)) fail('dp reward ' + JSON.stringify(r) + ' want ' + want);
     // measured income over 60s agrees with dpRate within 15% (kills are whole numbers)
     const t = midSave(); t.meta.run = null; t.gen = 0; t.mon.forEach(x => { x.n = 0; }); t.mon[0].n = 20; t.clones = Math.max(t.clones, G.assigned(t)); t.create.autoClone = false; t.create.target = 'clone';
-    const rate = G.dpRate(t), d0 = t.dpTotal; G.advance(t, 60, []);
-    if(!(rate > 0) || Math.abs((t.dpTotal - d0) / 60 - rate) > 0.15 * rate) fail('dpRate ' + rate + ' vs measured ' + (t.dpTotal - d0) / 60); }
+    const rate = G.dpRate(t), d0 = t.dpTotal, tev = []; G.advance(t, 60, tev);
+    const paid = tev.reduce((a, e) => a + (e.type === 'mission' && e.reward.dp || 0), 0);   // sect-mission rewards aren't income
+    if(!(rate > 0) || Math.abs((t.dpTotal - d0 - paid) / 60 - rate) > 0.15 * rate) fail('dpRate ' + rate + ' vs measured ' + (t.dpTotal - d0 - paid) / 60); }
   // 'speed' doubles training for boostSecs, stacks up to boostCap, and runs out
   { const a = midSave(); a.meta.run = null; a.fight = null; a.train.forEach(r => { r.n = 0; }); a.skill.forEach(r => { r.n = 0; }); a.mon.forEach(r => { r.n = 0; });
     a.train[0].n = 10; a.train[0].lv = 0; a.train[0].prog = 0; a.create.autoClone = false; a.create.target = 'clone';
@@ -365,6 +383,7 @@ console.log('C sanitize ok', ((Date.now() - T0) / 1000).toFixed(1) + 's');
     for(let i = 0; i < 10; i++) G.claimFortune(b, 'speed', []);
     if(b.boostT > F.boostCap) fail('boost over cap ' + b.boostT);
     G.advance(b, F.boostCap + 5, []);
+    a.buff = b.buff = 0;   // a sect-mission speed buff may have been paid meanwhile
     if(b.boostT !== 0 || !near(G.derive(b).m.speed, G.derive(a).m.speed)) fail('boost did not end'); }
   // 'create' finishes createSecs of creation work
   { const s = lateSave(); s.meta.fortune.streak = 0;
@@ -440,5 +459,65 @@ function bot(s, t){
   invariants(s, 'long run end');
   if(s.meta.mpTotal <= 60) fail('long run: no ultimate being was ever beaten');
   console.log('D long run ok: gods', s.gods, 'rebirths', s.meta.rebirths, 'ub', JSON.stringify(s.meta.ub), 'chal', JSON.stringify(s.meta.chal), ((Date.now() - T0) / 1000).toFixed(1) + 's');
+}
+// ---------- F. sect missions ----------
+{
+  seed(41);
+  // a fresh save played by the bot: the chain advances in order, every completion pays out, slots stay full
+  const s = G.newState(), ev = [];
+  let done = 0, dpPaid = 0, buffs = 0, lastC = -1;
+  for(let t = 0; t < 20 * 60; t++){
+    G.step(s, 1, ev);
+    if(t % 3 === 0) bot(s, t);
+    for(const e of ev){
+      if(e.type !== 'mission') continue;
+      done++;
+      if(!(e.reward.dp > 0 || e.reward.buff > 0)) fail('mission paid nothing: ' + JSON.stringify(e));
+      if(e.reward.dp) dpPaid += e.reward.dp; else buffs++;
+      if(s.missions.some(m => m.id === e.m.id)) fail('completed mission still open');
+      if(e.m.c !== undefined){ if(e.m.c < lastC - D.MISSION_SLOTS) fail('chain went backwards'); lastC = Math.max(lastC, e.m.c); }
+    }
+    ev.length = 0;
+    if(t > 5 && s.missions.length !== D.MISSION_SLOTS) fail('mission slots not full at t=' + t + ': ' + s.missions.length);
+    if(t % 60 === 0) invariants(s, 'missions t=' + t);
+  }
+  if(done < 15 || s.meta.mchain < 12 || !dpPaid || !buffs) fail('missions barely progressed: done=' + done + ' chain=' + s.meta.mchain);
+  // chain position survives rebirth, missions and the buff do not; unfinished chain missions come back
+  const open = s.missions.filter(m => m.c !== undefined).map(m => m.c);
+  s.meta.bestGods = 6; s.gods = Math.max(s.gods, 1);
+  const before = s.meta.mchain;
+  G.rebirth(s);
+  if(s.missions.length || s.buff) fail('rebirth kept missions/buff');
+  if(s.meta.mchain !== (open.length ? Math.min(before, ...open) : before)) fail('rebirth lost the chain position: ' + before + ' -> ' + s.meta.mchain);
+  G.step(s, 1, []); invariants(s, 'missions after rebirth');
+  if(s.missions.length !== D.MISSION_SLOTS) fail('no missions after rebirth');
+  // offline progress completes missions too
+  const o = G.newState(), oev = [];
+  o.clones = 10; o.train[0].n = 6; o.mon[0].n = 4;
+  G.advance(o, 1800, oev);
+  const od = oev.filter(e => e.type === 'mission').length;
+  if(od < 4 || o.meta.mchain < 4) fail('offline advance completed only ' + od + ' missions');
+  invariants(o, 'missions offline');
+  // the buff speeds training and runs out
+  const b = G.newState(); b.buff = 10;
+  const sp = G.derive(b).m.speed; G.advance(b, 12, []);
+  if(Math.abs(sp / G.derive(b).m.speed - D.MISSION_BUFF) > 1e-9 || b.buff !== 0) fail('mission buff');
+  // earning-พลังเทวะ missions don't count other missions' rewards
+  const r = G.newState(); r.missions = [{ id:1, t:'dp', n:1e9, base:0, r:'buff' }, { id:2, t:'clones', n:1, base:0, r:'dp' }]; r.mseq = 2; r.clones = 1;
+  G.step(r, 1, []);
+  if(r.missions[0].base !== r.dpTotal) fail('dp mission counted a reward: base=' + r.missions[0].base + ' dpTotal=' + r.dpTotal);
+  // old saves: past the basics skip the chain, fresh ones start it; junk missions are dropped
+  const old = clone(midSave()); delete old.meta.mchain; delete old.missions;
+  if(G.sanitize(old).meta.mchain !== D.MISSION_CHAIN.length) fail('old save did not skip the chain');
+  const early = clone(G.newState()); delete early.meta.mchain;
+  if(G.sanitize(early).meta.mchain !== 0) fail('fresh old save skipped the chain');
+  const junkM = clone(G.newState());
+  junkM.missions = [{ t:'lv', kind:'mon', i:0, n:5 }, { t:'job', kind:'train', i:99 }, { t:'made', key:'toString', n:1 }, { t:'x' }, null, { t:'kills', i:-1, n:3 },
+    { id:7, t:'kills', i:2, n:30, base:5, c:3 }, { t:'gods', n:2, c:999 }, { t:'dp', n:1e400, base:-3 }];
+  junkM.mseq = -5; junkM.buff = 1e9; junkM.meta.mchain = 1e9;
+  const js = G.sanitize(junkM);
+  if(js.missions.length !== 3 || js.missions[0].id !== 7 || js.missions[1].c !== undefined || js.buff !== D.MISSION_BUFF_MAX || js.meta.mchain !== D.MISSION_CHAIN.length) fail('sanitize missions: ' + JSON.stringify(js.missions));
+  invariants(js, 'sanitize missions'); G.advance(js, 30, []); invariants(js, 'sanitize missions + play');
+  console.log('F missions ok: ' + done + ' done in 20 min, chain ' + s.meta.mchain + '/' + D.MISSION_CHAIN.length, ((Date.now() - T0) / 1000).toFixed(1) + 's');
 }
 console.log('engine_fuzz: all ok,', checks, 'invariant checks in', ((Date.now() - T0) / 1000).toFixed(1) + 's');

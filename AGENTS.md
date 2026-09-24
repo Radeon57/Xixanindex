@@ -27,6 +27,7 @@ https://radeon57.github.io/Xixanindex/god-killer.html (`index.html` redirects th
   - Use the change-checked setters (`setText`, `setHTML`, `setShown`, `setClass`, `setBar`). Don't write to the DOM every frame.
 - **Animations** use transform and opacity only, and must respect `prefers-reduced-motion`.
 - **Offline progress** is `G.advance`, which runs in 1s chunks up to 8h. `G.step` must give the same results as `advance`.
+- **Sect missions** (ภารกิจสำนัก) are checked and paid in the engine every second (`checkMissions`), so offline play counts. The guide chain is `MISSION_CHAIN` in data.js and its position is `meta.mchain`; the UI is the "sect missions" block near the end of ui.js.
 - **Destructive buttons** use a two-tap confirm (`confirmTap`), with the second tap at least 400ms after the first.
 - **UI text** is Thai. Keep new text in natural Thai.
 - **Balance.** A fresh-save bot kills gods 1–6 at about 4 / 10 / 17 / 27 / 38 / 52 minutes (`first god within ~4 min` keeps the opening fun). Late-save idle-bot timings were about 3.4 / 4.8 / 6.6 / 9.1 hours for gods 7–10. Re-check them if you change numbers in `data.js`.
