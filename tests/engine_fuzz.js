@@ -75,6 +75,15 @@ function invariants(s, where){
   if(s.boostT > D.FORTUNE.boostCap) bad.push('boostT ' + s.boostT);
   const fo = m.fortune;
   if(!fo || !isInt(fo.streak) || !isInt(fo.best) || !isInt(fo.caught) || fo.best < fo.streak || fo.caught < fo.streak) bad.push('fortune ' + JSON.stringify(fo));
+  // split times: this run's kills are timed inside the run, and the best per god is never slower than this run's
+  if(!Array.isArray(s.splits) || s.splits.length > s.gods) bad.push('splits length ' + (s.splits && s.splits.length) + ' > gods ' + s.gods);
+  else s.splits.forEach((t, i) => {
+    if(typeof t !== 'number' || t > s.playTime + 1e-6) bad.push('split ' + i + '=' + t + ' after playTime ' + s.playTime);
+    if(t && !(m.splits[i] > 0 && m.splits[i] <= t)) bad.push('best split ' + i + '=' + m.splits[i] + ' slower than run split ' + t);
+  });
+  if(!Array.isArray(m.splits) || m.splits.length !== D.GODS.length || m.splits.some(x => typeof x !== 'number')) bad.push('meta.splits ' + JSON.stringify(m.splits));
+  if(!Array.isArray(m.lastSplits) || m.lastSplits.length > D.GODS.length || m.lastSplits.some(x => typeof x !== 'number')) bad.push('meta.lastSplits');
+  if(typeof m.lastGain !== 'number') bad.push('meta.lastGain ' + m.lastGain);
   const ci = D.CREATIONS.findIndex(c => c.key === s.create.target);
   if(ci < 0 || !G.creationUnlocked(s, ci)) bad.push('create target ' + s.create.target);
   if(s.create.cur && !G.creationByKey(s.create.cur)) bad.push('create cur ' + s.create.cur);
@@ -180,6 +189,29 @@ seed(13); fuzzActions('late', lateSave, 4000);
   G.unassignKind(s, 'train'); G.assign(s, 'train', 0, 1.5); invariants(s, 'assign(1.5)');
   G.step(s, Infinity, []); invariants(s, 'step(Infinity)');
 }
+{ // split times: recorded on each kill from the run timer, best kept across rebirth, previous run remembered
+  const s = midSave(); s.meta.run = null; s.playTime = 500; s.splits = [100, 200, 300]; s.meta.splits = D.GODS.map((g, i) => i < 3 ? 90 : 0);
+  const ev = []; G.startFight(s); G.advance(s, 120, ev);
+  const w = ev.find(e => e.type === 'godWin');
+  if(!w || w.i !== 3 || !(w.t > 500 && w.t <= 620) || w.best !== 0) fail('godWin split event ' + JSON.stringify(w));
+  if(s.splits[3] !== w.t || s.meta.splits[3] !== w.t) fail('split not recorded ' + JSON.stringify(s.splits) + ' / ' + JSON.stringify(s.meta.splits));
+  invariants(s, 'split recorded');
+  const gain = G.rebirthGain(s), kills = s.splits.slice();
+  G.rebirth(s);
+  if(s.splits.length || s.playTime !== 0) fail('rebirth did not reset the run timer/splits');
+  if(s.meta.lastGain !== gain || JSON.stringify(s.meta.lastSplits) !== JSON.stringify(kills)) fail('rebirth did not remember the last run');
+  // a faster kill replaces the best, a slower one does not
+  s.gods = 3; s.splits = [1, 2, 3]; s.playTime = 10; s.meta.splits[3] = 50; s.fight = { kind:'god', ghp:1e-9, t:0, hits:0 };
+  G.step(s, 2, []); if(s.meta.splits[3] !== 12) fail('faster split not kept: ' + s.meta.splits[3]);
+  s.gods = 3; s.splits = [1, 2, 3]; s.playTime = 90; s.fight = { kind:'god', ghp:1e-9, t:0, hits:0 };
+  G.step(s, 2, []); if(s.meta.splits[3] !== 12 || s.splits[3] !== 92) fail('slower split replaced best: ' + s.meta.splits[3]);
+  // old saves without the fields load with safe defaults; bad values are dropped
+  const old = clone(s); delete old.splits; delete old.meta.splits; delete old.meta.lastSplits; delete old.meta.lastGain;
+  const o = G.sanitize(old); invariants(o, 'sanitize(no splits)');
+  if(o.splits.length || o.meta.splits.length !== D.GODS.length || o.meta.lastGain !== 0) fail('split defaults');
+  const bad = clone(s); bad.splits = [1e300, -5, 'x', NaN, 7]; bad.meta.splits = { a:1 }; bad.meta.lastSplits = [Infinity]; bad.meta.lastGain = -3;
+  invariants(G.sanitize(bad), 'sanitize(bad splits)');
+}
 console.log('A actions ok', ((Date.now() - T0) / 1000).toFixed(1) + 's');
 
 // ---------- B. step with small dt matches advance ----------
@@ -192,7 +224,7 @@ function compareRuns(name, make, secs, dt, prep){
   const close = (x, y, tol) => Math.abs(x - y) <= tol * Math.max(1, Math.abs(x), Math.abs(y));
   const cmp = [['gods', a.gods, b.gods, 0], ['dpTotal', a.dpTotal, b.dpTotal, 0.05],
     ['phys', G.derive(a).phys, G.derive(b).phys, 0.05], ['myst', G.derive(a).myst, G.derive(b).myst, 0.05],
-    ['ub0', a.meta.ub[0] || 0, b.meta.ub[0] || 0, 0], ['clonesLost', a.clonesLost, b.clonesLost, 0.1],
+    ['ub0', a.meta.ub[0] || 0, b.meta.ub[0] || 0, 0], ['lastSplit', a.splits[a.splits.length - 1] || 0, b.splits[b.splits.length - 1] || 0, 0], ['clonesLost', a.clonesLost, b.clonesLost, 0.1],
     ['dgBest', JSON.stringify(a.meta.dgBest), JSON.stringify(b.meta.dgBest)],
     ['petLv', D.PETS.map(p => a.meta.pets[p.key] ? a.meta.pets[p.key].lv : 0).join(), D.PETS.map(p => b.meta.pets[p.key] ? b.meta.pets[p.key].lv : 0).join()]];
   for(const [k, x, y, tol] of cmp){

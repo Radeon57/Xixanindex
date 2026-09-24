@@ -221,6 +221,24 @@ textarea:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
 .wbTitle{font-size:.95rem;font-weight:bold;color:var(--gold)}
 .wbRow{display:flex;justify-content:space-between;gap:10px;font-size:.74rem;color:var(--sub);padding:5px 0;border-bottom:1px solid var(--border)}
 .wbRow b{color:var(--text);font-weight:normal;text-align:right;overflow-wrap:anywhere}
+/* rebirth payoff, split times and the "จุติสำเร็จ" card */
+.rbPay{margin-top:6px;padding:7px 9px;border-radius:8px;border:1px solid rgba(232,199,111,.35);background:rgba(232,199,111,.06)}
+.rpBig{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:.74rem;color:var(--sub)}
+.rpBig b{font-size:1.15rem;color:var(--gold);font-variant-numeric:tabular-nums}
+.rpLine{font-size:.68rem;color:var(--sub);margin-top:3px}
+.rpLine b{color:var(--text);font-weight:normal}
+.rpLine .up{color:var(--ok)}
+.spTable{font-size:.7rem;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.spRow{display:grid;grid-template-columns:minmax(0,1fr) repeat(3,4.4em);gap:6px;padding:4px 8px;border-top:1px solid var(--border);color:var(--sub);font-variant-numeric:tabular-nums}
+.spRow:first-child{border-top:0;font-size:.64rem}
+.spRow span{text-align:right;white-space:nowrap}
+.spRow span:first-child{text-align:left;overflow:hidden;text-overflow:ellipsis;color:var(--text)}
+.spRow .pb{color:var(--ok)}
+.spRow.next span:first-child{color:var(--gold)}
+.rbCard .wbTitle{font-size:1.05rem;text-align:center}
+.rbCard .rbCheer{font-size:.74rem;color:var(--gold);text-align:center;margin-top:8px}
+@keyframes rbPop{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:none}}
+.rbCard{animation:rbPop .35s ease-out}
 @media (prefers-reduced-motion: reduce){
   :root:not([data-motion="full"]) *{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
 }
@@ -691,11 +709,14 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
         <div class="curCard">
           <div class="row"><span>ปราณเทพ (GP)</span><b id="gpTxt">0</b></div>
           <div class="note" id="rbInfo"></div>
+          <div class="rbPay" id="rbPay"></div>
           <div class="note">จุติใหม่จะล้างทุกอย่างของรอบนี้ (การฝึก ร่างเงา พลังเทวะ ของที่สร้าง อนุสรณ์ เครื่องผลิต เทพที่สังหาร) แต่เก็บปราณเทพ อัปเกรดถาวร สัตว์คู่กาย อุปกรณ์ และความสำเร็จไว้</div>
           <button class="b bPrimary" id="rbBtn" style="margin-top:8px"></button>
         </div>
         <div class="secTitle">อัปเกรดถาวร <span class="secSub">ใช้ปราณเทพ · คงอยู่ข้ามการจุติ</span></div>
         <div id="upList"></div>
+        <div class="secTitle">เวลาสังหารเทพ <span class="secSub" id="spSub"></span></div>
+        <div class="spTable" id="spTable"></div>
       </div>
       <div id="rv-chal">
         <div class="note" style="margin-bottom:6px">เริ่มบททดสอบ = จุติใหม่ทันที (ได้ปราณเทพของรอบนี้ตามปกติ) แล้วเล่นรอบใหม่ภายใต้กฎพิเศษ สังหารเทพเป้าหมายได้เมื่อไร กฎจะหายไปและได้โบนัสถาวร ยิ่งผ่านมาก เป้าหมายยิ่งไกลขึ้น</div>
