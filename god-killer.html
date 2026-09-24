@@ -410,6 +410,15 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
 .gToc a{font-size:.7rem;color:var(--sub);border:1px solid var(--border);border-radius:8px;padding:3px 7px;text-decoration:none}
 .ctlBtn,.maxBtn,.selBtn{touch-action:manipulation;user-select:none;-webkit-user-select:none}
 #main{overscroll-behavior:contain}
+/* ---------- personal realm ---------- */
+#realmPanel{margin-top:8px}
+.rlSeeds{flex-wrap:wrap;margin-bottom:6px}
+.rlSeeds button{flex:1 1 30%;font-size:.68rem}
+.plotGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
+.plot{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:6px;font:inherit;font-size:.68rem;color:var(--sub);text-align:left;cursor:pointer;min-height:52px}
+.plot b{display:block;color:var(--text);font-size:.72rem;margin-bottom:2px}
+.plot.ready{border-color:var(--gold);color:var(--gold);background:rgba(232,199,111,.1)}
+.plot .bar{margin-top:4px;height:4px}
 /* ---------- adventure mode ---------- */
 .advHud{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:.82rem}
 .advHud b{color:var(--gold);flex:1;text-align:center}
@@ -536,7 +545,7 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
     <div class="tab" data-tab="pets" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-paw"></use></svg>คู่หู</div>
     <div class="tab" data-tab="gods" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-crown"></use></svg>ท้าเทพ</div>
     <div class="tab" data-tab="rebirth" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-cycle"></use></svg>เกิดใหม่</div>
-    <div class="tab" data-tab="adv" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-sword"></use></svg>ผจญภัย</div>
+    <div class="tab" data-tab="adv" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-sword"></use></svg>มิติ</div>
   </nav>
   </div>
 
@@ -675,10 +684,24 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
         <button class="miniBtn" id="advNext" aria-label="เขตถัดไป">▶</button>
         <span class="advKills" id="advKills"></span>
       </div>
-      <div class="bar hp"><i id="advHp"></i></div>
+      <div class="bar hp" id="advHpBar"><i id="advHp"></i></div>
       <div id="advGame"></div>
       <div class="advCtl"><span class="note" id="advMsg"></span><button class="b bPrimary" id="advAtk">⚔ โจมตี</button></div>
-      <div class="note" id="advHelp">คอม: WASD หรือลูกศรเพื่อเดิน · J หรือ Space โจมตี · มือถือ: แตะพื้นเพื่อเดิน แตะมอนสเตอร์เพื่อเข้าโจมตี · ฆ่ามอนสเตอร์ได้ DP และค่ายุทธ์เข้าเกมหลัก · เดินเข้าประตูทองขวาสุดเพื่อไปเขตถัดไป</div>
+      <div id="realmPanel">
+        <div class="curCard">
+          <div class="row"><span>มิติ<b id="rlName"></b></span><b id="rlStones"></b></div>
+          <div class="note" id="rlInfo"></div>
+          <div class="btnPair"><button class="miniBtn" data-act="realmUp" id="rlUp"></button><button class="miniBtn" data-act="springUp" id="rlSpring"></button></div>
+        </div>
+        <div class="secTitle">แปลงสมุนไพร <span class="secSub">แตะแปลงในฉากหรือในรายการเพื่อปลูก / เก็บเกี่ยว · เติบโตแม้ปิดเกม</span></div>
+        <div class="seg rlSeeds" id="rlSeeds" role="group" aria-label="เมล็ดที่จะปลูก"></div>
+        <div class="plotGrid" id="rlPlots"></div>
+        <button class="miniBtn" data-act="harvestAll" id="rlHarvestAll" style="margin-top:6px;width:100%">เก็บเกี่ยวทั้งหมด</button>
+        <div class="secTitle" id="rlFurnace">เตาหลอมโอสถ <span class="secSub" id="rlHerbs"></span></div>
+        <div id="rlPills"></div>
+        <div class="note" id="rlBuffs"></div>
+      </div>
+      <div class="note" id="advHelp">คอม: WASD หรือลูกศรเพื่อเดิน · J หรือ Space โจมตี · มือถือ: แตะพื้นเพื่อเดิน · ในมิติแตะแปลงเพื่อปลูก/เก็บเกี่ยว · เดินเข้าประตูทองขวาสุดเพื่อไปดินแดนลับ</div>
     </section>
 
     <section id="tab-log" class="panel">
