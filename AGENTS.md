@@ -38,13 +38,7 @@ https://radeon57.github.io/Xixanindex/god-killer.html (`index.html` redirects th
    - check the console shows no errors
 
 ## Not done yet (ideas for next work)
-- Animations: hit and victory effects in the arena, and level-up pulses.
-  - The shake animation only targets the SVG fallback (`.fighting .godPortrait svg`), so AI portraits don't shake. Retarget it to `.godPortrait .art`.
-- An active "divine strike" button in the arena. To matter, it needs to deal a share of the god's HP.
-- "Buy max" for the generator, monuments and God Power upgrades.
-- A "next goal" hint after the tutorial ends.
-- Keep the creation target across rebirth. Today it resets to ร่างเงา every run.
-- Sound effects and a settings panel (sound, vibration, number format).
-- An in-game how-to-play guide.
-- A PWA (manifest and service worker) so the game can be installed.
-- Touch: hold +/− to repeat, and swipe between tabs.
+- More combat animation (hero lunge, crit numbers) and a rebirth transition.
+- A settings panel beyond the sound toggle (number format, vibration, reduced motion).
+- Spoiler-free guide: hide sections for systems not unlocked yet.
+- `sw.js` caches network-first; bump `CACHE` if the caching strategy changes.

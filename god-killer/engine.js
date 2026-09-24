@@ -34,6 +34,7 @@ function newState(meta){
     hp: 100,
     clonesLost: 0,
     playTime: 0,
+    strikeAt: 0,
     lastSave: Date.now(),
     log: []
   };
@@ -633,6 +634,17 @@ function stepFight(s, dt, d, ev){
     }
   }
 }
+// active strike: only during a fight, then a cooldown counted in play time
+const strikeWait = s => Math.max(0, (s.strikeAt || 0) - s.playTime);
+function strike(s){
+  const f = s.fight;
+  if(!f || strikeWait(s) > 0) return 0;
+  const tg = fightTarget(s, f), dmg = Math.max(D.STRIKE_BLOWS * blow(derive(s).atk, tg.def), D.STRIKE_SHARE * tg.hp);
+  f.ghp -= dmg;
+  if(f.ghp <= 0) f.t = D.HIT_INTERVAL;   // the kill resolves on the next step
+  s.strikeAt = s.playTime + D.STRIKE_CD;
+  return dmg;
+}
 const fightTarget = (s, f) => f.kind === 'ub' ? ubStats(s, f.i) : D.GODS[s.gods];
 function winGod(s, ev){
   s.gods++;
@@ -709,6 +721,7 @@ function sanitize(raw){
   const d = newState();
   if(!raw || typeof raw !== 'object' || raw.v !== SAVE_VERSION) return d;
   ['dp','dpTotal','battleRaw','clonesLost','playTime','hp'].forEach(k=>{ d[k] = nonNeg(raw[k], d[k]); });
+  d.strikeAt = Math.min(nonNeg(raw.strikeAt, 0), d.playTime + D.STRIKE_CD);
   d.clones = Math.floor(capped(raw.clones, 1e9));
   d.gods = Math.min(D.GODS.length, Math.floor(nonNeg(raw.gods, 0)));
   d.lastSave = isNum(raw.lastSave) && raw.lastSave > 0 && raw.lastSave <= Date.now() ? raw.lastSave : Date.now();
@@ -803,6 +816,6 @@ root.GK = {
   chalDone, chalGoal, startChallenge, abandonChallenge, ubUnlocked, ubOpen, ubLevel, ubStats, startUbFight, fightTarget, outlook,
   mightUnlocked, mightLv, mightCost, buyMight,
   planUnlocked, autoFightUnlocked, topRow, bestSafeMonster, bestRowFor, moveToBest, applyPlan, setPlan, togglePlan, neededFactor,
-  step, advance, assign, unassignKind, setCreateTarget, startFight, flee
+  strike, strikeWait, step, advance, assign, unassignKind, setCreateTarget, startFight, flee
 };
 })(typeof window !== 'undefined' ? window : globalThis);
