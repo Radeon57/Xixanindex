@@ -16,25 +16,25 @@ const LEVEL_TIME_GROWTH = 0.1;
 const ROW_UNLOCK_LEVEL = 10;
 
 const TRAININGS = [
-  { name:'ยืนม้า',       base:1.5 },
-  { name:'ชกหุ่นไม้',        base:6 },
-  { name:'วิ่งบันไดพันขั้น',     base:24 },
-  { name:'ว่ายทวนน้ำตก',   base:96 },
-  { name:'ชกศิลา',        base:384 },
-  { name:'แบกภูผา',       base:1536 },
-  { name:'ยืนฝ่าอัสนี',     base:6144 },
-  { name:'ต้านพายุสวรรค์',  base:24576 }
+  { name:'วิ่งขึ้นเขา', base:1.5, desc:'วิ่งขึ้นลงภูเขาหลังสำนักทุกเช้า สร้างพละกำลังพื้นฐาน' },
+  { name:'ยกหินฝึกแรง', base:6, desc:'ยกหินก้อนยักษ์จนกล้ามเนื้อแข็งดั่งเหล็ก' },
+  { name:'ชกหุ่นไม้พันหมัด', base:24, desc:'ชกหุ่นไม้วันละพันหมัด ให้หมัดหนักและแม่นยำ' },
+  { name:'ยืนรับน้ำตก', base:96, desc:'ยืนใต้น้ำตกให้สายน้ำกระแทก จนร่างทนทานไม่หวั่นไหว' },
+  { name:'หมัดผ่าภูผา', base:384, desc:'ฟาดหมัดใส่หน้าผาจนหินแตกกระจาย' },
+  { name:'หลอมกายในลาวา', base:1536, desc:'แช่ร่างในบ่อลาวา เผาสิ่งเจือปนออกจนกายบริสุทธิ์' },
+  { name:'รับสายฟ้าหลอมกาย', base:6144, desc:'ยืนบนยอดเขารับสายฟ้า ให้ร่างแกร่งเหนือมนุษย์' },
+  { name:'กายาเทพอมตะ', base:24576, desc:'หลอมกายเนื้อให้กลายเป็นกายเทพที่ไม่มีวันสลาย' }
 ].map((t,i)=>({ ...t, gain: Math.pow(6, i) }));
 
 const SKILLS = [
-  { name:'เคล็ดลมปราณเบื้องต้น',  base:2 },
-  { name:'หมัดพยัคฆ์คู่',        base:8 },
-  { name:'เกราะชี่คุ้มกาย',    base:32 },
-  { name:'วิชาตัวเบา',        base:128 },
-  { name:'ฝ่ามือเพลิงหยาง',     base:512 },
-  { name:'เนตรทิพย์ส่องฟ้า',      base:2048 },
-  { name:'กระบี่จิตไร้รูป',        base:8192 },
-  { name:'ตราผนึกเทพ',       base:32768 }
+  { name:'นั่งสมาธิ', base:2, desc:'หลับตาทำจิตให้นิ่ง รวบรวมลมปราณเข้าสู่ร่าง' },
+  { name:'เดินลมปราณ', base:8, desc:'ส่งลมปราณไหลเวียนทั่วร่าง ให้ร่างต้านแรงกระแทกได้' },
+  { name:'เกราะลมปราณ', base:32, desc:'ห่อหุ้มร่างด้วยลมปราณ รับการโจมตีแทนเนื้อหนัง' },
+  { name:'วิชาตัวเบา', base:128, desc:'ร่างเบาดั่งขนนก หลบการโจมตีได้คล่องขึ้น' },
+  { name:'จิตนิ่งดั่งขุนเขา', base:512, desc:'จิตไม่หวั่นไหว ความเจ็บปวดทำอะไรไม่ได้' },
+  { name:'เนตรทิพย์', base:2048, desc:'มองเห็นการโจมตีของศัตรูก่อนมันจะมาถึง' },
+  { name:'โล่หยินหยาง', base:8192, desc:'สร้างโล่พลังหยินหยาง ปัดป้องพลังศัตรูออกไป' },
+  { name:'จิตอมตะ', base:32768, desc:'จิตหลอมรวมกับฟ้าดิน ไม่มีสิ่งใดทำลายได้' }
 ].map((t,i)=>({ ...t, gain: Math.pow(6, i) }));
 
 // Clones fight monsters for Divinity (DP) and Battle. Clones weaker than the monster also die.
@@ -55,7 +55,7 @@ const CREATIONS = [
   { key:'stone', name:'ศิลา',     time:10,  dp:500,    needs:{ light:2 },           bonus:{ stat:'phys',   per:0.01, cap:100 }, desc:`+${pa(0.01, 100)}% กาย` },
   { key:'soil',  name:'ปฐพี',     time:20,  dp:5000,    needs:{ stone:2 },           bonus:{ stat:'dp',     per:0.01, cap:100 }, desc:'+1% พลังเทวะที่ได้' },
   { key:'air',   name:'วายุ',     time:40,  dp:5e4,   needs:{ soil:2, light:1 },   bonus:{ stat:'speed',  per:0.01, cap:100 }, desc:'+1% ความเร็วฝึก' },
-  { key:'water', name:'ธารา',     time:80,  dp:5e5,  needs:{ air:2 },             bonus:{ stat:'myst',   per:0.01, cap:100 }, desc:`+${pa(0.01, 100)}% เวท` },
+  { key:'water', name:'ธารา',     time:80,  dp:5e5,  needs:{ air:2 },             bonus:{ stat:'myst',   per:0.01, cap:100 }, desc:`+${pa(0.01, 100)}% จิต` },
   { key:'plant', name:'พฤกษา',    time:160, dp:5e6,  needs:{ water:2, soil:2 },   bonus:{ stat:'clone',  per:0.01, cap:100 }, desc:`+${pa(0.01, 100)}% พลังร่างเงา` },
   { key:'beast', name:'สัตว์ป่า',   time:320, dp:5e7, needs:{ plant:2 },           bonus:{ stat:'battle', per:0.01, cap:100 }, desc:`+${pa(0.01, 100)}% ค่ายุทธ์` },
   { key:'human', name:'มนุษย์',    time:640, dp:5e8, needs:{ beast:2, water:1 },  bonus:{ stat:'maxClones', per:1, cap:50, add:true }, desc:'+1 ร่างเงาสูงสุด' }
@@ -104,7 +104,7 @@ const GEN_RATE = 100, GEN_GROWTH = 4, GEN_COST = 1e5, GEN_COST_GROWTH = 5;
 // Monuments are bought with DP plus created items. Level L costs dp*10^L DP and n*(L+1) items.
 const MONUMENTS = [
   { key:'statue', name:'รูปปั้นขุนพล',   stat:'phys',      per:0.5,        dp:1e6, item:'stone', n:10, desc:`+${pp(0.5)}% กาย` },
-  { key:'shrine', name:'ศาลาเต๋า',    stat:'myst',      per:0.5,        dp:3e6, item:'water', n:4,  desc:`+${pp(0.5)}% เวท` },
+  { key:'shrine', name:'ศาลาเต๋า',    stat:'myst',      per:0.5,        dp:3e6, item:'water', n:4,  desc:`+${pp(0.5)}% จิต` },
   { key:'temple', name:'ศาลเจ้าเทวะ',     stat:'dp',        per:0.5,        dp:1e7, item:'soil',  n:6,  desc:'+50% พลังเทวะที่ได้' },
   { key:'tower',  name:'เจดีย์เงา',     stat:'clone',     per:0.5,        dp:3e7, item:'plant', n:3,  desc:`+${pp(0.5)}% พลังร่างเงา` },
   { key:'clock',  name:'หอระฆังสวรรค์', stat:'speed',     per:0.3,        dp:1e8, item:'air',   n:5,  desc:'+30% ความเร็วฝึก' },
@@ -141,7 +141,7 @@ const MATERIALS = { ore:'แร่ผลึกวิญญาณ', wood:'ไม�
 // Each level multiplies the stat by (1+per), compounding.
 const GEAR = [
   { key:'weapon', name:'กระบี่สังหารเทพ', stat:'phys',  per:0.15, mat:'ore',   desc:`กาย ×${px(1.15)}` },
-  { key:'armor',  name:'เสื้อเกราะเทวะ',    stat:'myst',  per:0.15, mat:'wood',  desc:`เวท ×${px(1.15)}` },
+  { key:'armor',  name:'เสื้อเกราะเทวะ',    stat:'myst',  per:0.15, mat:'wood',  desc:`จิต ×${px(1.15)}` },
   { key:'ring',   name:'แหวนหยกศรัทธา',   stat:'dp',    per:0.2,  mat:'ember', desc:'พลังเทวะที่ได้ ×1.2' },
   { key:'amulet', name:'จี้หยกวิญญาณ',   stat:'clone', per:0.2,  mat:'pearl', desc:`พลังร่างเงา ×${px(1.2)}` }
 ];
@@ -153,7 +153,7 @@ const FORGE_COST = 5, FORGE_GROWTH = 1.35, FORGE_MIN_CHANCE = 0.3;
 const CHALLENGES = [
   { key:'few',      name:'กองทัพน้อย',     rule:'ร่างเงามีได้ไม่เกิน 10 ร่าง',                         stat:'clone', per:0.25, rdesc:`พลังร่างเงา ×${px(1.25)}` },
   { key:'nocreate', name:'โลกไร้สรรพสิ่ง',  rule:'สร้างได้เพียงร่างเงา ไร้สรรพสิ่งและอนุสรณ์',                   stat:'dp',    per:0.3,  rdesc:'พลังเทวะที่ได้ ×1.3' },
-  { key:'nomagic',  name:'ไร้มนตรา',       rule:'ฝึกวิชาเวทไม่ได้เลย',                                        stat:'myst',  per:0.3,  rdesc:`เวท ×${px(1.3)}` },
+  { key:'nomagic',  name:'จิตถูกผนึก',       rule:'ฝึกจิตไม่ได้เลย',                                        stat:'myst',  per:0.3,  rdesc:`จิต ×${px(1.3)}` },
   { key:'mortal',   name:'มนุษย์ธรรมดา',    rule:'ตัดผลของอัปเกรดถาวร บารมี สัตว์คู่กาย อุปกรณ์ และบททดสอบอื่น',   stat:'stat',  per:0.2,  rdesc:`ค่าสถานะทั้งหมด ×${px(1.2)}` }
 ];
 const CHAL_MAX = 6, CHAL_FIRST_GOAL = 3, FEW_CLONES = 10;
@@ -180,7 +180,7 @@ const MIGHT = [
 const PLAN_PRESETS = [
   { key:'balanced', name:'สมดุล',   train:40, skill:30, mon:30 },
   { key:'body',     name:'เน้นกาย',  train:60, skill:20, mon:20 },
-  { key:'mind',     name:'เน้นเวท',  train:30, skill:50, mon:20 },
+  { key:'mind',     name:'เน้นจิต',  train:30, skill:50, mon:20 },
   { key:'hunt',     name:'เน้นล่า',   train:30, skill:20, mon:50 }
 ];
 // the clone plan unlocks with the first god; auto-fighting gods with the first rebirth
@@ -203,7 +203,7 @@ const FORTUNE = {
   streakBonus: 0.05, streakMax: 5,
   items: [
     { kind:'dp',     name:'ผลท้อเซียน',  color:'#ff9ab8', desc:'พลังเทวะเท่ากับรายได้หลายสิบวินาที' },
-    { kind:'speed',  name:'คัมภีร์ลับ',   color:'#9fe7ff', desc:'ความเร็วฝึกกายและวิชาเวท ×2 ชั่วครู่' },
+    { kind:'speed',  name:'คัมภีร์ลับ',   color:'#9fe7ff', desc:'ความเร็วฝึกกายและฝึกจิต ×2 ชั่วครู่' },
     { kind:'create', name:'เม็ดยาทิพย์', color:'#e8c76f', desc:'เร่งการสร้างให้เสร็จทันที' }
   ]
 };
@@ -233,8 +233,8 @@ const ACHIEVEMENTS = [
   { key:'cl200',  name:'ทัพเงามหึมา',       type:'clones',   n:200 },
   { key:'tr100',  name:'กายเหล็กไหล',       type:'trainLv',  n:100 },
   { key:'tr500',  name:'กายาเทพ',          type:'trainLv',  n:500 },
-  { key:'sk100',  name:'ผู้ฝึกเวท',          type:'skillLv',  n:100 },
-  { key:'sk500',  name:'จอมเวท',           type:'skillLv',  n:500 },
+  { key:'sk100',  name:'จิตมั่นคง',          type:'skillLv',  n:100 },
+  { key:'sk500',  name:'จิตดั่งวัชระ',           type:'skillLv',  n:500 },
   { key:'k1e3',   name:'นักล่าอสูร',          type:'kills',    n:1e3 },
   { key:'k1e5',   name:'ผู้พิชิตอสูร',        type:'kills',    n:1e5 },
   { key:'k1e7',   name:'มหันตภัยแห่งอสูร',    type:'kills',    n:1e6 },
@@ -275,7 +275,7 @@ const MISSION_CHAIN = [
   { t:'lv',     kind:'train', i:1, n:10, r:'buff' },
   { t:'kills',  n:100, r:'dp' },
   { t:'gods',   n:1, r:'dp',   text:`สังหารเทพองค์แรก ${GODS[0].name}` },
-  { t:'job',    kind:'skill', i:0, r:'buff', req:1, text:'เรียนวิชาเวทขั้นแรก' },
+  { t:'job',    kind:'skill', i:0, r:'buff', req:1, text:'เริ่มฝึกจิตขั้นแรก' },
   { t:'clones', n:20, r:'dp', req:1, text:'รวบรวมร่างเงาให้ครบ 20 ร่าง' },
   { t:'lv',     kind:'skill', i:0, n:10, r:'buff', req:1 },
   { t:'lv',     kind:'train', i:2, n:10, r:'buff' },

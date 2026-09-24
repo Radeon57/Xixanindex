@@ -11,3 +11,7 @@ These images were generated through the free community [AI Horde](https://aihord
 | `fortune/01.webp` | game item icon, a single glowing peach of immortality, pink and gold peach with two green leaves, soft golden magical glow and sparkles around it, centered, isolated on a plain dark charcoal black background, painterly digital art, xianxia fantasy treasure, high detail |
 | `fortune/02.webp` | game item icon, a single ancient rolled secret scroll tied with a red cord, emitting radiant golden light and floating golden sparks, centered, isolated on a plain dark charcoal black background, painterly digital art, xianxia fantasy treasure, high detail |
 | `fortune/03.webp` | game item icon, a single round golden elixir pill, glowing divine alchemy pill with swirling golden cloud patterns on its surface, radiant golden aura and light rays, floating, centered, isolated on a plain dark charcoal black background, painterly digital art, xianxia fantasy treasure, high detail |
+
+## Training icons (Canva)
+
+`train/01–08.webp` (ฝึกกาย) and `skill/01–08.webp` (ฝึกจิต) were generated with Canva's AI image generator (round gold-and-jade medallions), exported at 200px and re-encoded to 128px WebP. A missing file falls back to the drawn icon in `icons.js`.
