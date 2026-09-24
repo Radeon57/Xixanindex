@@ -724,12 +724,12 @@ function renderPets(d, full){
 // ---------- tutorial & first-visit tips ----------
 // each step finishes itself once its condition holds; the last one waits for the player
 const TUT = [
-  { tab:'train',  text:'ร่างเงาจะถูกสร้างขึ้นเองทีละร่าง — กด + ที่ "วิดพื้น" เพื่อส่งไปฝึก (เลือก "ทั้งหมด" เพื่อส่งทุกร่างในครั้งเดียว)', done:()=>s.train.some(r=>r.n>0) || s.meta.bestGods >= 1 },
-  { tab:'mon',    text:'ส่งร่างเงาบางส่วนไปสู้ "ภูตหมอก" เพื่อหาพลังเทวะและค่ายุทธ์ — ศัตรูสีเขียวแปลว่าร่างเงาจะไม่ตาย', done:()=>s.mon.some(r=>r.n>0) || s.meta.bestGods >= 1 },
-  { tab:'train',  text:'วิดพื้นถึง Lv.10 แล้ว "ซิทอัพ" จะปลดล็อก — ย้ายร่างเงาไปขั้นที่สูงกว่า เพราะได้พลังต่อเลเวลมากกว่า 6 เท่า', done:()=>s.train[1].n>0 || s.meta.bestGods >= 1 },
-  { tab:'gods',   text:'ดูคาดการณ์ที่แท็บท้าเทพ เมื่อขึ้นว่า "ชนะ" ให้กดท้าสู้เทพสายฟ้า', done:()=>s.meta.bestGods >= 1 },
+  { tab:'train',  text:`ร่างเงาจะถูกสร้างขึ้นเองทีละร่าง — กด + ที่ "${D.TRAININGS[0].name}" เพื่อส่งไปฝึก (เลือก "ทั้งหมด" เพื่อส่งทุกร่างในครั้งเดียว)`, done:()=>s.train.some(r=>r.n>0) || s.meta.bestGods >= 1 },
+  { tab:'mon',    text:`ส่งร่างเงาบางส่วนไปสู้ "${D.MONSTERS[0].name}" เพื่อหาพลังเทวะและค่ายุทธ์ — ศัตรูสีเขียวแปลว่าร่างเงาจะไม่ตาย`, done:()=>s.mon.some(r=>r.n>0) || s.meta.bestGods >= 1 },
+  { tab:'train',  text:`${D.TRAININGS[0].name}ถึง Lv.10 แล้ว "${D.TRAININGS[1].name}" จะปลดล็อก — ย้ายร่างเงาไปขั้นที่สูงกว่า เพราะได้พลังต่อเลเวลมากกว่า 6 เท่า`, done:()=>s.train[1].n>0 || s.meta.bestGods >= 1 },
+  { tab:'gods',   text:`ดูคาดการณ์ที่แท็บท้าเทพ เมื่อขึ้นว่า "ชนะ" ให้กดท้าสู้${D.GODS[0].name}`, done:()=>s.meta.bestGods >= 1 },
   { tab:'skill',  text:'วิชาเวทปลดล็อกแล้ว! แบ่งร่างเงาไปฝึกวิชาเวทเพื่อเพิ่มพลังป้องกัน — จำเป็นสำหรับเทพองค์ต่อไป', done:()=>s.skill.some(r=>r.n>0) || s.meta.bestGods >= 2 },
-  { tab:'gods',   text:'เป้าหมายต่อไป: สังหารเทพสงคราม เพื่อปลดล็อกการสร้างสรรพสิ่ง', done:()=>s.meta.bestGods >= 2 },
+  { tab:'gods',   text:`เป้าหมายต่อไป: สังหาร${D.GODS[1].name} เพื่อปลดล็อกการสร้างสรรพสิ่ง`, done:()=>s.meta.bestGods >= 2 },
   { tab:'create', text:'การสร้างปลดล็อกแล้ว! เลือกสร้าง "แสงสวรรค์" — ของทุกชิ้นที่เคยสร้างให้โบนัสถาวรจนจบรอบ', done:()=>(s.made.light||0) > 0 || s.meta.rebirths > 0 },
   { tab:null,     text:'จบบทสอนพื้นฐานแล้ว! ระบบใหม่จะปลดล็อกเมื่อสังหารเทพเพิ่ม — จุดสีทองบนแท็บบอกว่ามีอะไรใหม่', manual:true }
 ];
@@ -1640,7 +1640,7 @@ function boot(saved){
     t.addEventListener('keydown', e=>{ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); selectTab(t.dataset.tab); } });
   });
 
-  if(!s.log.length) addLog('เริ่มต้นเส้นทางสังหารเทพ: ร่างเงาจะถูกสร้างขึ้นเองทีละร่าง ส่งไปฝึกกายและสนามรบ แล้วท้าเทพสายฟ้าเมื่อคาดการณ์ว่าชนะ');
+  if(!s.log.length) addLog('เริ่มต้นเส้นทางสังหารเทพ: ร่างเงาจะถูกสร้างขึ้นเองทีละร่าง ส่งไปฝึกกายและสนามรบ แล้วท้า' + D.GODS[0].name + 'เมื่อคาดการณ์ว่าชนะ');
   if(!storageOk) addLog('เบราว์เซอร์นี้ไม่อนุญาตให้บันทึกเกม — ความคืบหน้าจะหายเมื่อปิดหน้า');
   selectTab('train');
   initPlatform();

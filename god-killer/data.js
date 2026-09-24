@@ -8,25 +8,25 @@ const LEVEL_TIME_GROWTH = 0.1;
 const ROW_UNLOCK_LEVEL = 10;
 
 const TRAININGS = [
-  { name:'วิดพื้น',       base:1.5 },
-  { name:'ซิทอัพ',        base:6 },
-  { name:'วิ่งขึ้นเขา',     base:24 },
+  { name:'ยืนม้า',       base:1.5 },
+  { name:'ชกหุ่นไม้',        base:6 },
+  { name:'วิ่งบันไดพันขั้น',     base:24 },
   { name:'ว่ายทวนน้ำตก',   base:96 },
   { name:'ชกศิลา',        base:384 },
   { name:'แบกภูผา',       base:1536 },
-  { name:'ยืนฝ่าอสนี',     base:6144 },
+  { name:'ยืนฝ่าอัสนี',     base:6144 },
   { name:'ต้านพายุสวรรค์',  base:24576 }
 ].map((t,i)=>({ ...t, gain: Math.pow(6, i) }));
 
 const SKILLS = [
-  { name:'ลมปราณพื้นฐาน',  base:2 },
-  { name:'หมัดคู่',        base:8 },
-  { name:'เกราะวิญญาณ',    base:32 },
-  { name:'ก้าวเงา',        base:128 },
-  { name:'ฝ่ามือเพลิง',     base:512 },
-  { name:'เนตรทิพย์',      base:2048 },
-  { name:'ดาบจิต',        base:8192 },
-  { name:'ผนึกเทพ',       base:32768 }
+  { name:'เคล็ดลมปราณเบื้องต้น',  base:2 },
+  { name:'หมัดพยัคฆ์คู่',        base:8 },
+  { name:'เกราะชี่คุ้มกาย',    base:32 },
+  { name:'วิชาตัวเบา',        base:128 },
+  { name:'ฝ่ามือเพลิงหยาง',     base:512 },
+  { name:'เนตรทิพย์ส่องฟ้า',      base:2048 },
+  { name:'กระบี่จิตไร้รูป',        base:8192 },
+  { name:'ตราผนึกเทพ',       base:32768 }
 ].map((t,i)=>({ ...t, gain: Math.pow(6, i) }));
 
 // Clones fight monsters for Divinity (DP) and Battle. Clones weaker than the monster also die.
@@ -34,8 +34,8 @@ const KILL_RATE = 0.25;      // kills per clone per second when clone power equa
 const KILL_RATIO_CAP = 2;    // being stronger than this many times the monster no longer speeds kills up
 const DEATH_RATE = 0.5;      // clone deaths per clone per second at 0 power ratio (scales down to 0 at ratio 1)
 const MONSTERS = [
-  'ภูตหมอก','หมาป่าเงา','โกเลมหิน','งูพิษทมิฬ','อสูรเพลิง',
-  'ยักษ์ภูผา','เทพพระเจ้ามักกร','ปีศาจอสนี','อสูรกาลเวลา','ราชันอสูร'
+  'วิญญาณหมอกพันปี','หมาป่าอสูรเงา','หุ่นศิลาเฝ้าสุสาน','อสรพิษทมิฬพันพิษ','ปีศาจเพลิงนรก',
+  'ยักษ์เฝ้าขุนเขา','เทพพระเจ้ามักกร','อสูรอัสนีปีกดำ','อสูรกงล้อกาล','จักรพรรดิมาร'
 ].map((name,i)=>({ name, power: 1.5*Math.pow(6, i), dp: Math.pow(5, i), battle: 0.05*Math.pow(6, i) }));
 
 // The hero creates one item at a time; higher items consume lower ones as ingredients.
@@ -63,20 +63,50 @@ const STRIKE_CD = 12, STRIKE_SHARE = 0.04, STRIKE_BLOWS = 5;
 // Hero and monster damage per hit scale with clone power / monster power, clamped to ADV_RATIO_MIN..ADV_RATIO_MAX.
 const ADV_INCOME_SEC = 5, ADV_KILL_WORTH = 25, ADV_HERO_DMG = 26, ADV_MON_DMG = 11, ADV_RATIO_MIN = 0.25, ADV_RATIO_MAX = 4;
 
+// ---------- personal realm (มิติส่วนตัว): a jade pocket world that survives rebirth ----------
+// Realm level L gives REALM_PLOTS_BASE + REALM_PLOTS_PER*(L-1) herb plots; the next level costs REALM_COST*REALM_COST_GROWTH^(L-1) spirit stones.
+// From REALM_CHAMBER_LV the time chamber speeds up training by REALM_CHAMBER_PER per level above it.
+const REALM_MAX_LV = 9, REALM_PLOTS_BASE = 2, REALM_PLOTS_PER = 2, REALM_COST = 20, REALM_COST_GROWTH = 3, REALM_CHAMBER_LV = 3, REALM_CHAMBER_PER = 0.2;
+const REALM_NAMES = ['หยกขั้นต้น','หยกเปล่งแสง','หยกวิญญาณ','หยกเมฆม่วง','หยกเทวะ','หยกดาราศักดิ์สิทธิ์','หยกเซียน','หยกปฐมกาล','หยกนิรันดร์'];
+// the spirit spring speeds herb growth by SPRING_PER per level
+const SPRING_MAX = 10, SPRING_PER = 0.25, SPRING_COST = 15, SPRING_COST_GROWTH = 2.2;
+// herbs: grow for `time` seconds (real time, also while offline), a harvest gives `yield` herbs and one seed back
+const HERBS = [
+  { key:'grass', name:'หญ้าวิญญาณ',      time:300,   yield:3, color:'#7fe0a0' },
+  { key:'lotus', name:'บัวหิมะ',          time:1200,  yield:2, color:'#dff6ff' },
+  { key:'lingzhi', name:'เห็ดหลินจือโลหิต', time:3600,  yield:2, color:'#ff6b6b' },
+  { key:'ginseng', name:'โสมพันปี',        time:10800, yield:2, color:'#e8c76f' },
+  { key:'peach', name:'ท้อเซียน',          time:28800, yield:1, color:'#ffb0c8' }
+];
+// pills brewed in the alchemy furnace. buff: a stat multiplier for `sec` seconds (stacking time); perm: a permanent
+// compounding multiplier (1+per) per pill eaten. Neither applies in the 'mortal' challenge.
+const PILLS = [
+  { key:'body',   name:'โอสถเสริมกาย',      needs:{ grass:3 },            buff:{ stat:'phys',  mult:2, sec:600 } },
+  { key:'qi',     name:'โอสถรวมชี่',        needs:{ grass:2, lotus:1 },  buff:{ stat:'myst',  mult:2, sec:600 } },
+  { key:'swift',  name:'โอสถเร่งบำเพ็ญ',     needs:{ lotus:2 },            buff:{ stat:'speed', mult:2, sec:600 } },
+  { key:'luck',   name:'โอสถดึงดูดโชค',     needs:{ lingzhi:2 },          buff:{ stat:'dp',    mult:3, sec:600 } },
+  { key:'break',  name:'โอสถทะลวงขั้น',      needs:{ ginseng:1, lingzhi:2 }, perm:{ stat:'stat', per:0.02 } },
+  { key:'immortal', name:'โอสถเซียนอมตะ',    needs:{ peach:1, ginseng:1 },  perm:{ stat:'stat', per:0.05 } }
+];
+// adventure kills also pay spirit stones (1 + zone) and, every REALM_SEED_EVERY kills, a seed of the zone's herb tier
+const REALM_SEED_EVERY = 3;
+// most of one permanent pill a player can eat (keeps every number finite)
+const PILL_PERM_MAX = 60;
+
 // Gods are fought by the hero. Each one killed unlocks something and makes the hero stronger.
 // unlock: 'skills' | 'create' | 'gen' | 'monuments' | 'pets' | 'rebirth'; monsters unlock two at a time per god.
 // gp: God Power paid out on rebirth for every god killed in that run.
 const GODS = [
-  { name:'เทพสายฟ้า',   hp:34000, atk:160, def:810,       gp:3,  reward:{ unlock:'skills', maxClones:10, stat:1.3 } },
-  { name:'เทพสงคราม',   hp:3.7e5, atk:4400, def:8800,     gp:3,  reward:{ unlock:'create', maxClones:20, stat:1.3 } },
-  { name:'เทพมรณะ',    hp:2.4e7, atk:3.3e5, def:5.8e5,   gp:6,  reward:{ unlock:'gen', maxClones:30, stat:1.3, clone:2 } },
-  { name:'เทพโชคชะตา',  hp:2.9e9, atk:4e7, def:7e7,       gp:9,  reward:{ unlock:'monuments', maxClones:40, stat:1.3, dp:2 } },
-  { name:'เทพทะเล',    hp:3.1e11, atk:4.3e9, def:7.4e9,  gp:12,  reward:{ unlock:'pets', maxClones:50, stat:1.3, speed:2 } },
-  { name:'เทพอัคคี',    hp:1.3e12, atk:1.7e10, def:3e10,  gp:18,  reward:{ unlock:'rebirth', maxClones:60, stat:1.5 } },
-  { name:'เทพกาลเวลา',  hp:8.9e14, atk:1.2e13, def:2.1e13,  gp:30, reward:{ maxClones:80, stat:1.5, speed:2 } },
-  { name:'เทพจันทรา',   hp:5.8e15, atk:7.9e13, def:1.4e14,gp:45, reward:{ maxClones:100, stat:1.5, dp:3 } },
-  { name:'เทพสุริยัน',   hp:2.8e16, atk:3.8e14, def:6.7e14,  gp:75, reward:{ maxClones:120, stat:1.5, clone:3 } },
-  { name:'เทพเจ้าสูงสุด', hp:1.4e17, atk:1.9e15, def:3.3e15,gp:120, reward:{ stat:2 } }
+  { name:'จอมเทพอัสนี',   hp:34000, atk:160, def:810,       gp:3,  reward:{ unlock:'skills', maxClones:10, stat:1.3 } },
+  { name:'เทพสงครามกระบี่โลหิต',   hp:3.7e5, atk:4400, def:8800,     gp:3,  reward:{ unlock:'create', maxClones:20, stat:1.3 } },
+  { name:'ราชันยมโลก',    hp:2.4e7, atk:3.3e5, def:5.8e5,   gp:6,  reward:{ unlock:'gen', maxClones:30, stat:1.3, clone:2 } },
+  { name:'เทพีลิขิตฟ้า',  hp:2.9e9, atk:4e7, def:7e7,       gp:9,  reward:{ unlock:'monuments', maxClones:40, stat:1.3, dp:2 } },
+  { name:'ราชามังกรทะเลบูรพา',    hp:3.1e11, atk:4.3e9, def:7.4e9,  gp:12,  reward:{ unlock:'pets', maxClones:50, stat:1.3, speed:2 } },
+  { name:'เทพเพลิงจูหรง',    hp:1.3e12, atk:1.7e10, def:3e10,  gp:18,  reward:{ unlock:'rebirth', maxClones:60, stat:1.5 } },
+  { name:'เซียนเฒ่ากาลเวลา',  hp:8.9e14, atk:1.2e13, def:2.1e13,  gp:30, reward:{ maxClones:80, stat:1.5, speed:2 } },
+  { name:'เทพธิดาฉางเอ๋อ',   hp:5.8e15, atk:7.9e13, def:1.4e14,gp:45, reward:{ maxClones:100, stat:1.5, dp:3 } },
+  { name:'จักรพรรดิสุริยัน',   hp:2.8e16, atk:3.8e14, def:6.7e14,  gp:75, reward:{ maxClones:120, stat:1.5, clone:3 } },
+  { name:'จักรพรรดิหยก', hp:1.4e17, atk:1.9e15, def:3.3e15,gp:120, reward:{ stat:2 } }
 ];
 // the god whose defeat unlocks each system (index into GODS)
 const UNLOCK_AT = { skills:0, adv:0, create:1, gen:2, monuments:3, pets:4, rebirth:5 };
@@ -99,12 +129,12 @@ const GEN_RATE = 100, GEN_GROWTH = 4, GEN_COST = 1e5, GEN_COST_GROWTH = 5;
 
 // Monuments are bought with DP plus created items. Level L costs dp*10^L DP and n*(L+1) items.
 const MONUMENTS = [
-  { key:'statue', name:'รูปปั้นนักรบ',   stat:'phys',      per:0.5,        dp:1e6, item:'stone', n:10, desc:'+50% กาย' },
-  { key:'shrine', name:'ศาลจอมเวท',    stat:'myst',      per:0.5,        dp:3e6, item:'water', n:4,  desc:'+50% เวท' },
-  { key:'temple', name:'วิหารเทวะ',     stat:'dp',        per:0.5,        dp:1e7, item:'soil',  n:6,  desc:'+50% พลังเทวะที่ได้' },
-  { key:'tower',  name:'หอคอยเงา',     stat:'clone',     per:0.5,        dp:3e7, item:'plant', n:3,  desc:'+50% พลังร่างเงา' },
-  { key:'clock',  name:'หอนาฬิกาสวรรค์', stat:'speed',     per:0.3,        dp:1e8, item:'air',   n:5,  desc:'+30% ความเร็วฝึก' },
-  { key:'city',   name:'นครเทพ',       stat:'maxClones', per:20, add:true, dp:1e9, item:'human', n:1,  desc:'+20 ร่างเงาสูงสุด' }
+  { key:'statue', name:'รูปปั้นขุนพล',   stat:'phys',      per:0.5,        dp:1e6, item:'stone', n:10, desc:'+50% กาย' },
+  { key:'shrine', name:'ศาลาเต๋า',    stat:'myst',      per:0.5,        dp:3e6, item:'water', n:4,  desc:'+50% เวท' },
+  { key:'temple', name:'ศาลเจ้าเทวะ',     stat:'dp',        per:0.5,        dp:1e7, item:'soil',  n:6,  desc:'+50% พลังเทวะที่ได้' },
+  { key:'tower',  name:'เจดีย์เงา',     stat:'clone',     per:0.5,        dp:3e7, item:'plant', n:3,  desc:'+50% พลังร่างเงา' },
+  { key:'clock',  name:'หอระฆังสวรรค์', stat:'speed',     per:0.3,        dp:1e8, item:'air',   n:5,  desc:'+30% ความเร็วฝึก' },
+  { key:'city',   name:'วังสวรรค์',       stat:'maxClones', per:20, add:true, dp:1e9, item:'human', n:1,  desc:'+20 ร่างเงาสูงสุด' }
 ];
 
 // ---------- phase 3: pets, dungeons, gear. All of it is kept through rebirth. ----------
@@ -113,9 +143,9 @@ const MONUMENTS = [
 const PETS = [
   { key:'crane',   name:'กระเรียนหยก',   base:10, stat:'phys',   per:0.03, color:'#7fe0c0', unlock:{ type:'gods', n:5 } },
   { key:'fox',     name:'จิ้งจอกเก้าหาง',  base:12, stat:'dp',     per:0.03, color:'#ff9a6b', unlock:{ type:'gods', n:6 } },
-  { key:'turtle',  name:'เต่าศักดิ์สิทธิ์',  base:15, stat:'myst',   per:0.03, color:'#7fb0ff', unlock:{ type:'rebirths', n:1 } },
+  { key:'turtle',  name:'เต่าดำเสวียนอู่',  base:15, stat:'myst',   per:0.03, color:'#7fb0ff', unlock:{ type:'rebirths', n:1 } },
   { key:'tiger',   name:'พยัคฆ์เพลิง',     base:20, stat:'battle', per:0.03, color:'#ff6b6b', unlock:{ type:'gods', n:7 } },
-  { key:'phoenix', name:'หงส์ไฟ',        base:25, stat:'speed',  per:0.03, color:'#ffb454', unlock:{ type:'ach', n:12 } },
+  { key:'phoenix', name:'นกเพลิงจูเชว่',        base:25, stat:'speed',  per:0.03, color:'#ffb454', unlock:{ type:'ach', n:12 } },
   { key:'qilin',   name:'กิเลนสวรรค์',    base:30, stat:'clone',  per:0.03, color:'#e8c76f', unlock:{ type:'gods', n:9 } }
 ];
 const PET_GROWTH = 1.12, PET_EXP_BASE = 50, PET_EXP_GROWTH = 1.12, PET_MAX_LV = 100, TEAM_SIZE = 3;
@@ -124,22 +154,22 @@ const PET_GROWTH = 1.12, PET_EXP_BASE = 50, PET_EXP_GROWTH = 1.12, PET_MAX_LV = 
 // below it the win chance is (team/dungeon)^2. A win gives d+1 of the material and exp*d to every pet in the team,
 // a loss gives a quarter of the exp. The next dungeon opens once the previous one is cleared to DUNGEON_UNLOCK_DEPTH.
 const DUNGEONS = [
-  { key:'cave',    name:'ถ้ำหินผลึก',  time:120,  power:8,    mat:'ore',   exp:20 },
-  { key:'forest',  name:'ป่าต้องสาป',  time:300,  power:120,  mat:'wood',  exp:60 },
-  { key:'volcano', name:'ภูเขาไฟนรก', time:600,  power:1000, mat:'ember', exp:180 },
-  { key:'abyss',   name:'วังใต้สมุทร',  time:1200, power:8000, mat:'pearl', exp:500 }
+  { key:'cave',    name:'ถ้ำผลึกวิญญาณ',  time:120,  power:8,    mat:'ore',   exp:20 },
+  { key:'forest',  name:'ป่าอสูรหมื่นลี้',  time:300,  power:120,  mat:'wood',  exp:60 },
+  { key:'volcano', name:'ภูผาเพลิงนรก', time:600,  power:1000, mat:'ember', exp:180 },
+  { key:'abyss',   name:'วังมังกรใต้สมุทร',  time:1200, power:8000, mat:'pearl', exp:500 }
 ];
 const DEPTH_GROWTH = 1.6, MAX_DEPTH = 10, DUNGEON_UNLOCK_DEPTH = 5;
-const MATERIALS = { ore:'แร่ผลึก', wood:'ไม้วิญญาณ', ember:'แก่นเพลิง', pearl:'ไข่มุกทะเล' };
+const MATERIALS = { ore:'แร่ผลึกวิญญาณ', wood:'ไม้หอมพันปี', ember:'แก่นเพลิงหยาง', pearl:'ไข่มุกมังกร' };
 
 // Hero gear, crafted and then reinforced with dungeon materials. Level L -> L+1 costs FORGE_COST*FORGE_GROWTH^L
 // of the gear's material; the first craft always works, later ones succeed with max(FORGE_MIN_CHANCE, 0.95 - 0.03L).
 // Each level multiplies the stat by (1+per), compounding.
 const GEAR = [
-  { key:'weapon', name:'ดาบสังหารเทพ', stat:'phys',  per:0.15, mat:'ore',   desc:'กาย ×1.15' },
-  { key:'armor',  name:'เกราะเทวะ',    stat:'myst',  per:0.15, mat:'wood',  desc:'เวท ×1.15' },
-  { key:'ring',   name:'แหวนศรัทธา',   stat:'dp',    per:0.2,  mat:'ember', desc:'พลังเทวะที่ได้ ×1.2' },
-  { key:'amulet', name:'สร้อยวิญญาณ',   stat:'clone', per:0.2,  mat:'pearl', desc:'พลังร่างเงา ×1.2' }
+  { key:'weapon', name:'กระบี่สังหารเทพ', stat:'phys',  per:0.15, mat:'ore',   desc:'กาย ×1.15' },
+  { key:'armor',  name:'เสื้อเกราะเทวะ',    stat:'myst',  per:0.15, mat:'wood',  desc:'เวท ×1.15' },
+  { key:'ring',   name:'แหวนหยกศรัทธา',   stat:'dp',    per:0.2,  mat:'ember', desc:'พลังเทวะที่ได้ ×1.2' },
+  { key:'amulet', name:'จี้หยกวิญญาณ',   stat:'clone', per:0.2,  mat:'pearl', desc:'พลังร่างเงา ×1.2' }
 ];
 const FORGE_COST = 5, FORGE_GROWTH = 1.35, FORGE_MIN_CHANCE = 0.3;
 
@@ -157,9 +187,9 @@ const CHAL_MAX = 6, CHAL_FIRST_GOAL = 3, FEW_CLONES = 10;
 // Ultimate beings: repeatable bosses after the last god. Level L has the last god's stats * mult * UB_GROWTH^L.
 // Each kill raises the level and pays mp Might points. Being i opens once being i-1 reaches UB_UNLOCK_LV.
 const ULTIMATES = [
-  { name:'ผู้พิทักษ์นภา',     mult:2,  mp:1, color:'#9fe7ff' },
-  { name:'อสูรโกลาหล',      mult:6,  mp:2, color:'#c77dff' },
-  { name:'ปฐมกาลผู้ไร้นาม',   mult:20, mp:3, color:'#ffffff' }
+  { name:'เทพพิทักษ์ประตูสวรรค์',     mult:2,  mp:1, color:'#9fe7ff' },
+  { name:'อสูรโกลาหลฮุ่นตุ้น',      mult:6,  mp:2, color:'#c77dff' },
+  { name:'ปฐมเทพผานกู่',   mult:20, mp:3, color:'#ffffff' }
 ];
 const UB_GROWTH = 1.3, UB_UNLOCK_LV = 5;
 
@@ -213,7 +243,7 @@ const ACHIEVEMENTS = [
 root.GKDATA = {
   LEVEL_TIME_GROWTH, ROW_UNLOCK_LEVEL, TRAININGS, SKILLS,
   KILL_RATE, KILL_RATIO_CAP, DEATH_RATE, MONSTERS,
-  CREATIONS, BASE_MAX_CLONES, HIT_INTERVAL, HP_REGEN, STRIKE_CD, STRIKE_SHARE, STRIKE_BLOWS, ADV_INCOME_SEC, ADV_KILL_WORTH, ADV_HERO_DMG, ADV_MON_DMG, ADV_RATIO_MIN, ADV_RATIO_MAX, GODS, UNLOCK_AT,
+  CREATIONS, BASE_MAX_CLONES, HIT_INTERVAL, HP_REGEN, STRIKE_CD, STRIKE_SHARE, STRIKE_BLOWS, ADV_INCOME_SEC, ADV_KILL_WORTH, ADV_HERO_DMG, ADV_MON_DMG, ADV_RATIO_MIN, ADV_RATIO_MAX, GODS, UNLOCK_AT, REALM_MAX_LV, REALM_PLOTS_BASE, REALM_PLOTS_PER, REALM_COST, REALM_COST_GROWTH, REALM_CHAMBER_LV, REALM_CHAMBER_PER, REALM_NAMES, SPRING_MAX, SPRING_PER, SPRING_COST, SPRING_COST_GROWTH, HERBS, PILLS, REALM_SEED_EVERY, PILL_PERM_MAX,
   UPGRADES, UPGRADE_COST_GROWTH, GEN_RATE, GEN_GROWTH, GEN_COST, GEN_COST_GROWTH, MONUMENTS, ACH_BONUS, ACHIEVEMENTS,
   PETS, PET_GROWTH, PET_EXP_BASE, PET_EXP_GROWTH, PET_MAX_LV, TEAM_SIZE,
   DUNGEONS, DEPTH_GROWTH, MAX_DEPTH, DUNGEON_UNLOCK_DEPTH, MATERIALS, GEAR, FORGE_COST, FORGE_GROWTH, FORGE_MIN_CHANCE,
