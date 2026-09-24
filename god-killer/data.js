@@ -63,12 +63,12 @@ const STRIKE_CD = 12, STRIKE_SHARE = 0.04, STRIKE_BLOWS = 5;
 // unlock: 'skills' | 'create' | 'gen' | 'monuments' | 'pets' | 'rebirth'; monsters unlock two at a time per god.
 // gp: God Power paid out on rebirth for every god killed in that run.
 const GODS = [
-  { name:'จอมเทพอัสนี',   hp:34000, atk:160, def:810,       gp:3,  reward:{ unlock:'skills', maxClones:10, stat:1.3 } },
+  { name:'จอมเทพอัสนี',   hp:7800, atk:37, def:190,       gp:3,  reward:{ unlock:'skills', maxClones:10, stat:1.3 } },
   { name:'เทพสงครามกระบี่โลหิต',   hp:3.7e5, atk:4400, def:8800,     gp:3,  reward:{ unlock:'create', maxClones:20, stat:1.3 } },
   { name:'ราชันยมโลก',    hp:2.4e7, atk:3.3e5, def:5.8e5,   gp:6,  reward:{ unlock:'gen', maxClones:30, stat:1.3, clone:2 } },
-  { name:'เทพีลิขิตฟ้า',  hp:2.9e9, atk:4e7, def:7e7,       gp:9,  reward:{ unlock:'monuments', maxClones:40, stat:1.3, dp:2 } },
-  { name:'ราชามังกรทะเลบูรพา',    hp:3.1e11, atk:4.3e9, def:7.4e9,  gp:12,  reward:{ unlock:'pets', maxClones:50, stat:1.3, speed:2 } },
-  { name:'เทพเพลิงจูหรง',    hp:1.3e12, atk:1.7e10, def:3e10,  gp:18,  reward:{ unlock:'rebirth', maxClones:60, stat:1.5 } },
+  { name:'เทพีลิขิตฟ้า',  hp:2.7e9, atk:3.7e7, def:6.5e7,       gp:9,  reward:{ unlock:'monuments', maxClones:40, stat:1.3, dp:2 } },
+  { name:'ราชามังกรทะเลบูรพา',    hp:2.5e11, atk:3.5e9, def:6.1e9,  gp:12,  reward:{ unlock:'pets', maxClones:50, stat:1.3, speed:2 } },
+  { name:'เทพเพลิงจูหรง',    hp:9.5e11, atk:1.2e10, def:2.2e10,  gp:18,  reward:{ unlock:'rebirth', maxClones:60, stat:1.5 } },
   { name:'เซียนเฒ่ากาลเวลา',  hp:8.9e14, atk:1.2e13, def:2.1e13,  gp:30, reward:{ maxClones:80, stat:1.5, speed:2 } },
   { name:'เทพธิดาฉางเอ๋อ',   hp:5.8e15, atk:7.9e13, def:1.4e14,gp:45, reward:{ maxClones:100, stat:1.5, dp:3 } },
   { name:'จักรพรรดิสุริยัน',   hp:2.8e16, atk:3.8e14, def:6.7e14,  gp:75, reward:{ maxClones:120, stat:1.5, clone:3 } },
