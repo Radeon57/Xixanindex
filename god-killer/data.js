@@ -58,45 +58,6 @@ const HIT_INTERVAL = 0.5;      // seconds between blows in a god fight
 const HP_REGEN = 0.1;          // share of max HP regained per second outside a fight
 // active strike in a fight: the bigger of STRIKE_BLOWS normal blows or STRIKE_SHARE of the foe's max HP, then a cooldown
 const STRIKE_CD = 12, STRIKE_SHARE = 0.04, STRIKE_BLOWS = 5;
-// adventure mode: one monster slain by the hero pays like ADV_KILL_WORTH kills in the battlefield, or, if more,
-// ADV_INCOME_SEC seconds of the current DP income scaled by how deep the zone is (so late game it still matters).
-// Hero and monster damage per hit scale with clone power / monster power, clamped to ADV_RATIO_MIN..ADV_RATIO_MAX.
-const ADV_INCOME_SEC = 5, ADV_KILL_WORTH = 25, ADV_HERO_DMG = 26, ADV_MON_DMG = 11, ADV_RATIO_MIN = 0.25, ADV_RATIO_MAX = 4;
-
-// ---------- personal realm (มิติส่วนตัว): a jade pocket world that survives rebirth ----------
-// Realm level L gives REALM_PLOTS_BASE + REALM_PLOTS_PER*(L-1) herb plots; the next level costs REALM_COST*REALM_COST_GROWTH^(L-1) spirit stones.
-// From REALM_CHAMBER_LV the time chamber speeds up training by REALM_CHAMBER_PER per level above it.
-const REALM_MAX_LV = 9, REALM_PLOTS_BASE = 2, REALM_PLOTS_PER = 2, REALM_COST = 20, REALM_COST_GROWTH = 3, REALM_CHAMBER_LV = 3, REALM_CHAMBER_PER = 0.2;
-const REALM_NAMES = ['หยกขั้นต้น','หยกเปล่งแสง','หยกวิญญาณ','หยกเมฆม่วง','หยกเทวะ','หยกดาราศักดิ์สิทธิ์','หยกเซียน','หยกปฐมกาล','หยกนิรันดร์'];
-// the spirit spring speeds herb growth by SPRING_PER per level
-const SPRING_MAX = 10, SPRING_PER = 0.25, SPRING_COST = 15, SPRING_COST_GROWTH = 2.2;
-// herbs: grow for `time` seconds (real time, also while offline), a harvest gives `yield` herbs and one seed back
-const HERBS = [
-  { key:'grass', name:'หญ้าวิญญาณ',      time:300,   yield:3, color:'#7fe0a0' },
-  { key:'lotus', name:'บัวหิมะ',          time:1200,  yield:2, color:'#dff6ff' },
-  { key:'lingzhi', name:'เห็ดหลินจือโลหิต', time:3600,  yield:2, color:'#ff6b6b' },
-  { key:'ginseng', name:'โสมพันปี',        time:10800, yield:2, color:'#e8c76f' },
-  { key:'peach', name:'ท้อเซียน',          time:28800, yield:1, color:'#ffb0c8' }
-];
-// pills brewed in the alchemy furnace. buff: a stat multiplier for `sec` seconds (stacking time); perm: a permanent
-// compounding multiplier (1+per) per pill eaten. Neither applies in the 'mortal' challenge.
-const PILLS = [
-  { key:'body',   name:'โอสถเสริมกาย',      needs:{ grass:3 },            buff:{ stat:'phys',  mult:2, sec:600 } },
-  { key:'qi',     name:'โอสถรวมชี่',        needs:{ grass:2, lotus:1 },  buff:{ stat:'myst',  mult:2, sec:600 } },
-  { key:'swift',  name:'โอสถเร่งบำเพ็ญ',     needs:{ lotus:2 },            buff:{ stat:'speed', mult:2, sec:600 } },
-  { key:'luck',   name:'โอสถดึงดูดโชค',     needs:{ lingzhi:2 },          buff:{ stat:'dp',    mult:3, sec:600 } },
-  { key:'break',  name:'โอสถทะลวงขั้น',      needs:{ ginseng:1, lingzhi:2 }, perm:{ stat:'stat', per:0.02 } },
-  { key:'immortal', name:'โอสถเซียนอมตะ',    needs:{ peach:1, ginseng:1 },  perm:{ stat:'stat', per:0.05 } }
-];
-// adventure kills also pay spirit stones (1 + zone) and, every REALM_SEED_EVERY kills, a seed of the zone's herb tier
-const REALM_SEED_EVERY = 3;
-// secret lands (one per battlefield monster). Each has a treasure guardian: BOSS_HP_MULT times a monster's HP and
-// BOSS_DMG_MULT its damage; beating it pays BOSS_KILL_WORTH normal kills, BOSS_STONES*(zone+1) spirit stones and a
-// seed one herb tier above the zone's; it returns after BOSS_RESPAWN seconds.
-const SECRET_LANDS = ['ป่าหมอกพันปี','หุบเขาหมาป่าเงา','สุสานศิลาโบราณ','บึงอสรพิษทมิฬ','ทุ่งเพลิงนรก','ขุนเขายักษ์เฝ้า','ทะเลสาบมักกร','ที่ราบอัสนี','หอกงล้อกาล','วังจักรพรรดิมาร'];
-const BOSS_HP_MULT = 6, BOSS_DMG_MULT = 2.2, BOSS_KILL_WORTH = 5, BOSS_STONES = 5, BOSS_RESPAWN = 300;
-// most of one permanent pill a player can eat (keeps every number finite)
-const PILL_PERM_MAX = 60;
 
 // Gods are fought by the hero. Each one killed unlocks something and makes the hero stronger.
 // unlock: 'skills' | 'create' | 'gen' | 'monuments' | 'pets' | 'rebirth'; monsters unlock two at a time per god.
@@ -114,7 +75,7 @@ const GODS = [
   { name:'จักรพรรดิหยก', hp:1.4e17, atk:1.9e15, def:3.3e15,gp:120, reward:{ stat:2 } }
 ];
 // the god whose defeat unlocks each system (index into GODS)
-const UNLOCK_AT = { skills:0, adv:0, create:1, gen:2, monuments:3, pets:4, rebirth:5 };
+const UNLOCK_AT = { skills:0, create:1, gen:2, monuments:3, pets:4, rebirth:5 };
 
 // Permanent upgrades bought with God Power; survive rebirth. Level L costs cost*UPGRADE_COST_GROWTH^L GP (rounded up),
 // so pouring everything into one upgrade runs into diminishing returns.
@@ -248,7 +209,7 @@ const ACHIEVEMENTS = [
 root.GKDATA = {
   LEVEL_TIME_GROWTH, ROW_UNLOCK_LEVEL, TRAININGS, SKILLS,
   KILL_RATE, KILL_RATIO_CAP, DEATH_RATE, MONSTERS,
-  CREATIONS, BASE_MAX_CLONES, HIT_INTERVAL, HP_REGEN, STRIKE_CD, STRIKE_SHARE, STRIKE_BLOWS, ADV_INCOME_SEC, ADV_KILL_WORTH, ADV_HERO_DMG, ADV_MON_DMG, ADV_RATIO_MIN, ADV_RATIO_MAX, GODS, UNLOCK_AT, REALM_MAX_LV, REALM_PLOTS_BASE, REALM_PLOTS_PER, REALM_COST, REALM_COST_GROWTH, REALM_CHAMBER_LV, REALM_CHAMBER_PER, REALM_NAMES, SPRING_MAX, SPRING_PER, SPRING_COST, SPRING_COST_GROWTH, HERBS, PILLS, REALM_SEED_EVERY, SECRET_LANDS, BOSS_HP_MULT, BOSS_DMG_MULT, BOSS_KILL_WORTH, BOSS_STONES, BOSS_RESPAWN, PILL_PERM_MAX,
+  CREATIONS, BASE_MAX_CLONES, HIT_INTERVAL, HP_REGEN, STRIKE_CD, STRIKE_SHARE, STRIKE_BLOWS, GODS, UNLOCK_AT,
   UPGRADES, UPGRADE_COST_GROWTH, GEN_RATE, GEN_GROWTH, GEN_COST, GEN_COST_GROWTH, MONUMENTS, ACH_BONUS, ACHIEVEMENTS,
   PETS, PET_GROWTH, PET_EXP_BASE, PET_EXP_GROWTH, PET_MAX_LV, TEAM_SIZE,
   DUNGEONS, DEPTH_GROWTH, MAX_DEPTH, DUNGEON_UNLOCK_DEPTH, MATERIALS, GEAR, FORGE_COST, FORGE_GROWTH, FORGE_MIN_CHANCE,
