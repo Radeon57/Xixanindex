@@ -25,6 +25,9 @@ function setShown(el, v, how){ const d = v ? (how||'block') : 'none'; if(el._d !
 function setClass(el, cls, on){ if(el.classList.contains(cls) !== on) el.classList.toggle(cls, on); }
 // 'on' marks the chosen button of a toggle or segmented control; mirror it for screen readers
 function setOn(el, on){ setClass(el, 'on', on); if(el.getAttribute('aria-pressed') !== String(on)) el.setAttribute('aria-pressed', String(on)); }
+const REDUCED_MOTION = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+// restart a one-shot CSS animation class
+function replayAnim(el, cls){ el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
 function setBar(el, frac){
   const k = Math.round(Math.max(0, Math.min(1, frac || 0))*1000);
   if(el._k !== k){ el._k = k; el.style.transform = 'scaleX('+(k/1000)+')'; }
@@ -220,6 +223,9 @@ function renderJobs(kind, d, full){
       setHTML(ref.s2, rate);
     } else {
       const mult = kind === 'train' ? d.m.phys : d.m.myst;
+      const now = Date.now();   // at most one pulse per row every 1.5s, so fast late-game levels don't strobe
+      if(ref._lv !== undefined && r.lv > ref._lv && !REDUCED_MOTION && !(now - ref._lvAt < 1500)){ ref._lvAt = now; replayAnim(ref.el, 'lvUp'); replayAnim(ref.lv, 'bump'); }
+      ref._lv = r.lv;
       setText(ref.lv, 'Lv.' + r.lv);
       const eta = r.n ? fmtTime((G.levelTime(defs[i], r.lv) - r.prog) / (r.n * d.m.speed)) : 'ไม่มีร่างเงา';
       setText(ref.s1, '+' + fmt(defs[i].gain*mult) + ' ' + (kind==='train' ? 'กาย' : 'เวท') + '/เลเวล · เลเวลถัดไป ' + eta);
@@ -472,10 +478,11 @@ function buildTemple(){
   $('monoList').innerHTML = D.MONUMENTS.map((mo,i)=>`<div class="cItem" data-i="${i}">
       <div class="jobHead"><span class="jobName">${mo.name}</span><span class="jobLv"></span></div>
       <div class="cDesc"></div>
-      <div class="cFoot"><span class="cCost"></span><button class="selBtn" data-act="build" data-key="${mo.key}">สร้าง</button></div>
+      <div class="cFoot"><span class="cCost"></span><button class="miniBtn maxBtn" data-act="buildMax" data-key="${mo.key}">สูงสุด</button><button class="selBtn" data-act="build" data-key="${mo.key}">สร้าง</button></div>
     </div>`).join('');
   R.mono = [...document.querySelectorAll('#monoList .cItem')].map(el=>({
-    el, lv: el.querySelector('.jobLv'), desc: el.querySelector('.cDesc'), cost: el.querySelector('.cCost'), btn: el.querySelector('.selBtn')
+    el, lv: el.querySelector('.jobLv'), desc: el.querySelector('.cDesc'), cost: el.querySelector('.cCost'), btn: el.querySelector('.selBtn'),
+    max: el.querySelector('.maxBtn')
   }));
 }
 function bonusText(x, L, compound){
@@ -489,7 +496,7 @@ function renderTemple(d, full){
   const next = D.GEN_RATE * Math.pow(D.GEN_GROWTH, s.gen) * d.m.dp;
   setText($('genRate'), (s.gen ? 'ผลิต ' + fmt(G.genRate(s, d)) + ' DP/วิ' : 'ยังไม่ได้สร้าง') + ' · เลเวลถัดไป ' + fmt(next) + ' DP/วิ');
   setText($('genBtn'), (s.gen ? 'อัปเกรด' : 'สร้างเครื่องผลิต') + ' · ' + fmt(cost) + ' DP');
-  setDisabled($('genBtn'), s.dp < cost);
+  setDisabled($('genBtn'), s.dp < cost); setDisabled($('genMaxBtn'), s.dp < cost);
   const open = G.monumentsUnlocked(s);
   setShown($('monoLock'), !open);
   if(!open) setHTML($('monoLock'), s.challenge === 'nocreate' ? 'ความท้าทาย "โลกไร้สรรพสิ่ง" ปิดอนุสรณ์ไว้จนกว่าจะผ่าน'
@@ -504,7 +511,7 @@ function renderTemple(d, full){
     setText(ref.desc, mo.desc + ' ต่อเลเวล' + (L ? ' · ตอนนี้ ' + bonusText(mo, L) : ''));
     setHTML(ref.cost, '<span class="' + (s.dp < c.dp ? 'short' : '') + '">DP ' + fmt(c.dp) + '</span> · <span class="' + (have < c.items ? 'short' : '') + '">' +
       itemName + ' ' + fmt(have) + '/' + fmt(c.items) + '</span>');
-    setDisabled(ref.btn, !G.canBuild(s, mo));
+    setDisabled(ref.btn, !G.canBuild(s, mo)); setDisabled(ref.max, !G.canBuild(s, mo));
   });
 }
 
@@ -515,10 +522,11 @@ function buildRebirth(){
   $('upList').innerHTML = D.UPGRADES.map((u,i)=>`<div class="cItem" data-i="${i}">
       <div class="jobHead"><span class="jobName">${u.name}</span><span class="jobLv"></span></div>
       <div class="cDesc"></div>
-      <div class="cFoot"><span class="cCost"></span><button class="selBtn" data-act="upgrade" data-key="${u.key}">ซื้อ</button></div>
+      <div class="cFoot"><span class="cCost"></span><button class="miniBtn maxBtn" data-act="upgradeMax" data-key="${u.key}">สูงสุด</button><button class="selBtn" data-act="upgrade" data-key="${u.key}">ซื้อ</button></div>
     </div>`).join('');
   R.up = [...document.querySelectorAll('#upList .cItem')].map(el=>({
-    lv: el.querySelector('.jobLv'), desc: el.querySelector('.cDesc'), cost: el.querySelector('.cCost'), btn: el.querySelector('.selBtn')
+    lv: el.querySelector('.jobLv'), desc: el.querySelector('.cDesc'), cost: el.querySelector('.cCost'), btn: el.querySelector('.selBtn'),
+    max: el.querySelector('.maxBtn')
   }));
   $('achList').innerHTML = D.ACHIEVEMENTS.map(a=>`<div class="ach" data-key="${a.key}"><b>${a.name}</b><span>${ACH_LABEL[a.type]} ${fmt(a.n)}</span><div class="bar gold"><i></i></div></div>`).join('');
   R.ach = [...document.querySelectorAll('#achList .ach')].map(el=>({ el, bar: el.querySelector('.bar>i') }));
@@ -583,7 +591,7 @@ function renderRebirth(d, full){
     setText(ref.lv, 'Lv.' + L);
     setText(ref.desc, u.desc + ' ต่อเลเวล' + (u.add ? '' : ' (ทบต้น)') + (L ? ' · ตอนนี้ ' + bonusText(u, L, true) : ''));
     setHTML(ref.cost, '<span class="' + (m.gp < c ? 'short' : '') + '">' + c + ' God Power</span>');
-    setDisabled(ref.btn, m.gp < c);
+    setDisabled(ref.btn, m.gp < c); setDisabled(ref.max, m.gp < c);
   });
   const n = G.achCount(s);
   setText($('achSum'), n + '/' + D.ACHIEVEMENTS.length + ' · ค่าสถานะทั้งหมด +' + Math.round(n*D.ACH_BONUS*100) + '%');
@@ -733,7 +741,11 @@ function renderTutor(){
   const m = s.meta;
   while(m.tut < TUT.length && !TUT[m.tut].manual && TUT[m.tut].done()) m.tut++;
   const step = TUT[m.tut];
-  setShown($('tutor'), !!step, 'flex');
+  const goal = !step && nextGoal();
+  setShown($('tutor'), !!step || !!goal, 'flex');
+  setClass($('tutor'), 'goal', !!goal);
+  setShown($('tutorBtn'), !!step, 'inline-block');
+  if(goal){ setText($('tutorStep'), 'เป้าหมาย'); setText($('tutorText'), goal); }
   document.querySelectorAll('.tab').forEach(t=>setClass(t, 'guide', !!step && step.tab === t.dataset.tab && activeTab !== step.tab));
   if(step){
     setText($('tutorStep'), step.manual ? '✓' : (m.tut+1) + '/' + (TUT.length-1));
@@ -744,6 +756,22 @@ function renderTutor(){
   const tip = TIPS[k] && !m.seen[k] && !tabLocked(k) && (!basics || m.tut >= TUT.length);
   setShown($('tabTip'), !!tip, 'flex');
   if(tip) setText($('tabTipText'), TIPS[k]);
+}
+
+// one line of advice after the tutorial: the next god, or when rebirth pays off
+function nextGoal(){
+  const d = G.derive(s), gain = G.rebirthGain(s), rb = G.rebirthUnlocked(s) && gain > 0;
+  if(s.gods < D.GODS.length){
+    const tg = godTarget(), o = fightOutlook(d, tg);
+    if(s.fight) return 'กำลังสู้กับ ' + tg.name + '...';
+    if(o.win) return 'พร้อมท้า ' + tg.name + ' แล้ว! ไปที่แท็บท้าเทพ (คาดว่าชนะใน ' + fmtTime(o.secs) + ')';
+    const f = G.neededFactor(s, d, tg);
+    let t = 'ต้องแข็งแกร่งขึ้นอีก ×' + fmt(f) + ' เพื่อชนะ ' + tg.name;
+    if(rb && f > 20) t += ' · ยังห่างอีกมาก ลองเกิดใหม่ได้ +' + gain + ' God Power';
+    return t;
+  }
+  if(G.ubUnlocked(s)) return 'สังหารเทพครบแล้ว! สู้สิ่งมีชีวิตสูงสุดเพื่อเก็บแต้ม Might' + (rb ? ' · หรือเกิดใหม่ได้ +' + gain + ' God Power' : '');
+  return '';
 }
 
 // ---------- save transfer ----------
@@ -1037,6 +1065,12 @@ function onMainClick(e){
   } else if(act === 'build'){
     const mo = D.MONUMENTS.find(x=>x.key===b.dataset.key);
     if(G.buildMonument(s, b.dataset.key)){ addLog('สร้าง ' + mo.name + ' เป็น Lv.' + s.mono[mo.key]); toast(mo.name + ' Lv.' + s.mono[mo.key]); }
+  } else if(act === 'buildMax'){
+    const mo = D.MONUMENTS.find(x=>x.key===b.dataset.key), n = G.buildMonumentMax(s, b.dataset.key);
+    if(n){ addLog('สร้าง ' + mo.name + ' +' + n + ' เลเวล เป็น Lv.' + s.mono[mo.key]); toast(mo.name + ' Lv.' + s.mono[mo.key]); }
+  } else if(act === 'upgradeMax'){
+    const u = D.UPGRADES.find(x=>x.key===b.dataset.key), n = G.buyUpgradeMax(s, b.dataset.key);
+    if(n){ addLog('อัปเกรดถาวร ' + u.name + ' +' + n + ' เลเวล เป็น Lv.' + s.meta.up[u.key]); save(); }
   } else if(act === 'plan'){
     G.togglePlan(s, !s.meta.plan.on);
     addLog('จัดร่างเงาอัตโนมัติ: ' + (s.meta.plan.on ? 'เปิด' : 'ปิด'));
@@ -1090,6 +1124,10 @@ function onMainClick(e){
     if(G.buyUpgrade(s, b.dataset.key)){ addLog('อัปเกรดถาวร ' + u.name + ' เป็น Lv.' + s.meta.up[u.key]); save(); }
   }
   render(true);
+}
+function onGenMax(){
+  const n = G.upgradeGenMax(s);
+  if(n){ addLog('เครื่องผลิตพลังเทวะ +' + n + ' เลเวล เป็น Lv.' + s.gen); render(true); }
 }
 function onGen(){
   if(G.upgradeGen(s)){ addLog('เครื่องผลิตพลังเทวะ Lv.' + s.gen); render(true); }
@@ -1312,6 +1350,7 @@ function boot(saved){
   $('main').addEventListener('click', onMainClick);
   $('fightBtn').addEventListener('click', onFight);
   $('genBtn').addEventListener('click', onGen);
+  $('genMaxBtn').addEventListener('click', onGenMax);
   $('backToGod').addEventListener('click', ()=>{ arenaSel = 'god'; render(true); });
   $('autoFight').addEventListener('change', e=>{ s.meta.autoFight = e.target.checked; save(); render(true); });
   $('tutorBtn').addEventListener('click', ()=>{ s.meta.tut = 999; save(); render(true); });

@@ -129,7 +129,7 @@ section.panel{display:none}
 .fighting #heroPixel{animation:heroLunge .5s ease-in-out infinite}
 @keyframes heroLunge{0%,100%{transform:translateX(0)}40%{transform:translateX(6px)}}
 .godPortrait svg{display:block;will-change:transform}
-.fighting .godPortrait svg{animation:godShake .5s ease-in-out infinite}
+.fighting .godPortrait svg,.fighting .godPortrait .art{animation:godShake .5s ease-in-out infinite}
 @keyframes godShake{0%,100%{transform:translateX(0)}60%{transform:translateX(-3px)}}
 .fName{font-size:.82rem;font-weight:bold;color:var(--gold);text-align:center}
 .fighter .bar{width:100%;flex:none}
@@ -356,6 +356,16 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
   .tab{padding:6px 10px;font-size:.78rem}
   .tab .kHint{display:none}
 }
+/* ---------- buy max, next goal, level-up ---------- */
+.buyRow{display:flex;gap:6px;margin-top:8px;align-items:stretch}
+.buyRow .b{flex:1}
+.maxBtn{flex:none;white-space:nowrap}
+.cFoot .maxBtn{padding:7px 8px}
+.tutor.goal{background:linear-gradient(90deg,rgba(232,199,111,.14),rgba(139,92,246,.12))}
+.job.lvUp{animation:lvUp .7s ease-out}
+@keyframes lvUp{0%{box-shadow:inset 0 0 0 0 rgba(232,199,111,0);background:rgba(232,199,111,.18)}100%{background:transparent}}
+.jobLv.bump{display:inline-block;animation:bump .45s ease-out}
+@keyframes bump{0%{transform:scale(1)}35%{transform:scale(1.35)}100%{transform:scale(1)}}
 </style>
 </head>
 <body>
@@ -533,7 +543,7 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
       <div class="curCard">
         <div class="row"><span>เครื่องผลิตพลังเทวะ</span><b id="genLv">Lv.0</b></div>
         <div class="note" id="genRate"></div>
-        <button class="b bPrimary" id="genBtn" style="margin-top:8px"></button>
+        <div class="buyRow"><button class="b bPrimary" id="genBtn"></button><button class="miniBtn maxBtn" id="genMaxBtn">ซื้อสูงสุด</button></div>
       </div>
       <div class="hint" id="monoLock">ปลดล็อกอนุสรณ์เมื่อสังหาร <b id="monoLockGod"></b></div>
       <div class="secTitle" id="monoTitle">อนุสรณ์ <span class="secSub">ใช้พลังเทวะและของที่สร้างไว้ — ให้โบนัสจนกว่าจะเกิดใหม่</span></div>
