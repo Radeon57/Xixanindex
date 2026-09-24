@@ -5,7 +5,7 @@ const G = window.GK, D = G.D;
 const SAVE_KEY = 'godKillerSave2';
 const UI_INTERVAL_MS = 200;   // text refresh; bars move every frame
 const JOB_DEFS = { train: D.TRAININGS, skill: D.SKILLS, mon: D.MONSTERS };
-const GOD_COLORS = ['#7fb0ff','#ff6b6b','#b6a8d6','#e8c76f','#4fd1c5','#ff9a3c'];
+const GOD_COLORS = ['#7fb0ff','#ff6b6b','#b8c4cc','#e8c76f','#4fd1c5','#ff9a3c'];
 
 let s = G.newState();
 let storageOk = true;
@@ -363,7 +363,7 @@ function godSVG(i, color){
     <circle cx="42" cy="42" r="40" fill="url(#godGlow${i})"/>
     <circle cx="42" cy="42" r="30" fill="none" stroke="${c}" stroke-width="1.2" opacity=".55"/>
     <path d="M25 31 L28 15 L35 24 L42 10 L49 24 L56 15 L59 31 Z" fill="${c}"/>
-    <path d="M28 34 Q42 30 56 34 L56 50 Q42 68 28 50 Z" fill="#1c1832" stroke="${c}" stroke-width="1.5"/>
+    <path d="M28 34 Q42 30 56 34 L56 50 Q42 68 28 50 Z" fill="#1a140e" stroke="${c}" stroke-width="1.5"/>
     <rect x="33" y="41" width="6" height="3" rx="1" fill="${c}"/><rect x="45" y="41" width="6" height="3" rx="1" fill="${c}"/>
     <path d="M37 55 L47 55" stroke="${c}" stroke-width="1.5" stroke-linecap="round"/>
   </svg>`;
@@ -1027,7 +1027,7 @@ function centerOf(el){
 function hitFx(){
   if(!fx || activeTab !== 'gods' || !s.fight) return;
   const g = centerOf($('godArt')), h = centerOf($('heroPixel').parentNode);
-  fx.burst(g.x, g.y, 6, '#ece7fb', 70);
+  fx.burst(g.x, g.y, 6, '#ede3cc', 70);
   fx.burst(h.x, h.y, 4, '#ff6b6b', 50);
   sfx('hit');
   if(!motionOff()){ replayAnim($('godArt'), 'hitFlash'); replayAnim($('heroPixel').parentNode, 'hurtFlash'); }
@@ -1567,6 +1567,9 @@ const FORTUNE_ART = {
   speed: '<svg viewBox="0 0 48 48" aria-hidden="true"><rect x="10" y="10" width="28" height="28" rx="2" fill="#f2e6c8"/><rect x="6" y="7" width="6" height="34" rx="3" fill="#b0763a"/><rect x="36" y="7" width="6" height="34" rx="3" fill="#b0763a"/><path d="M16 17h16M16 23h16M16 29h9" stroke="#3f7fa8" stroke-width="2.4" stroke-linecap="round"/><circle cx="31" cy="31" r="3.5" fill="#d9534f"/></svg>',
   create: '<svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="25" r="14" fill="#e8c76f"/><circle cx="24" cy="25" r="10" fill="none" stroke="#a8873e" stroke-width="1.6"/><path d="M18 27c2 4 9 4 11-1s-4-8-7-5 1 6 4 4" fill="none" stroke="#8a6420" stroke-width="1.8" stroke-linecap="round"/><ellipse cx="18.5" cy="19" rx="4" ry="2.6" fill="#fff" opacity=".55"/></svg>'
 };
+// painted treasures (img/fortune/NN.webp); the drawn SVG above stands in when a file is missing
+const FORTUNE_IMG = { dp: '01', speed: '02', create: '03' };
+function fortuneArt(kind){ return FORTUNE_IMG[kind] ? '<img src="god-killer/img/fortune/' + FORTUNE_IMG[kind] + '.webp" alt="" decoding="async">' : FORTUNE_ART[kind]; }
 const fortune = { wait: 0, cur: null, lastAt: 0, bar: null };
 const fortuneRand = r => r[0] + Math.random() * (r[1] - r[0]);
 function fortunePaused(){ return document.hidden || !!$('welcome') || !!document.querySelector('#guide.open,#settings.open,#keyHelp.open'); }
@@ -1589,7 +1592,9 @@ function spawnFortune(kind){
   el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.setProperty('--fc', item.color);
   el.title = item.name + ' — ' + item.desc;
   el.setAttribute('aria-label', 'แตะเพื่อรับ' + item.name + ': ' + item.desc);
-  el.innerHTML = '<span class="fortuneHalo"></span><span class="fortuneBob">' + FORTUNE_ART[kind] + '</span><span class="fortuneName">' + item.name + '</span><span class="fortuneLife"><i></i></span>';
+  el.innerHTML = '<span class="fortuneHalo"></span><span class="fortuneBob">' + fortuneArt(kind) + '</span><span class="fortuneName">' + item.name + '</span><span class="fortuneLife"><i></i></span>';
+  const art = el.querySelector('.fortuneBob img');
+  if(art) art.onerror = ()=>{ art.parentNode.innerHTML = FORTUNE_ART[kind]; };
   el.addEventListener('click', onFortuneTap);
   document.body.appendChild(el);
   fortune.cur = { el, kind, x, y, left: F.life, life: el.querySelector('.fortuneLife>i') };

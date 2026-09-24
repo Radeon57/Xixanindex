@@ -164,9 +164,9 @@ function kill(){
   else p = { x: innerWidth/2, y: innerHeight*0.38 };  // god slain on another tab: bloom under the banner
   const R = Math.min(innerWidth, 480);
   ring(p.x, p.y, 16, R*0.42, '#fff3c4', 5, 0.7);
-  ring(p.x, p.y, 10, R*0.3, '#8b5cf6', 4, 0.8, 0.12);
+  ring(p.x, p.y, 10, R*0.3, '#d2503f', 4, 0.8, 0.12);
   burst(p.x, p.y, { n:40, colors:['#e8c76f','#fff3d0','#ffd66b'], speed:330, size:12, life:0.9, drag:0.92 });
-  burst(p.x, p.y, { n:22, colors:['#b39cf0','#8b5cf6','#7fb0ff'], speed:70, size:14, life:1.6, g:-60, drag:0.97, spread:30, delay:0.1, jitter:0.3 });
+  burst(p.x, p.y, { n:22, colors:['#8fd6be','#3e8e7e','#f1d38a'], speed:70, size:14, life:1.6, g:-60, drag:0.97, spread:30, delay:0.1, jitter:0.3 });
 }
 
 let wheel = null;
@@ -184,13 +184,13 @@ function rebirth(){
   for(let i=0;i<48 && parts.length < MAX;i++){        // qi drawn into the centre ...
     const a = Math.random()*TAU, d = R*(0.55 + Math.random()*0.45);
     parts.push({ ox: cx + Math.cos(a)*d, oy: cy + Math.sin(a)*d, tx: cx, ty: cy, x:0, y:0, s: 8 + Math.random()*8, a:1,
-      life: -Math.random()*0.15, max: 0.55 + Math.random()*0.1, img: sprite(i % 3 ? '#e8c76f' : '#b39cf0') });
+      life: -Math.random()*0.15, max: 0.55 + Math.random()*0.1, img: sprite(i % 3 ? '#e8c76f' : '#8fd6be') });
   }
   start();
   // ... then released as a new life begins
-  burst(cx, cy, { n:44, colors:['#fff3d0','#e8c76f','#b39cf0'], speed:420, size:13, life:1.0, drag:0.93, delay:0.62 });
+  burst(cx, cy, { n:44, colors:['#fff3d0','#e8c76f','#8fd6be'], speed:420, size:13, life:1.0, drag:0.93, delay:0.62 });
   ring(cx, cy, 10, R*0.9, '#fff3c4', 6, 0.9, 0.62);
-  ring(cx, cy, 10, R*0.6, '#8b5cf6', 4, 1.0, 0.75);
+  ring(cx, cy, 10, R*0.6, '#d2503f', 4, 1.0, 0.75);
 }
 
 const api = {

@@ -130,7 +130,7 @@ const mat = {
 
 const ring = {
   train: G, skill: J,
-  create: { clone:'#b39cf0', light:'#ffe9a8', stone:'#a9b1bd', soil:'#c79a5b', air:'#9fe7ff', water:'#7fb0ff', plant:'#6fd49a', beast:'#ff9a6b', human:G },
+  create: { clone:'#9fb4c8', light:'#ffe9a8', stone:'#a9b1bd', soil:'#c79a5b', air:'#9fe7ff', water:'#7fb0ff', plant:'#6fd49a', beast:'#ff9a6b', human:G },
   gear: { weapon:'#ff9a6b', armor:'#7fb0ff', ring:G, amulet:J }
 };
 const sets = { train, skill, create, gear, mat };
@@ -139,13 +139,13 @@ const sets = { train, skill, create, gear, mat };
 // Fallback for img/hero/01.webp; the figure sits in .heroFig so CSS can move it without moving the frame.
 const SKIN = '#ecd3b2', HAIR = '#120e1c', ROBE = '#173a35';
 const HERO = `<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false" stroke-linecap="round" stroke-linejoin="round">
-<defs><radialGradient id="gkhBg" cx="50%" cy="42%" r="62%"><stop offset="0" stop-color="#2b2238"/><stop offset="1" stop-color="${K}"/></radialGradient>
+<defs><radialGradient id="gkhBg" cx="50%" cy="42%" r="62%"><stop offset="0" stop-color="#2a2119"/><stop offset="1" stop-color="${K}"/></radialGradient>
 <radialGradient id="gkhAura" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="${J}" stop-opacity=".55"/><stop offset=".6" stop-color="${J}" stop-opacity=".16"/><stop offset="1" stop-color="${J}" stop-opacity="0"/></radialGradient>
 <linearGradient id="gkhRobe" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${ROBE}"/><stop offset="1" stop-color="#0c1a18"/></linearGradient>
 <filter id="gkhGlow" x="-60%" y="-10%" width="220%" height="120%"><feGaussianBlur stdDeviation="1.8"/></filter></defs>
 <rect width="100" height="100" fill="url(#gkhBg)"/>
-<path d="M0 74L12 64L22 70L35 57L47 67L60 55L73 66L86 58L100 67V100H0Z" fill="#1a1630" opacity=".9"/>
-<path d="M0 84L16 76L30 82L46 74L62 81L78 73L100 80V100H0Z" fill="#120f20"/>
+<path d="M0 74L12 64L22 70L35 57L47 67L60 55L73 66L86 58L100 67V100H0Z" fill="#1b1610" opacity=".9"/>
+<path d="M0 84L16 76L30 82L46 74L62 81L78 73L100 80V100H0Z" fill="#110d09"/>
 <circle cx="50" cy="47" r="36" fill="url(#gkhAura)"/>
 <circle cx="50" cy="42" r="27" fill="none" stroke="${G}" stroke-width=".6" opacity=".45"/>
 <circle cx="50" cy="42" r="31" fill="none" stroke="${G}" stroke-width=".5" stroke-dasharray="1.5 3" opacity=".4"/>
