@@ -11,10 +11,7 @@ function newMeta(){
   return { gp:0, gpTotal:0, rebirths:0, bestGods:0, dpLife:0, up:{}, ach:{},
            pets:{}, team:[], mats:{}, gear:{}, dgBest:{}, run:null, dgAuto:true,
            chal:{}, ub:[], mp:0, mpTotal:0, might:{},
-           tut:0, seen:{}, plan:{ on:false, train:40, skill:30, mon:30 }, autoFight:false, createPref:null, adv:{ best:0, kills:0 }, realm:newRealm() };
-}
-function newRealm(){
-  return { lv:1, stones:0, spring:0, seedAcc:0, seeds:{ grass:3 }, herbs:{}, plots:[{ herb:null, t:0 }, { herb:null, t:0 }], buffs:{}, perm:{} };
+           tut:0, seen:{}, plan:{ on:false, train:40, skill:30, mon:30 }, autoFight:false, createPref:null };
 }
 function newState(meta){
   return {
@@ -96,8 +93,6 @@ function mults(s){
     compound(D.MIGHT.filter(x=>x.stat), x => mightLv(s, x.key));
     compound(D.CHALLENGES.filter(c=>c.stat === 'stat'), c => s.meta.chal[c.key] || 0);
   }
-  const realm = s.meta.realm;
-  if(!mortal) D.PILLS.forEach(p=>{ const n = p.perm && realm.perm[p.key]; if(n) m[p.perm.stat] *= Math.pow(1 + p.perm.per, n); });
   m.stat *= 1 + D.ACH_BONUS * achCount(s);
   m.phys = m.myst = m.battle = m.stat;
   apply(D.MONUMENTS, mo => s.mono[mo.key] || 0);
@@ -106,10 +101,6 @@ function mults(s){
     compound(D.GEAR, g => s.meta.gear[g.key] || 0);
     compound(D.PETS, p => s.meta.pets[p.key] ? s.meta.pets[p.key].lv - 1 : 0);
     compound(D.CHALLENGES.filter(c=>c.stat !== 'stat'), c => s.meta.chal[c.key] || 0);
-  }
-  if(!mortal){
-    D.PILLS.forEach(p=>{ if(p.buff && realm.buffs[p.key] > 0) m[p.buff.stat] *= p.buff.mult; });
-    if(realm.lv >= D.REALM_CHAMBER_LV) m.speed *= 1 + D.REALM_CHAMBER_PER * (realm.lv - D.REALM_CHAMBER_LV + 1);
   }
   D.CREATIONS.forEach(c=>{
     if(!c.bonus) return;
@@ -469,7 +460,6 @@ function step(s, dt, ev){
   if(!(dt > 0)) return;
   dt = Math.min(dt, MAX_OFFLINE_SEC);
   s.playTime += dt;
-  stepRealm(s, dt);
   let d = derive(s);
 
   // clone jobs: training and skills
@@ -644,92 +634,6 @@ function stepFight(s, dt, d, ev){
     }
   }
 }
-// ---------- personal realm (a pocket world kept in meta, so it survives rebirth) ----------
-const herbDef = key => D.HERBS.find(h=>h.key === key);
-const pillDef = key => D.PILLS.find(p=>p.key === key);
-const realmPlots = lv => D.REALM_PLOTS_BASE + D.REALM_PLOTS_PER * (lv - 1);
-const realmCost = s => Math.ceil(D.REALM_COST * Math.pow(D.REALM_COST_GROWTH, s.meta.realm.lv - 1));
-const springCost = s => Math.ceil(D.SPRING_COST * Math.pow(D.SPRING_COST_GROWTH, s.meta.realm.spring));
-const growSpeed = s => 1 + D.SPRING_PER * s.meta.realm.spring;
-function realmUpgrade(s){
-  const r = s.meta.realm, c = realmCost(s);
-  if(r.lv >= D.REALM_MAX_LV || r.stones < c) return false;
-  r.stones -= c; r.lv++;
-  while(r.plots.length < realmPlots(r.lv)) r.plots.push({ herb:null, t:0 });
-  return true;
-}
-function springUpgrade(s){
-  const r = s.meta.realm, c = springCost(s);
-  if(r.spring >= D.SPRING_MAX || r.stones < c) return false;
-  r.stones -= c; r.spring++;
-  return true;
-}
-function plant(s, i, key){
-  const r = s.meta.realm, plot = Number.isInteger(i) && r.plots[i];
-  if(!plot || plot.herb || !herbDef(key) || !(r.seeds[key] > 0)) return false;
-  r.seeds[key]--; plot.herb = key; plot.t = 0;
-  return true;
-}
-const plotReady = (s, i) => { const p = s.meta.realm.plots[i]; return !!(p && p.herb && p.t >= herbDef(p.herb).time); };
-function harvest(s, i){
-  if(!plotReady(s, i)) return 0;
-  const r = s.meta.realm, p = r.plots[i], h = herbDef(p.herb);
-  r.herbs[h.key] = (r.herbs[h.key] || 0) + h.yield;
-  r.seeds[h.key] = (r.seeds[h.key] || 0) + 1;
-  p.herb = null; p.t = 0;
-  return h.yield;
-}
-const canBrew = (s, key) => { const p = pillDef(key); return !!p && !(p.perm && (s.meta.realm.perm[key] || 0) >= D.PILL_PERM_MAX) && Object.keys(p.needs).every(k=>(s.meta.realm.herbs[k] || 0) >= p.needs[k]); };
-function brew(s, key){
-  if(!canBrew(s, key)) return false;
-  const r = s.meta.realm, p = pillDef(key);
-  for(const k in p.needs) r.herbs[k] -= p.needs[k];
-  if(p.buff) r.buffs[key] = (r.buffs[key] || 0) + p.buff.sec;
-  else r.perm[key] = (r.perm[key] || 0) + 1;
-  return true;
-}
-function stepRealm(s, dt){
-  const r = s.meta.realm, g = growSpeed(s);
-  for(const p of r.plots) if(p.herb) p.t = Math.min(herbDef(p.herb).time, p.t + dt*g);
-  for(const k in r.buffs){ r.buffs[k] = Math.max(0, r.buffs[k] - dt); if(!r.buffs[k]) delete r.buffs[k]; }
-}
-
-// ---------- adventure mode (the walkable 2D world) ----------
-const advUnlocked = s => s.meta.bestGods > D.UNLOCK_AT.adv;
-const advZones = s => monstersUnlocked(s);   // one zone per battlefield monster that is open
-function advStats(s, zone){
-  const d = derive(s), r = Math.min(D.ADV_RATIO_MAX, Math.max(D.ADV_RATIO_MIN, d.clonePower / D.MONSTERS[zone].power));
-  return { ratio: d.clonePower / D.MONSTERS[zone].power, heroDmg: D.ADV_HERO_DMG * r, monDmg: D.ADV_MON_DMG / r };
-}
-// the hero slew one monster in zone: pays ADV_KILL_WORTH battlefield kills; returns the DP gained
-function advKill(s, zone){
-  if(!advUnlocked(s) || !Number.isInteger(zone) || zone < 0 || zone >= advZones(s)) return 0;
-  const d = derive(s), mon = D.MONSTERS[zone], k = D.ADV_KILL_WORTH;
-  let income = genRate(s, d);   // DP per second right now, from the generator and the battlefield
-  for(let i = 0; i < D.MONSTERS.length; i++) if(s.mon[i].n) income += monsterRates(s, i, d).kills * D.MONSTERS[i].dp * d.m.dp;
-  const gain = Math.max(k * mon.dp * d.m.dp, D.ADV_INCOME_SEC * income * (zone + 1) / advZones(s));
-  s.dp += gain; s.dpTotal += gain; s.meta.dpLife += gain;
-  s.battleRaw += k * mon.battle;
-  s.mon[zone].kills += k;
-  s.meta.adv.kills++;
-  const r = s.meta.realm;
-  r.stones += 1 + zone;
-  if(++r.seedAcc >= D.REALM_SEED_EVERY){ r.seedAcc = 0; const h = D.HERBS[Math.min(D.HERBS.length - 1, zone >> 1)].key; r.seeds[h] = (r.seeds[h] || 0) + 1; }
-  if(zone > s.meta.adv.best) s.meta.adv.best = zone;
-  return gain;
-}
-
-// the treasure guardian of a secret land: worth BOSS_KILL_WORTH kills, extra stones and a rarer seed; returns the DP gained
-function advBoss(s, zone){
-  if(!advUnlocked(s) || !Number.isInteger(zone) || zone < 0 || zone >= advZones(s)) return 0;
-  let gain = 0;
-  for(let i = 0; i < D.BOSS_KILL_WORTH; i++) gain += advKill(s, zone);
-  const r = s.meta.realm, h = D.HERBS[Math.min(D.HERBS.length - 1, (zone >> 1) + 1)].key;
-  r.stones += D.BOSS_STONES * (zone + 1);
-  r.seeds[h] = (r.seeds[h] || 0) + 1;
-  return gain;
-}
-
 // active strike: only during a fight, then a cooldown counted in play time
 const strikeWait = s => Math.max(0, (s.strikeAt || 0) - s.playTime);
 function strike(s){
@@ -879,22 +783,6 @@ function sanitize(raw){
   m.autoFight = rm.autoFight === true || !!(rm.might && rm.might.autoFight);
   if(rm.might && rm.might.autoFight) m.mp += D.MIGHT_AUTOFIGHT_REFUND;   // that perk became a free toggle: give its cost back once
   m.tut = isNum(rm.tut) ? Math.floor(Math.max(0, rm.tut)) : (m.bestGods >= 2 || m.rebirths ? 999 : 0);
-  const rr = rm.realm;
-  if(rr && typeof rr === 'object'){
-    const r = m.realm;
-    r.lv = Math.max(1, Math.min(D.REALM_MAX_LV, Math.floor(capped(rr.lv, D.REALM_MAX_LV)) || 1));
-    r.stones = Math.floor(capped(rr.stones, 1e15)); r.spring = Math.floor(capped(rr.spring, D.SPRING_MAX));
-    r.seedAcc = Math.min(D.REALM_SEED_EVERY - 1, Math.floor(capped(rr.seedAcc, D.REALM_SEED_EVERY)));
-    ['seeds','herbs'].forEach(k=>{ r[k] = {}; if(rr[k] && typeof rr[k] === 'object') D.HERBS.forEach(h=>{ const v = Math.floor(capped(rr[k][h.key], 1e12)); if(v) r[k][h.key] = v; }); });
-    r.buffs = {}; if(rr.buffs && typeof rr.buffs === 'object') D.PILLS.forEach(p=>{ const v = capped(rr.buffs[p.key], 1e7); if(p.buff && v > 0) r.buffs[p.key] = v; });
-    r.perm = {}; if(rr.perm && typeof rr.perm === 'object') D.PILLS.forEach(p=>{ const v = Math.floor(capped(rr.perm[p.key], D.PILL_PERM_MAX)); if(p.perm && v) r.perm[p.key] = v; });
-    r.plots = [];
-    for(let i = 0; i < realmPlots(r.lv); i++){
-      const x = Array.isArray(rr.plots) && rr.plots[i], h = x && typeof x === 'object' && herbDef(x.herb);
-      r.plots.push(h ? { herb:h.key, t:Math.min(h.time, capped(x.t, h.time)) } : { herb:null, t:0 });
-    }
-  }
-  if(rm.adv && typeof rm.adv === 'object') m.adv = { best: Math.min(D.MONSTERS.length - 1, Math.floor(capped(rm.adv.best, D.MONSTERS.length))), kills: Math.floor(capped(rm.adv.kills, 1e12)) };
   m.createPref = typeof rm.createPref === 'string' && rm.createPref !== 'clone' && D.CREATIONS.some(c=>c.key===rm.createPref) ? rm.createPref : null;
   if(rm.seen && typeof rm.seen === 'object') for(const k in rm.seen) if(rm.seen[k] === 1) m.seen[k] = 1;
   const r = rm.run;
@@ -929,7 +817,6 @@ root.GK = {
   chalDone, chalGoal, startChallenge, abandonChallenge, ubUnlocked, ubOpen, ubLevel, ubStats, startUbFight, fightTarget, outlook,
   mightUnlocked, mightLv, mightCost, buyMight,
   planUnlocked, autoFightUnlocked, topRow, bestSafeMonster, bestRowFor, moveToBest, applyPlan, setPlan, togglePlan, neededFactor,
-  herbDef, pillDef, realmPlots, realmCost, springCost, growSpeed, realmUpgrade, springUpgrade, plant, plotReady, harvest, canBrew, brew,
-  advUnlocked, advZones, advStats, advKill, advBoss, strike, strikeWait, step, advance, assign, unassignKind, setCreateTarget, startFight, flee
+  strike, strikeWait, step, advance, assign, unassignKind, setCreateTarget, startFight, flee
 };
 })(typeof window !== 'undefined' ? window : globalThis);
