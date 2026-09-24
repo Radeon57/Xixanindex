@@ -55,9 +55,13 @@ const CREATIONS = [
 
 const BASE_MAX_CLONES = 10;
 const HIT_INTERVAL = 0.5;      // seconds between blows in a god fight
-const HP_REGEN = 0.1;
+const HP_REGEN = 0.1;          // share of max HP regained per second outside a fight
 // active strike in a fight: the bigger of STRIKE_BLOWS normal blows or STRIKE_SHARE of the foe's max HP, then a cooldown
-const STRIKE_CD = 12, STRIKE_SHARE = 0.04, STRIKE_BLOWS = 5;          // share of max HP regained per second outside a fight
+const STRIKE_CD = 12, STRIKE_SHARE = 0.04, STRIKE_BLOWS = 5;
+// adventure mode: one monster slain by the hero pays like ADV_KILL_WORTH kills in the battlefield, or, if more,
+// ADV_INCOME_SEC seconds of the current DP income scaled by how deep the zone is (so late game it still matters).
+// Hero and monster damage per hit scale with clone power / monster power, clamped to ADV_RATIO_MIN..ADV_RATIO_MAX.
+const ADV_INCOME_SEC = 5, ADV_KILL_WORTH = 25, ADV_HERO_DMG = 26, ADV_MON_DMG = 11, ADV_RATIO_MIN = 0.25, ADV_RATIO_MAX = 4;
 
 // Gods are fought by the hero. Each one killed unlocks something and makes the hero stronger.
 // unlock: 'skills' | 'create' | 'gen' | 'monuments' | 'pets' | 'rebirth'; monsters unlock two at a time per god.
@@ -75,7 +79,7 @@ const GODS = [
   { name:'เทพเจ้าสูงสุด', hp:1.4e17, atk:1.9e15, def:3.3e15,gp:120, reward:{ stat:2 } }
 ];
 // the god whose defeat unlocks each system (index into GODS)
-const UNLOCK_AT = { skills:0, create:1, gen:2, monuments:3, pets:4, rebirth:5 };
+const UNLOCK_AT = { skills:0, adv:0, create:1, gen:2, monuments:3, pets:4, rebirth:5 };
 
 // Permanent upgrades bought with God Power; survive rebirth. Level L costs cost*UPGRADE_COST_GROWTH^L GP (rounded up),
 // so pouring everything into one upgrade runs into diminishing returns.
@@ -209,7 +213,7 @@ const ACHIEVEMENTS = [
 root.GKDATA = {
   LEVEL_TIME_GROWTH, ROW_UNLOCK_LEVEL, TRAININGS, SKILLS,
   KILL_RATE, KILL_RATIO_CAP, DEATH_RATE, MONSTERS,
-  CREATIONS, BASE_MAX_CLONES, HIT_INTERVAL, HP_REGEN, STRIKE_CD, STRIKE_SHARE, STRIKE_BLOWS, GODS, UNLOCK_AT,
+  CREATIONS, BASE_MAX_CLONES, HIT_INTERVAL, HP_REGEN, STRIKE_CD, STRIKE_SHARE, STRIKE_BLOWS, ADV_INCOME_SEC, ADV_KILL_WORTH, ADV_HERO_DMG, ADV_MON_DMG, ADV_RATIO_MIN, ADV_RATIO_MAX, GODS, UNLOCK_AT,
   UPGRADES, UPGRADE_COST_GROWTH, GEN_RATE, GEN_GROWTH, GEN_COST, GEN_COST_GROWTH, MONUMENTS, ACH_BONUS, ACHIEVEMENTS,
   PETS, PET_GROWTH, PET_EXP_BASE, PET_EXP_GROWTH, PET_MAX_LV, TEAM_SIZE,
   DUNGEONS, DEPTH_GROWTH, MAX_DEPTH, DUNGEON_UNLOCK_DEPTH, MATERIALS, GEAR, FORGE_COST, FORGE_GROWTH, FORGE_MIN_CHANCE,

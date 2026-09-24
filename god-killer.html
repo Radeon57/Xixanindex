@@ -63,7 +63,7 @@ body::before{
 .chip b{margin-left:auto;color:var(--text);white-space:nowrap}
 
 /* tabs */
-.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:0 0 8px}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin:0 0 8px}
 .tab{min-width:0;display:flex;align-items:center;justify-content:center;gap:4px;padding:6px 2px;border-radius:10px;border:1px solid var(--border);background:var(--panel2);color:var(--sub);font-size:.68rem;white-space:nowrap;cursor:pointer;position:relative}
 .tab.active{background:var(--violet);color:#fff;border-color:var(--gold)}
 .tab.locked{opacity:.45}
@@ -278,7 +278,7 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
 @media (min-width:600px) and (max-width:1023px) and (min-height:501px){
   #app{max-width:840px;padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,env(safe-area-inset-right));padding-top:max(16px,env(safe-area-inset-top))}
   .hudGrid{grid-template-columns:repeat(4,1fr)}
-  .tabs{grid-template-columns:repeat(8,1fr)}
+  .tabs{grid-template-columns:repeat(9,1fr)}
   .tab{flex-direction:column;gap:2px;padding:7px 2px;font-size:.72rem}
   .tab .ic{width:18px;height:18px}
   section.panel{padding:12px 16px}
@@ -349,7 +349,7 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
   .hpRow{margin-bottom:3px}
   .hudGrid{gap:1px 8px}
   .chip{font-size:.68rem}
-  .tabs{grid-template-columns:repeat(2,minmax(0,1fr));margin:0}
+  .tabs{grid-template-columns:repeat(3,minmax(0,1fr));margin:0}
   .tab{justify-content:flex-start;padding:6px 8px;font-size:.7rem}
   .tutor,.tip{font-size:.68rem;padding:5px 8px;margin-bottom:6px}
   .portrait{width:76px;height:76px}
@@ -410,6 +410,18 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
 .gToc a{font-size:.7rem;color:var(--sub);border:1px solid var(--border);border-radius:8px;padding:3px 7px;text-decoration:none}
 .ctlBtn,.maxBtn,.selBtn{touch-action:manipulation;user-select:none;-webkit-user-select:none}
 #main{overscroll-behavior:contain}
+/* ---------- adventure mode ---------- */
+.advHud{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:.82rem}
+.advHud b{color:var(--gold);flex:1;text-align:center}
+.advKills{font-size:.7rem;color:var(--sub);white-space:nowrap}
+.advHud b{font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:600px){ .advRatio{display:none} }
+#advGame{height:min(46vh,440px);margin-top:6px;border-radius:12px;overflow:hidden;border:1px solid var(--border);background:#0b0a17;touch-action:none;position:relative}
+#advGame canvas{display:block}
+.advCtl{display:flex;align-items:center;gap:8px;margin-top:8px}
+.advCtl .note{flex:1;margin:0}
+.advCtl .b{width:auto;padding:12px 20px}
+@media (min-width:1024px){ #advGame{height:min(64vh,560px)} }
 </style>
 </head>
 <body>
@@ -524,6 +536,7 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
     <div class="tab" data-tab="pets" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-paw"></use></svg>คู่หู</div>
     <div class="tab" data-tab="gods" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-crown"></use></svg>ท้าเทพ</div>
     <div class="tab" data-tab="rebirth" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-cycle"></use></svg>เกิดใหม่</div>
+    <div class="tab" data-tab="adv" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-sword"></use></svg>ผจญภัย</div>
   </nav>
   </div>
 
@@ -653,6 +666,19 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
         <div class="summary"><span>วัตถุดิบ</span><span id="matLine2"></span></div>
         <div id="gearList"></div>
       </div>
+    </section>
+
+    <section id="tab-adv" class="panel">
+      <div class="advHud">
+        <button class="miniBtn" id="advPrev" aria-label="เขตก่อนหน้า">◀</button>
+        <b id="advZone">—</b>
+        <button class="miniBtn" id="advNext" aria-label="เขตถัดไป">▶</button>
+        <span class="advKills" id="advKills"></span>
+      </div>
+      <div class="bar hp"><i id="advHp"></i></div>
+      <div id="advGame"></div>
+      <div class="advCtl"><span class="note" id="advMsg"></span><button class="b bPrimary" id="advAtk">⚔ โจมตี</button></div>
+      <div class="note" id="advHelp">คอม: WASD หรือลูกศรเพื่อเดิน · J หรือ Space โจมตี · มือถือ: แตะพื้นเพื่อเดิน แตะมอนสเตอร์เพื่อเข้าโจมตี · ฆ่ามอนสเตอร์ได้ DP และค่ายุทธ์เข้าเกมหลัก · เดินเข้าประตูทองขวาสุดเพื่อไปเขตถัดไป</div>
     </section>
 
     <section id="tab-log" class="panel">

@@ -11,7 +11,7 @@ function newMeta(){
   return { gp:0, gpTotal:0, rebirths:0, bestGods:0, dpLife:0, up:{}, ach:{},
            pets:{}, team:[], mats:{}, gear:{}, dgBest:{}, run:null, dgAuto:true,
            chal:{}, ub:[], mp:0, mpTotal:0, might:{},
-           tut:0, seen:{}, plan:{ on:false, train:40, skill:30, mon:30 }, autoFight:false, createPref:null };
+           tut:0, seen:{}, plan:{ on:false, train:40, skill:30, mon:30 }, autoFight:false, createPref:null, adv:{ best:0, kills:0 } };
 }
 function newState(meta){
   return {
@@ -634,6 +634,28 @@ function stepFight(s, dt, d, ev){
     }
   }
 }
+// ---------- adventure mode (the walkable 2D world) ----------
+const advUnlocked = s => s.meta.bestGods > D.UNLOCK_AT.adv;
+const advZones = s => monstersUnlocked(s);   // one zone per battlefield monster that is open
+function advStats(s, zone){
+  const d = derive(s), r = Math.min(D.ADV_RATIO_MAX, Math.max(D.ADV_RATIO_MIN, d.clonePower / D.MONSTERS[zone].power));
+  return { ratio: d.clonePower / D.MONSTERS[zone].power, heroDmg: D.ADV_HERO_DMG * r, monDmg: D.ADV_MON_DMG / r };
+}
+// the hero slew one monster in zone: pays ADV_KILL_WORTH battlefield kills; returns the DP gained
+function advKill(s, zone){
+  if(!advUnlocked(s) || !Number.isInteger(zone) || zone < 0 || zone >= advZones(s)) return 0;
+  const d = derive(s), mon = D.MONSTERS[zone], k = D.ADV_KILL_WORTH;
+  let income = genRate(s, d);   // DP per second right now, from the generator and the battlefield
+  for(let i = 0; i < D.MONSTERS.length; i++) if(s.mon[i].n) income += monsterRates(s, i, d).kills * D.MONSTERS[i].dp * d.m.dp;
+  const gain = Math.max(k * mon.dp * d.m.dp, D.ADV_INCOME_SEC * income * (zone + 1) / advZones(s));
+  s.dp += gain; s.dpTotal += gain; s.meta.dpLife += gain;
+  s.battleRaw += k * mon.battle;
+  s.mon[zone].kills += k;
+  s.meta.adv.kills++;
+  if(zone > s.meta.adv.best) s.meta.adv.best = zone;
+  return gain;
+}
+
 // active strike: only during a fight, then a cooldown counted in play time
 const strikeWait = s => Math.max(0, (s.strikeAt || 0) - s.playTime);
 function strike(s){
@@ -641,7 +663,7 @@ function strike(s){
   if(!f || strikeWait(s) > 0) return 0;
   const tg = fightTarget(s, f), dmg = Math.max(D.STRIKE_BLOWS * blow(derive(s).atk, tg.def), D.STRIKE_SHARE * tg.hp);
   f.ghp -= dmg;
-  if(f.ghp <= 0) f.t = D.HIT_INTERVAL;   // the kill resolves on the next step
+  if(f.ghp <= 0){ f.ghp = Number.MIN_VALUE; f.t = D.HIT_INTERVAL; }   // HP stays positive; the next blow (next step) kills
   s.strikeAt = s.playTime + D.STRIKE_CD;
   return dmg;
 }
@@ -783,6 +805,7 @@ function sanitize(raw){
   m.autoFight = rm.autoFight === true || !!(rm.might && rm.might.autoFight);
   if(rm.might && rm.might.autoFight) m.mp += D.MIGHT_AUTOFIGHT_REFUND;   // that perk became a free toggle: give its cost back once
   m.tut = isNum(rm.tut) ? Math.floor(Math.max(0, rm.tut)) : (m.bestGods >= 2 || m.rebirths ? 999 : 0);
+  if(rm.adv && typeof rm.adv === 'object') m.adv = { best: Math.min(D.MONSTERS.length - 1, Math.floor(capped(rm.adv.best, D.MONSTERS.length))), kills: Math.floor(capped(rm.adv.kills, 1e12)) };
   m.createPref = typeof rm.createPref === 'string' && rm.createPref !== 'clone' && D.CREATIONS.some(c=>c.key===rm.createPref) ? rm.createPref : null;
   if(rm.seen && typeof rm.seen === 'object') for(const k in rm.seen) if(rm.seen[k] === 1) m.seen[k] = 1;
   const r = rm.run;
@@ -817,6 +840,6 @@ root.GK = {
   chalDone, chalGoal, startChallenge, abandonChallenge, ubUnlocked, ubOpen, ubLevel, ubStats, startUbFight, fightTarget, outlook,
   mightUnlocked, mightLv, mightCost, buyMight,
   planUnlocked, autoFightUnlocked, topRow, bestSafeMonster, bestRowFor, moveToBest, applyPlan, setPlan, togglePlan, neededFactor,
-  strike, strikeWait, step, advance, assign, unassignKind, setCreateTarget, startFight, flee
+  advUnlocked, advZones, advStats, advKill, strike, strikeWait, step, advance, assign, unassignKind, setCreateTarget, startFight, flee
 };
 })(typeof window !== 'undefined' ? window : globalThis);

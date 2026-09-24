@@ -841,9 +841,9 @@ function renderHud(d, full){
   setText($('hudDp'), fmt(s.dp));
   setText($('hudClones'), fmt(s.clones) + '/' + fmt(d.maxClones));
 }
-const TABS = ['train','skill','mon','create','temple','pets','gods','rebirth','log'];
-const TAB_LOCK = { skill:['skills', ()=>G.skillsUnlocked(s)], temple:['gen', ()=>G.genUnlocked(s)], rebirth:['rebirth', ()=>G.rebirthUnlocked(s)], pets:['pets', ()=>G.petsUnlocked(s)] };
-const TAB_NAME = { skill:'วิชาเวท', temple:'เทวาลัย', rebirth:'การเกิดใหม่', pets:'คู่หู' };
+const TABS = ['train','skill','mon','create','temple','pets','gods','rebirth','adv','log'];
+const TAB_LOCK = { skill:['skills', ()=>G.skillsUnlocked(s)], temple:['gen', ()=>G.genUnlocked(s)], rebirth:['rebirth', ()=>G.rebirthUnlocked(s)], pets:['pets', ()=>G.petsUnlocked(s)], adv:['adv', ()=>G.advUnlocked(s)] };
+const TAB_NAME = { adv:'โหมดผจญภัย', skill:'วิชาเวท', temple:'เทวาลัย', rebirth:'การเกิดใหม่', pets:'คู่หู' };
 function tabLocked(name){ const l = TAB_LOCK[name]; return !!l && !l[1](); }
 function renderTabs(d){
   if(s.gods < D.GODS.length && !s.fight && s.hp >= d.maxHp*0.999 && fightOutlook(d, godTarget()).win) alerts.gods = true;
@@ -862,12 +862,14 @@ function selectTab(name){
     return;
   }
   if(name !== activeTab) $('main').scrollTop = 0;
+  if(activeTab === 'adv' && name !== 'adv' && window.GKAdventure) GKAdventure.sleep();
   activeTab = name;
   alerts[name] = false;
   TABS.forEach(t=>setShown($('tab-'+t), t === name));
   document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-pressed', t.dataset.tab === name ? 'true' : 'false'));
   setOn($('logBtn'), name === 'log');
   if(name === 'log') renderLog();
+  if(name === 'adv') ensureAdv();
   render(true);
 }
 function renderSteps(){
@@ -883,6 +885,7 @@ function render(full){
   else if(activeTab === 'temple') renderTemple(d, full);
   else if(activeTab === 'rebirth') renderRebirth(d, full);
   else if(activeTab === 'pets') renderPets(d, full);
+  else if(activeTab === 'adv'){ if(full) renderAdv(); }
   else if(activeTab === 'log'){ if(logDirty) renderLog(); if(full) setText($('wipeBtn'), isArmed('wipe') ? 'แตะอีกครั้งเพื่อลบทุกอย่าง' : 'เริ่มใหม่ทั้งหมด'); }
   if(full){ renderTabs(d); renderTutor(); }
 }
@@ -1178,6 +1181,7 @@ const KEY_HELP = [
   ['L', 'เปิด/ปิดบันทึกและเซฟ'],
   ['F / Space', 'ท้าสู้หรือถอยหนี (ในแท็บท้าเทพ)'],
   ['S', 'ฟาดฟันเทวะ ระหว่างต่อสู้'],
+  ['W A S D', 'เดินในโหมดผจญภัย (J หรือ Space โจมตี)'],
   ['H', 'เปิด/ปิดวิธีเล่น'],
   ['[ ]', 'สลับมุมมองย่อย (คู่หู · เกิดใหม่)'],
   ['Esc', 'ยกเลิกการยืนยันที่ค้างอยู่ / ปิดบันทึก'],
@@ -1226,8 +1230,10 @@ function onKey(e){
     e.preventDefault(); return;
   }
   if(e.shiftKey) return;
+  // in the adventure tab, arrows and Space move and attack instead of scrolling the page
+  if(activeTab === 'adv' && /^(Arrow(Up|Down|Left|Right)|Space)$/.test(e.code)){ e.preventDefault(); return; }
   // e.code keeps shortcuts working on a Thai keyboard layout
-  const digit = /^(?:Digit|Numpad)([1-8])$/.exec(e.code);
+  const digit = /^(?:Digit|Numpad)([1-9])$/.exec(e.code);
   if(digit){
     const tab = document.querySelectorAll('#tabs .tab')[+digit[1]-1];
     if(tab){ e.preventDefault(); selectTab(tab.dataset.tab); }
@@ -1393,6 +1399,7 @@ function guideSections(){
     ['ความท้าทาย', `<p>เล่นรอบใหม่ภายใต้กฎพิเศษ ${D.CHALLENGES.length} แบบ สังหารเทพเป้าหมายได้จะได้โบนัสถาวร ทำซ้ำได้แบบละ ${D.CHAL_MAX} ครั้ง</p>`],
     ['สิ่งมีชีวิตสูงสุดและ Might', `<p>หลังสังหารเทพครบ ${D.GODS.length} องค์ในรอบเดียว จะสู้สิ่งมีชีวิตสูงสุดได้ไม่จำกัด ชนะแล้วได้แต้ม <b>Might</b> ไว้ซื้อความสามารถถาวร</p>`],
     ['คู่หู ดันเจี้ยน อุปกรณ์', `<p>ปลดล็อกเมื่อสังหาร ${god('pets')} ส่งทีมคู่หู ${D.TEAM_SIZE} ตัวไปดันเจี้ยนเพื่อเก็บเลเวลและวัตถุดิบ แล้วเอาวัตถุดิบไปตีบวกอุปกรณ์ ทั้งหมดอยู่ถาวรข้ามการเกิดใหม่</p>`],
+    ['ผจญภัย', `<p>แท็บที่ 9 เป็นโลก 2D ที่ตัวละครเดินได้จริง แต่ละเขตคือสนามรบของมอนสเตอร์หนึ่งชนิด มอนสเตอร์จะไล่ตามเมื่อเข้าใกล้ ฆ่าได้ 1 ตัวเท่ากับฆ่าในสนามรบ ${D.ADV_KILL_WORTH} ตัว (ได้ DP และค่ายุทธ์) ยิ่งร่างเงาแข็งแกร่ง ตัวละครยิ่งตีแรงและทนขึ้น</p><ul><li>คอม: WASD หรือลูกศรเดิน · J หรือ Space โจมตี</li><li>มือถือ: แตะพื้นเพื่อเดิน แตะมอนสเตอร์เพื่อเดินเข้าไปโจมตีเอง</li><li>เดินเข้าประตูทองด้านขวาเพื่อไปเขตถัดไป</li></ul>`],
     ['ความสำเร็จ', `<p>ทุกความสำเร็จเพิ่มค่าสถานะทั้งหมด +${Math.round(D.ACH_BONUS*100)}% ดูได้ที่แท็บเกิดใหม่ › สำเร็จ</p>`],
     ['เล่นตอนออฟไลน์', `<p>ปิดเกมไปก็ยังได้ความคืบหน้าสูงสุด 8 ชั่วโมง กลับมาจะมีการ์ดสรุปให้ดู</p>`],
     ['ย้ายเซฟ', `<p>เซฟเก็บในเบราว์เซอร์ของแต่ละเครื่อง ย้ายเครื่องให้กด "คัดลอกโค้ด" ในหน้านี้ แล้วไปวางที่ช่อง "วางโค้ดเซฟ" ในเครื่องใหม่</p>`],
@@ -1400,7 +1407,7 @@ function guideSections(){
   ];
 }
 // sections for systems the player hasn't reached yet are shown locked, without spoilers
-const GUIDE_LOCK = { 'วิชาเวท':'skills', 'การสร้าง':'create', 'เทวาลัย':'gen', 'เกิดใหม่และ God Power':'rebirth', 'ความท้าทาย':'rebirth', 'คู่หู ดันเจี้ยน อุปกรณ์':'pets' };
+const GUIDE_LOCK = { 'ผจญภัย':'adv', 'วิชาเวท':'skills', 'การสร้าง':'create', 'เทวาลัย':'gen', 'เกิดใหม่และ God Power':'rebirth', 'ความท้าทาย':'rebirth', 'คู่หู ดันเจี้ยน อุปกรณ์':'pets' };
 function guideLocked(title){
   const m = s.meta;
   if(title === 'สิ่งมีชีวิตสูงสุดและ Might') return G.ubUnlocked(s) || m.mpTotal > 0 ? '' : 'ปลดล็อกเมื่อสังหารเทพครบ ' + D.GODS.length + ' องค์ในรอบเดียว';
@@ -1464,13 +1471,47 @@ function initTouch(){
   $('main').addEventListener('touchend', e=>{
     const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
     if(Date.now() - st > 600 || Math.abs(dx) < 70 || Math.abs(dy) > Math.abs(dx)*0.5) return;
-    if(e.target.closest('textarea,input,.seg')) return;
+    if(e.target.closest('textarea,input,.seg,#advGame')) return;
     const order = [...document.querySelectorAll('#tabs .tab')].map(x=>x.dataset.tab).filter(n=>!tabLocked(n));
     const i = order.indexOf(activeTab);
     if(i < 0) return;
     const next = order[i + (dx < 0 ? 1 : -1)];
     if(next) selectTab(next);
   }, { passive:true });
+}
+
+// ---------- adventure mode host (the Phaser scene lives in adventure.js, loaded on first visit) ----------
+let advState = 0, advZone = 0, advAtkQueued = false;   // advState: 0 not loaded, 1 loading, 2 ready
+const advApi = {
+  startZone: ()=>Math.min(advZone, G.advZones(s) - 1),
+  zones: ()=>G.advZones(s),
+  stats: z=>G.advStats(s, z),
+  kill: z=>{ const g = G.advKill(s, z); if(g) sfx('ping'); return g; },
+  zoneChanged: z=>{ advZone = z; renderAdv(); },
+  hud: hp=>setBar($('advHp'), hp / 100),
+  message: t=>toast(t),
+  monName: i=>D.MONSTERS[i] ? D.MONSTERS[i].name : '',
+  fmt, sfx, reduced: motionOff,
+  takeAttack: ()=>{ const a = advAtkQueued; advAtkQueued = false; return a; }
+};
+function loadScript(src){ return new Promise((ok, bad)=>{ const e = document.createElement('script'); e.src = src; e.onload = ok; e.onerror = bad; document.head.appendChild(e); }); }
+function ensureAdv(){
+  if(advState === 2){ GKAdventure.wake(); return; }
+  if(advState === 1) return;
+  advState = 1;
+  setText($('advMsg'), 'กำลังโหลดโลกผจญภัย...');
+  loadScript('god-killer/vendor/phaser.min.js').then(()=>loadScript('god-killer/adventure.js')).then(()=>{
+    advState = 2;
+    setText($('advMsg'), '');
+    GKAdventure.mount($('advGame'), advApi);
+    if(activeTab !== 'adv') GKAdventure.sleep();
+  }).catch(()=>{ advState = 0; setText($('advMsg'), 'โหลดโหมดผจญภัยไม่สำเร็จ — ตรวจการเชื่อมต่อแล้วเปิดแท็บนี้ใหม่'); });
+}
+function renderAdv(){
+  const n = G.advZones(s), z = Math.min(advZone, n - 1), mon = D.MONSTERS[z], rt = G.advStats(s, z);
+  setText($('advZone'), (z + 1) + '/' + n + ' ' + mon.name);
+  setHTML($('advKills'), 'ฆ่าแล้ว ' + fmt(s.meta.adv.kills) + '<span class="advRatio"> · แข็งกว่ามอนสเตอร์ ×' + fmt(rt.ratio) + '</span>');
+  setDisabled($('advPrev'), z <= 0); setDisabled($('advNext'), z >= n - 1);
 }
 
 // ---------- save / load ----------
@@ -1574,6 +1615,9 @@ function boot(saved){
   $('genBtn').addEventListener('click', onGen);
   $('genMaxBtn').addEventListener('click', onGenMax);
   $('strikeBtn').addEventListener('click', onStrike);
+  $('advAtk').addEventListener('click', ()=>{ advAtkQueued = true; });
+  $('advPrev').addEventListener('click', ()=>{ if(advState === 2) GKAdventure.goZone(Math.max(0, GKAdventure.zone() - 1)); });
+  $('advNext').addEventListener('click', ()=>{ if(advState === 2) GKAdventure.goZone(Math.min(G.advZones(s) - 1, GKAdventure.zone() + 1)); });
   $('guideBtn').addEventListener('click', ()=>showGuide(true));
   $('soundBtn').addEventListener('click', ()=>{ settings.sound = !settings.sound; saveSettings(); renderSoundBtn(); sfx('ping'); });
   renderSoundBtn(); applyMotion();
