@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>God Killer</title>
-<meta name="description" content="God Killer — เกมไอเดิลสายฝึกฝน สร้างร่างเงา ฝึกกายและเวท แล้วท้าสังหารเทพทั้งสิบองค์">
+<meta name="description" content="God Killer — เกมไอเดิลแนวบำเพ็ญเพียร สร้างร่างเงา ฝึกกายและเวท แล้วท้าสังหารเทพทั้งสิบองค์">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#0b0a17">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -523,7 +523,7 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
     <div class="tab" data-tab="temple" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-temple"></use></svg>เทวาลัย</div>
     <div class="tab" data-tab="pets" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-paw"></use></svg>คู่หู</div>
     <div class="tab" data-tab="gods" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-crown"></use></svg>ท้าเทพ</div>
-    <div class="tab" data-tab="rebirth" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-cycle"></use></svg>เกิดใหม่</div>
+    <div class="tab" data-tab="rebirth" role="button" tabindex="0"><span class="dot"></span><svg class="ic" width="15" height="15"><use href="#icon-cycle"></use></svg>จุติ</div>
   </nav>
   </div>
 
@@ -575,12 +575,12 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
         <button class="b bPrimary" id="fightBtn"><svg class="ic" width="16" height="16"><use href="#icon-sword"></use></svg><span id="fightLabel">ท้าสู้</span></button>
         <button class="b strikeBtn" id="strikeBtn" style="display:none"><span id="strikeLabel">⚡ ฟาดฟันเทวะ</span></button>
         <label class="toggle" id="autoFightRow"><input type="checkbox" id="autoFight"> ท้าเทพองค์ถัดไปอัตโนมัติเมื่อพลังชีวิตเต็มและคาดว่าชนะ</label>
-        <div class="note" id="autoFightLock">ท้าเทพอัตโนมัติจะปลดล็อกหลังเกิดใหม่ครั้งแรก</div>
+        <div class="note" id="autoFightLock">ปลดล็อกท้าเทพอัตโนมัติหลังจุติใหม่ครั้งแรก</div>
         <div class="rewardBox" id="godReward"></div>
       </div>
-      <div class="doneBox" id="godsDone">สังหารเทพครบทุกองค์แล้ว! ท่านคือผู้สังหารเทพ<br>ท้าสิ่งมีชีวิตสูงสุดต่อได้ที่ด้านล่าง</div>
+      <div class="doneBox" id="godsDone">สังหารเทพครบทุกองค์แล้ว! ท่านคือผู้สังหารเทพ<br>ท้าสิ่งสูงสุดต่อได้ที่ด้านล่าง</div>
       <div class="godList" id="godList"></div>
-      <div class="secTitle">สิ่งมีชีวิตสูงสุด <span class="secSub">สู้ซ้ำได้ไม่จำกัด ทุกเลเวลแข็งขึ้น ×1.3 · ชนะได้แต้ม Might</span></div>
+      <div class="secTitle">สิ่งสูงสุด <span class="secSub">สู้ซ้ำได้ไม่จำกัด แข็งขึ้น ×1.3 ทุกเลเวล · ชนะได้บารมี</span></div>
       <div class="hint" id="ubLock">ปลดล็อกเมื่อสังหารเทพครบทั้ง 10 องค์ในรอบเดียว</div>
       <button class="miniBtn" id="backToGod" style="margin:4px 0">กลับไปท้าเทพองค์ถัดไป</button>
       <div id="ubList"></div>
@@ -593,32 +593,32 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
         <div class="buyRow"><button class="b bPrimary" id="genBtn"></button><button class="miniBtn maxBtn" id="genMaxBtn">ซื้อสูงสุด</button></div>
       </div>
       <div class="hint" id="monoLock">ปลดล็อกอนุสรณ์เมื่อสังหาร <b id="monoLockGod"></b></div>
-      <div class="secTitle" id="monoTitle">อนุสรณ์ <span class="secSub">ใช้พลังเทวะและของที่สร้างไว้ — ให้โบนัสจนกว่าจะเกิดใหม่</span></div>
+      <div class="secTitle" id="monoTitle">อนุสรณ์ <span class="secSub">ใช้พลังเทวะและของที่สร้างไว้ — ให้โบนัสจนกว่าจะจุติใหม่</span></div>
       <div id="monoList"></div>
     </section>
 
     <section id="tab-rebirth" class="panel">
       <div class="seg subSeg" role="group" aria-label="มุมมอง">
-        <button data-act="rbView" data-v="main">เกิดใหม่</button><button data-act="rbView" data-v="chal">ท้าทาย</button><button data-act="rbView" data-v="might">Might</button><button data-act="rbView" data-v="ach">สำเร็จ</button>
+        <button data-act="rbView" data-v="main">จุติ</button><button data-act="rbView" data-v="chal">บททดสอบ</button><button data-act="rbView" data-v="might">บารมี</button><button data-act="rbView" data-v="ach">สำเร็จ</button>
       </div>
       <div id="rv-main">
         <div class="curCard">
-          <div class="row"><span>God Power</span><b id="gpTxt">0</b></div>
+          <div class="row"><span>ปราณเทพ (GP)</span><b id="gpTxt">0</b></div>
           <div class="note" id="rbInfo"></div>
-          <div class="note">เกิดใหม่จะรีเซ็ตรอบนี้ทั้งหมด (การฝึก ร่างเงา พลังเทวะ ของที่สร้าง อนุสรณ์ เครื่องผลิต เทพที่สังหาร) แต่เก็บ God Power อัปเกรดถาวร คู่หู อุปกรณ์ และความสำเร็จไว้</div>
+          <div class="note">จุติใหม่จะล้างทุกอย่างของรอบนี้ (การฝึก ร่างเงา พลังเทวะ ของที่สร้าง อนุสรณ์ เครื่องผลิต เทพที่สังหาร) แต่เก็บปราณเทพ อัปเกรดถาวร สัตว์คู่กาย อุปกรณ์ และความสำเร็จไว้</div>
           <button class="b bPrimary" id="rbBtn" style="margin-top:8px"></button>
         </div>
-        <div class="secTitle">อัปเกรดถาวร <span class="secSub">ใช้ God Power · อยู่ถาวรข้ามการเกิดใหม่</span></div>
+        <div class="secTitle">อัปเกรดถาวร <span class="secSub">ใช้ปราณเทพ · คงอยู่ข้ามการจุติ</span></div>
         <div id="upList"></div>
       </div>
       <div id="rv-chal">
-        <div class="note" style="margin-bottom:6px">เริ่มความท้าทาย = เกิดใหม่ทันที (ได้ God Power ของรอบนี้ตามปกติ) แล้วเล่นรอบใหม่ภายใต้กฎพิเศษ สังหารเทพเป้าหมายได้เมื่อไหร่ กฎจะหายไปและได้โบนัสถาวร ยิ่งทำสำเร็จมาก เป้าหมายยิ่งไกลขึ้น</div>
+        <div class="note" style="margin-bottom:6px">เริ่มบททดสอบ = จุติใหม่ทันที (ได้ปราณเทพของรอบนี้ตามปกติ) แล้วเล่นรอบใหม่ภายใต้กฎพิเศษ สังหารเทพเป้าหมายได้เมื่อไร กฎจะหายไปและได้โบนัสถาวร ยิ่งผ่านมาก เป้าหมายยิ่งไกลขึ้น</div>
         <div id="chalList"></div>
       </div>
       <div id="rv-might">
         <div class="curCard">
-          <div class="row"><span>แต้ม Might</span><b id="mpTxt">0</b></div>
-          <div class="note">ได้จากการชนะสิ่งมีชีวิตสูงสุดที่แท็บท้าเทพ · ความสามารถทั้งหมดอยู่ถาวร</div>
+          <div class="row"><span>บารมี</span><b id="mpTxt">0</b></div>
+          <div class="note">ได้จากการชนะสิ่งสูงสุดในแท็บท้าเทพ · ทุกความสามารถอยู่ถาวร</div>
         </div>
         <div class="hint" id="mightLock">ปลดล็อกเมื่อสังหารเทพครบทั้ง 10 องค์ในรอบเดียว</div>
         <div id="mightList"></div>
@@ -631,7 +631,7 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
 
     <section id="tab-pets" class="panel">
       <div class="seg subSeg" role="group" aria-label="มุมมอง">
-        <button data-act="petView" data-v="dg">ดันเจี้ยน</button><button data-act="petView" data-v="pets">คู่หู</button><button data-act="petView" data-v="gear">อุปกรณ์</button>
+        <button data-act="petView" data-v="dg">แดนลับ</button><button data-act="petView" data-v="pets">คู่หู</button><button data-act="petView" data-v="gear">อุปกรณ์</button>
       </div>
       <div id="pv-dg">
         <div class="curCard">
