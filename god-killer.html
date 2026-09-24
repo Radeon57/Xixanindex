@@ -716,18 +716,18 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
 .realmTitle{flex:0 1 auto;min-width:0;background:none;border:0;padding:0;font:inherit;font-size:.72rem;color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;letter-spacing:.3px}
 .realmTitle::before{content:'☯ ';color:var(--dp)}
 .bar.realm{height:5px;min-width:40px}
-.bar.realm>i{background:linear-gradient(90deg,#6941b3,#b39cf0,#e8c76f)}
+.bar.realm>i{background:linear-gradient(90deg,#2f6e62,#8fd6be,#e8c76f)}
 .realmBtn{flex:1;min-width:0;align-items:center;justify-content:center;gap:2px 6px;flex-wrap:wrap;padding:4px 8px;border-radius:9px;border:1px solid var(--gold);
-  background:linear-gradient(180deg,#3a2c6e,#1d1638);color:#fff3d0;font:inherit;font-size:.72rem;cursor:pointer;position:relative;line-height:1.25;touch-action:manipulation}
+  background:linear-gradient(180deg,#8e2a22,#4a120e);color:#fff3d0;font:inherit;font-size:.72rem;cursor:pointer;position:relative;line-height:1.25;touch-action:manipulation}
 .realmBtn small{font-size:.62rem;color:var(--sub)}
 .realmBtn.risky{border-color:var(--danger)}
 .realmBtn.risky small{color:var(--danger)}
 .realmBtn:disabled{opacity:.65;cursor:default}
-.realmBtn::after{content:'';position:absolute;inset:-3px;border-radius:12px;pointer-events:none;opacity:0;box-shadow:0 0 14px 2px rgba(179,156,240,.75)}
+.realmBtn::after{content:'';position:absolute;inset:-3px;border-radius:12px;pointer-events:none;opacity:0;box-shadow:0 0 14px 2px rgba(241,211,138,.7)}
 .realmBtn:not(:disabled)::after{animation:realmGlow 1.6s ease-in-out infinite}
 @keyframes realmGlow{0%,100%{opacity:0}50%{opacity:1}}
 #tribFx{position:fixed;inset:0;z-index:56;pointer-events:none;opacity:0;visibility:hidden;transition:opacity .4s ease,visibility 0s linear .4s;
-  background:radial-gradient(ellipse at 50% 0%,rgba(44,34,100,.8),rgba(5,4,12,.7) 65%)}
+  background:radial-gradient(ellipse at 50% 0%,rgba(40,30,18,.82),rgba(5,4,12,.7) 65%)}
 #tribFx.show{opacity:1;visibility:visible;transition:opacity .4s ease}
 .tribFlash{position:absolute;inset:0;background:#dfe8ff;opacity:0}
 .tribFlash.hit{animation:tribFlash .5s ease-out}
@@ -736,15 +736,15 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
   background:linear-gradient(180deg,#fff,#cfe0ff 60%,#9fc0ff);clip-path:polygon(38% 0,72% 0,54% 36%,80% 36%,26% 100%,42% 50%,16% 50%)}
 .tribBolt.hit{animation:tribBolt .45s ease-out}
 @keyframes tribBolt{0%{opacity:1;transform:scaleY(.15)}25%{opacity:1;transform:scaleY(1)}100%{opacity:0;transform:scaleY(1)}}
-.tribBox{position:absolute;left:50%;top:58%;transform:translateX(-50%);width:min(320px,calc(100% - 32px));text-align:center;background:rgba(22,20,40,.92);
+.tribBox{position:absolute;left:50%;top:58%;transform:translateX(-50%);width:min(320px,calc(100% - 32px));text-align:center;background:rgba(21,18,14,.94);
   border:1px solid var(--gold);border-radius:12px;padding:10px 14px;display:flex;flex-direction:column;gap:5px;box-shadow:0 8px 30px rgba(0,0,0,.5)}
 .tribBox b{color:var(--gold);font-size:1.1rem;letter-spacing:1px}
 .tribBox span{font-size:.8rem;color:var(--text)}
 .tribBox small{font-size:.66rem;color:var(--sub)}
 .tribBox .bar{flex:none}
 #realmBanner{position:fixed;left:0;right:0;top:30%;z-index:57;pointer-events:none;text-align:center;opacity:0;padding:18px 12px;
-  background:linear-gradient(90deg,transparent,rgba(20,14,48,.92) 18%,rgba(20,14,48,.92) 82%,transparent)}
-#realmBanner b{display:block;font-size:clamp(1.5rem,7vw,2.4rem);color:#fff3c4;letter-spacing:1px;text-shadow:0 0 18px rgba(232,199,111,.9),0 0 36px rgba(139,92,246,.8),0 2px 4px #000}
+  background:linear-gradient(90deg,transparent,rgba(21,16,10,.92) 18%,rgba(21,16,10,.92) 82%,transparent)}
+#realmBanner b{display:block;font-size:clamp(1.5rem,7vw,2.4rem);color:#fff3c4;letter-spacing:1px;text-shadow:0 0 18px rgba(232,199,111,.9),0 0 36px rgba(184,50,42,.8),0 2px 4px #000}
 #realmBanner span{display:block;margin-top:6px;font-size:.85rem;color:var(--dp)}
 #realmBanner.show{animation:realmIn 3.2s ease-out forwards}
 @keyframes realmIn{0%{opacity:0;transform:scale(1.8)}12%{opacity:1;transform:scale(.96)}18%{transform:scale(1)}80%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.03)}}

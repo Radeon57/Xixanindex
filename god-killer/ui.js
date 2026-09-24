@@ -1616,8 +1616,8 @@ function realmBanner(title, sub){
   if(window.GKFX && !GKFX.off()){
     const x = innerWidth / 2, y = innerHeight * 0.4, R = Math.min(innerWidth, 520);
     GKFX.ring(x, y, 12, R * 0.45, '#fff3c4', 6, 0.9);
-    GKFX.ring(x, y, 10, R * 0.3, '#8b5cf6', 4, 1.0, 0.15);
-    GKFX.burst(x, y, { n:48, colors:['#fff3d0','#e8c76f','#b39cf0','#7fb0ff'], speed:380, size:13, life:1.1, drag:0.93 });
+    GKFX.ring(x, y, 10, R * 0.3, '#d2503f', 4, 1.0, 0.15);
+    GKFX.burst(x, y, { n:48, colors:['#fff3d0','#f1d38a','#8fd6be','#7fd4ff'], speed:380, size:13, life:1.1, drag:0.93 });
   }
 }
 // engine events for realms; returns true when the event was one of them
