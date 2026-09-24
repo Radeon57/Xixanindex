@@ -166,7 +166,7 @@ function buildJobs(kind){
   const rows = JOB_DEFS[kind].map((d,i)=>{
     const head = kind === 'mon'
       ? `<span class="jobName">${artHTML('monsters', i, GOD_COLORS[i % GOD_COLORS.length], sigil(d.name))}${d.name}</span><span class="jobLv pow"></span>`
-      : `<span class="jobName">${d.name}</span><span class="jobLv"></span>`;
+      : `<span class="jobName">${iconHTML(kind, i)}${d.name}</span><span class="jobLv"></span>`;
     const info = kind === 'mon'
       ? `<div class="jobSub s1"></div><div class="jobSub s2"></div>`
       : `<div class="bar thin"><i></i></div><div class="jobSub s1"></div>`;
@@ -269,7 +269,7 @@ function costHTML(c, d){
 }
 function buildCreate(){
   $('createList').innerHTML = D.CREATIONS.map((c,i)=>`<div class="cItem" data-i="${i}">
-      <div class="jobHead"><span class="jobName">${c.name}</span><span class="cOwn"></span></div>
+      <div class="jobHead"><span class="jobName">${iconHTML('create', c.key)}${c.name}</span><span class="cOwn"></span></div>
       <div class="cDesc">${c.bonus ? c.desc + ' ต่อชิ้น (สูงสุด ' + c.bonus.cap + ' ชิ้น)' : c.desc + ' (ใช้แค่เวลา)'}</div>
       <div class="cFoot"><span class="cCost"></span><button class="selBtn" data-act="target" data-key="${c.key}">เลือกสร้าง</button></div>
       <div class="lockTxt"></div>
@@ -341,6 +341,9 @@ function renderCreate(d, full){
 const artOk = {};   // path -> true once loaded, false once it failed
 function artPath(set, i){ return 'god-killer/img/' + set + '/' + String(i+1).padStart(2,'0') + '.webp'; }
 function sigil(name){ return '<span class="sigil">' + (name.match(/[ก-ฮ]/) || [name[0]])[0] + '</span>'; }
+// drawn icons for rows without portraits (god-killer/icons.js); rows just go without if that file is missing
+function iconHTML(set, k){ return window.GKICONS ? GKICONS.badge(set, k) : ''; }
+function matIcon(k){ return window.GKICONS ? GKICONS.mat(k) : ''; }
 function artHTML(set, i, color, fallback){ return `<span class="art" style="--c:${color}" data-art="${artPath(set, i)}">${fallback}</span>`; }
 function loadArt(root){
   root.querySelectorAll('.art[data-art]').forEach(el=>{
@@ -641,7 +644,7 @@ function buildPets(){
   R.pet = [...document.querySelectorAll('#petList .cItem')].map(el=>({ el, lv: el.querySelector('.jobLv'), bar: el.querySelector('.bar>i'),
     desc: el.querySelector('.cDesc'), cost: el.querySelector('.cCost'), btn: el.querySelector('.selBtn'), lock: el.querySelector('.lockTxt') }));
   $('gearList').innerHTML = D.GEAR.map(g=>`<div class="cItem">
-      <div class="jobHead"><span class="jobName">${g.name}</span><span class="jobLv"></span></div>
+      <div class="jobHead"><span class="jobName">${iconHTML('gear', g.key)}${g.name}</span><span class="jobLv"></span></div>
       <div class="cDesc"></div>
       <div class="cFoot"><span class="cCost"></span><button class="selBtn" data-act="forge" data-key="${g.key}"></button></div>
     </div>`).join('');
@@ -649,7 +652,7 @@ function buildPets(){
     cost: el.querySelector('.cCost'), btn: el.querySelector('.selBtn') }));
 }
 function matsText(){
-  return Object.keys(D.MATERIALS).map(k=>D.MATERIALS[k] + ' ' + fmt(s.meta.mats[k] || 0)).join(' · ');
+  return Object.keys(D.MATERIALS).map(k=>matIcon(k) + D.MATERIALS[k] + ' ' + fmt(s.meta.mats[k] || 0)).join(' · ');
 }
 function renderPets(d, full){
   const m = s.meta, run = m.run;
@@ -665,7 +668,7 @@ function renderPets(d, full){
     if($('dgAuto').checked !== m.dgAuto) $('dgAuto').checked = m.dgAuto;
     setShown($('dgStop'), !!run);
     setText($('teamPow'), 'พลังทีม ' + fmt(tp));
-    setText($('matLine'), matsText());
+    setHTML($('matLine'), matsText());
     let lockedShown = false;
     D.DUNGEONS.forEach((g,i)=>{
       const ref = R.dg[i], open = G.dungeonUnlocked(s, i);
@@ -709,12 +712,12 @@ function renderPets(d, full){
       setDisabled(ref.btn, !inTeam && m.team.length >= D.TEAM_SIZE);
     });
   } else {
-    setText($('matLine2'), matsText());
+    setHTML($('matLine2'), matsText());
     D.GEAR.forEach((g,i)=>{
       const ref = R.gear[i], L = m.gear[g.key] || 0, cost = G.forgeCost(L), have = m.mats[g.mat] || 0;
       setText(ref.lv, L ? '+' + L : 'ยังไม่มี');
       setText(ref.desc, g.desc + ' ต่อเลเวล (ทบต้น)' + (L ? ' · ตอนนี้ ×' + fmt(Math.pow(1+g.per, L)) : ''));
-      setHTML(ref.cost, '<span class="' + (have < cost ? 'short' : '') + '">' + D.MATERIALS[g.mat] + ' ' + fmt(have) + '/' + fmt(cost) + '</span> · โอกาสสำเร็จ ' + Math.round(G.forgeChance(L)*100) + '%');
+      setHTML(ref.cost, '<span class="' + (have < cost ? 'short' : '') + '">' + matIcon(g.mat) + D.MATERIALS[g.mat] + ' ' + fmt(have) + '/' + fmt(cost) + '</span> · โอกาสสำเร็จ ' + Math.round(G.forgeChance(L)*100) + '%');
       setText(ref.btn, L ? 'ตีบวก' : 'สร้าง');
       setDisabled(ref.btn, have < cost);
     });
@@ -962,18 +965,12 @@ function handleEvents(ev, quiet){
 }
 
 // ---------- effects ----------
-const HERO_PALETTE = { hair:'#241a3d', skin:'#e8c49a', eye:'#1a1420', armor:'#6941b3', armorLight:'#8b5cf6', gold:'#e8c76f', blade:'#fff3d0', dark:'#1c1832' };
-const HERO_BLOCKS = [
-  [3,0,4,1,'hair'],[2,1,6,1,'hair'],[2,2,1,3,'hair'],[7,2,1,3,'hair'],[3,2,4,3,'skin'],[3,3,1,1,'eye'],[6,3,1,1,'eye'],
-  [4,5,2,1,'skin'],[2,6,6,4,'armor'],[2,7,1,1,'armorLight'],[4,6,2,1,'gold'],[2,10,6,1,'gold'],[2,11,2,4,'dark'],[6,11,2,4,'dark'],
-  [2,15,2,1,'gold'],[6,15,2,1,'gold'],[1,7,1,3,'armor'],[1,10,1,1,'skin'],[8,6,1,2,'armor'],[8,4,1,2,'skin'],[7,3,3,1,'gold'],[8,0,1,3,'blade']
-];
-function drawPixelHero(canvas){
-  const unit = 8;
-  canvas.width = 10*unit; canvas.height = 16*unit;
-  const ctx = canvas.getContext('2d');
-  ctx.imageSmoothingEnabled = false;
-  HERO_BLOCKS.forEach(([x,y,w,h,c])=>{ ctx.fillStyle = HERO_PALETTE[c]; ctx.fillRect(x*unit, y*unit, w*unit, h*unit); });
+// Hero portrait: img/hero/01.webp when it loads, else the drawn SVG from icons.js. Keeps the #heroPixel id the hit effects use.
+function drawHero(){
+  const el = $('heroPixel');
+  el.style.setProperty('--c', '#e8c76f'); el.dataset.art = artPath('hero', 0);
+  el.innerHTML = window.GKICONS ? GKICONS.hero() : '';
+  loadArt(el.parentNode);
 }
 
 // particle bursts; the loop only runs while particles are alive and the canvas is visible
@@ -1566,7 +1563,7 @@ function boot(saved){
   buildJobs('train'); buildJobs('skill'); buildJobs('mon');
   buildCreate(); buildGods(); buildTemple(); buildRebirth(); buildPets(); buildUltimates(); buildPhase4();
   renderSteps();
-  drawPixelHero($('heroPixel'));
+  drawHero();
   fx = initFX($('fx'));
 
   $('main').addEventListener('click', onMainClick);

@@ -130,7 +130,7 @@ section.panel{display:none}
 .arena{position:relative;display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:6px 0 4px}
 .fighter{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px}
 .portrait{width:92px;height:92px;border-radius:50%;background:var(--panel2);border:2px solid var(--border);display:flex;align-items:center;justify-content:center;overflow:hidden}
-#heroPixel{width:45px;height:72px;image-rendering:pixelated;image-rendering:crisp-edges;animation:heroBob 2.6s ease-in-out infinite;will-change:transform}
+#heroPixel .heroFig{animation:heroBob 2.6s ease-in-out infinite}
 @keyframes heroBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
 .fighting #heroPixel{animation:heroLunge .5s ease-in-out infinite}
 @keyframes heroLunge{0%,100%{transform:translateX(0)}40%{transform:translateX(6px)}}
@@ -324,7 +324,6 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
   .godRow{padding:8px 10px;font-size:.8rem}
   #arenaWrap{max-width:760px;margin:0 auto}
   .portrait{width:140px;height:140px}
-  #heroPixel{width:68px;height:108px}
   .godPortrait svg{width:128px;height:128px}
   .fName{font-size:.95rem}
   .fStat{font-size:.74rem}
@@ -353,7 +352,6 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
   .tab{justify-content:flex-start;padding:6px 8px;font-size:.7rem}
   .tutor,.tip{font-size:.68rem;padding:5px 8px;margin-bottom:6px}
   .portrait{width:76px;height:76px}
-  #heroPixel{width:37px;height:59px}
   .vs{margin-top:-30px}
 }
 @media (min-width:1024px) and (max-height:500px){
@@ -410,6 +408,12 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
 .gToc a{font-size:.7rem;color:var(--sub);border:1px solid var(--border);border-radius:8px;padding:3px 7px;text-decoration:none}
 .ctlBtn,.maxBtn,.selBtn{touch-action:manipulation;user-select:none;-webkit-user-select:none}
 #main{overscroll-behavior:contain}
+/* ---------- drawn icons and hero portrait (god-killer/icons.js) ---------- */
+.gki{background:radial-gradient(circle at 50% 40%,color-mix(in srgb,var(--c) 24%,var(--panel2)),var(--panel2) 72%)}
+.gki svg,.heroArt svg{display:block;width:100%;height:100%}
+.gki svg{filter:drop-shadow(0 0 1.2px rgba(232,199,111,.55))}
+.gkm{display:inline-block;width:1.15em;height:1.15em;vertical-align:-.25em;margin-right:2px}
+.heroArt .heroFig{transform-box:view-box;transform-origin:50% 100%}
 </style>
 </head>
 <body>
@@ -555,7 +559,7 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
       <div id="arenaWrap">
         <div class="arena" id="arena">
           <div class="fighter">
-            <div class="portrait"><canvas id="heroPixel" aria-hidden="true"></canvas></div>
+            <div class="portrait"><span id="heroPixel" class="art heroArt" aria-hidden="true"></span></div>
             <div class="fName">ท่าน</div>
             <div class="bar hp"><i id="aHeroHp"></i></div>
             <div class="fStat" id="aHeroHpTxt"></div>
@@ -678,6 +682,7 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
 
 <script src="god-killer/data.js"></script>
 <script src="god-killer/engine.js"></script>
+<script src="god-killer/icons.js"></script>
 <script src="god-killer/ui.js"></script>
 </body>
 </html>

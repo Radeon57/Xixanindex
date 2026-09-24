@@ -13,7 +13,8 @@ https://radeon57.github.io/Xixanindex/god-killer.html (`index.html` redirects th
 | `god-killer/data.js` | Every tunable number and name: trainings, monsters, creations, gods, upgrades, pets, dungeons, gear, challenges, ultimates, might, achievements. |
 | `god-killer/engine.js` | Pure game rules with no DOM access, exported as `globalThis.GK`. It also runs in Node via `vm.runInThisContext`. |
 | `god-killer/ui.js` | Rendering and input, in one IIFE. |
-| `god-killer/img/<set>/<NN>.webp` | 256×256 portraits for `gods`, `ultimates`, `monsters`, `pets` and `dungeons`. A missing file falls back to a drawn sigil. The prompts used are in `img/PROMPTS.md`. |
+| `god-killer/icons.js` | Inline SVG art as `window.GKICONS`: icons for trainings, skills, creations, gear and materials, plus the hero portrait fallback. |
+| `god-killer/img/<set>/<NN>.webp` | 256×256 portraits for `gods`, `ultimates`, `monsters`, `pets`, `dungeons` and `hero`. A missing file falls back to a drawn sigil. The prompts used are in `img/PROMPTS.md`. |
 | `tests/engine_fuzz.js` | Engine invariant, fuzz and long-run test. Run it with `node tests/engine_fuzz.js`, about 5s. |
 
 ## Rules that keep the game working
