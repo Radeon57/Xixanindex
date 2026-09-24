@@ -3,6 +3,14 @@
 'use strict';
 
 // Clone jobs level up like this: a level takes base*(1 + LEVEL_TIME_GROWTH*lv) clone-seconds.
+// Power display scale. Stats grow exponentially, so attack, defence, HP, clone/monster power, ค่ายุทธ์ and god stats are
+// shown as POW_C * value^POW_K (ui.js pw()); the rules here and in engine.js always use the real values. A bonus that
+// multiplies a stat by f therefore shows as ×f^POW_K: stat-bonus descs below use px()/pp() so they match what the player sees.
+const POW_K = 0.5, POW_C = 10;
+const px = f => +Math.pow(f, POW_K).toFixed(2);                    // shown multiplier of a stat bonus ×f
+const pp = per => +((Math.pow(1 + per, POW_K) - 1) * 100).toFixed(1); // shown % of a stat bonus +per
+const pa = (per, cap) => +((Math.pow(1 + per * cap, POW_K) - 1) / cap * 100).toFixed(1);   // shown % per unit, averaged up to cap
+
 const LEVEL_TIME_GROWTH = 0.1;
 // A job row unlocks once the row above it reaches this level.
 const ROW_UNLOCK_LEVEL = 10;
@@ -44,12 +52,12 @@ const MONSTERS = [
 const CREATIONS = [
   { key:'clone', name:'ร่างเงา',   time:1,   dp:0,      needs:{},                    bonus:null,                     desc:'+1 ร่างเงา' },
   { key:'light', name:'แสงสวรรค์', time:5,   dp:50,     needs:{},                    bonus:{ stat:'create', per:0.02, cap:50 },  desc:'+2% ความเร็วการสร้าง' },
-  { key:'stone', name:'ศิลา',     time:10,  dp:500,    needs:{ light:2 },           bonus:{ stat:'phys',   per:0.01, cap:100 }, desc:'+1% กาย' },
+  { key:'stone', name:'ศิลา',     time:10,  dp:500,    needs:{ light:2 },           bonus:{ stat:'phys',   per:0.01, cap:100 }, desc:`+${pa(0.01, 100)}% กาย` },
   { key:'soil',  name:'ปฐพี',     time:20,  dp:5000,    needs:{ stone:2 },           bonus:{ stat:'dp',     per:0.01, cap:100 }, desc:'+1% พลังเทวะที่ได้' },
   { key:'air',   name:'วายุ',     time:40,  dp:5e4,   needs:{ soil:2, light:1 },   bonus:{ stat:'speed',  per:0.01, cap:100 }, desc:'+1% ความเร็วฝึก' },
-  { key:'water', name:'ธารา',     time:80,  dp:5e5,  needs:{ air:2 },             bonus:{ stat:'myst',   per:0.01, cap:100 }, desc:'+1% เวท' },
-  { key:'plant', name:'พฤกษา',    time:160, dp:5e6,  needs:{ water:2, soil:2 },   bonus:{ stat:'clone',  per:0.01, cap:100 }, desc:'+1% พลังร่างเงา' },
-  { key:'beast', name:'สัตว์ป่า',   time:320, dp:5e7, needs:{ plant:2 },           bonus:{ stat:'battle', per:0.01, cap:100 }, desc:'+1% ค่ายุทธ์' },
+  { key:'water', name:'ธารา',     time:80,  dp:5e5,  needs:{ air:2 },             bonus:{ stat:'myst',   per:0.01, cap:100 }, desc:`+${pa(0.01, 100)}% เวท` },
+  { key:'plant', name:'พฤกษา',    time:160, dp:5e6,  needs:{ water:2, soil:2 },   bonus:{ stat:'clone',  per:0.01, cap:100 }, desc:`+${pa(0.01, 100)}% พลังร่างเงา` },
+  { key:'beast', name:'สัตว์ป่า',   time:320, dp:5e7, needs:{ plant:2 },           bonus:{ stat:'battle', per:0.01, cap:100 }, desc:`+${pa(0.01, 100)}% ค่ายุทธ์` },
   { key:'human', name:'มนุษย์',    time:640, dp:5e8, needs:{ beast:2, water:1 },  bonus:{ stat:'maxClones', per:1, cap:50, add:true }, desc:'+1 ร่างเงาสูงสุด' }
 ];
 
@@ -82,12 +90,12 @@ const UNLOCK_AT = { skills:0, create:1, gen:2, monuments:3, pets:4, rebirth:5 };
 // Multipliers compound per level ((1+per)^L); maxClones adds per*L.
 const UPGRADE_COST_GROWTH = 1.15;
 const UPGRADES = [
-  { key:'might',  name:'พลังแห่งเทพ',   stat:'stat',      per:0.25,       cost:1, desc:'ค่าสถานะทั้งหมด ×1.25' },
+  { key:'might',  name:'พลังแห่งเทพ',   stat:'stat',      per:0.25,       cost:1, desc:`ค่าสถานะทั้งหมด ×${px(1.25)}` },
   { key:'legion', name:'กองทัพเงา',     stat:'maxClones', per:10, add:true, cost:1, desc:'+10 ร่างเงาสูงสุด' },
   { key:'focus',  name:'สมาธิเทพ',      stat:'speed',     per:0.25,       cost:2, desc:'ความเร็วฝึก ×1.25' },
   { key:'faith',  name:'ศรัทธาแห่งทวยเทพ', stat:'dp',     per:0.5,        cost:2, desc:'พลังเทวะที่ได้ ×1.5' },
   { key:'maker',  name:'หัตถ์สร้างโลก',   stat:'create',    per:0.25,       cost:2, desc:'ความเร็วการสร้าง ×1.25' },
-  { key:'shade',  name:'เงาอมตะ',       stat:'clone',     per:0.25,       cost:2, desc:'พลังร่างเงา ×1.25' }
+  { key:'shade',  name:'เงาอมตะ',       stat:'clone',     per:0.25,       cost:2, desc:`พลังร่างเงา ×${px(1.25)}` }
 ];
 
 // Divinity generator: produces DP by itself. Level L makes GEN_RATE*GEN_GROWTH^(L-1) DP/s; next level costs GEN_COST*GEN_COST_GROWTH^L DP.
@@ -95,10 +103,10 @@ const GEN_RATE = 100, GEN_GROWTH = 4, GEN_COST = 1e5, GEN_COST_GROWTH = 5;
 
 // Monuments are bought with DP plus created items. Level L costs dp*10^L DP and n*(L+1) items.
 const MONUMENTS = [
-  { key:'statue', name:'รูปปั้นขุนพล',   stat:'phys',      per:0.5,        dp:1e6, item:'stone', n:10, desc:'+50% กาย' },
-  { key:'shrine', name:'ศาลาเต๋า',    stat:'myst',      per:0.5,        dp:3e6, item:'water', n:4,  desc:'+50% เวท' },
+  { key:'statue', name:'รูปปั้นขุนพล',   stat:'phys',      per:0.5,        dp:1e6, item:'stone', n:10, desc:`+${pp(0.5)}% กาย` },
+  { key:'shrine', name:'ศาลาเต๋า',    stat:'myst',      per:0.5,        dp:3e6, item:'water', n:4,  desc:`+${pp(0.5)}% เวท` },
   { key:'temple', name:'ศาลเจ้าเทวะ',     stat:'dp',        per:0.5,        dp:1e7, item:'soil',  n:6,  desc:'+50% พลังเทวะที่ได้' },
-  { key:'tower',  name:'เจดีย์เงา',     stat:'clone',     per:0.5,        dp:3e7, item:'plant', n:3,  desc:'+50% พลังร่างเงา' },
+  { key:'tower',  name:'เจดีย์เงา',     stat:'clone',     per:0.5,        dp:3e7, item:'plant', n:3,  desc:`+${pp(0.5)}% พลังร่างเงา` },
   { key:'clock',  name:'หอระฆังสวรรค์', stat:'speed',     per:0.3,        dp:1e8, item:'air',   n:5,  desc:'+30% ความเร็วฝึก' },
   { key:'city',   name:'วังสวรรค์',       stat:'maxClones', per:20, add:true, dp:1e9, item:'human', n:1,  desc:'+20 ร่างเงาสูงสุด' }
 ];
@@ -132,10 +140,10 @@ const MATERIALS = { ore:'แร่ผลึกวิญญาณ', wood:'ไม�
 // of the gear's material; the first craft always works, later ones succeed with max(FORGE_MIN_CHANCE, 0.95 - 0.03L).
 // Each level multiplies the stat by (1+per), compounding.
 const GEAR = [
-  { key:'weapon', name:'กระบี่สังหารเทพ', stat:'phys',  per:0.15, mat:'ore',   desc:'กาย ×1.15' },
-  { key:'armor',  name:'เสื้อเกราะเทวะ',    stat:'myst',  per:0.15, mat:'wood',  desc:'เวท ×1.15' },
+  { key:'weapon', name:'กระบี่สังหารเทพ', stat:'phys',  per:0.15, mat:'ore',   desc:`กาย ×${px(1.15)}` },
+  { key:'armor',  name:'เสื้อเกราะเทวะ',    stat:'myst',  per:0.15, mat:'wood',  desc:`เวท ×${px(1.15)}` },
   { key:'ring',   name:'แหวนหยกศรัทธา',   stat:'dp',    per:0.2,  mat:'ember', desc:'พลังเทวะที่ได้ ×1.2' },
-  { key:'amulet', name:'จี้หยกวิญญาณ',   stat:'clone', per:0.2,  mat:'pearl', desc:'พลังร่างเงา ×1.2' }
+  { key:'amulet', name:'จี้หยกวิญญาณ',   stat:'clone', per:0.2,  mat:'pearl', desc:`พลังร่างเงา ×${px(1.2)}` }
 ];
 const FORGE_COST = 5, FORGE_GROWTH = 1.35, FORGE_MIN_CHANCE = 0.3;
 
@@ -143,10 +151,10 @@ const FORGE_COST = 5, FORGE_GROWTH = 1.35, FORGE_MIN_CHANCE = 0.3;
 // A challenge restarts the run under a rule. Killing the goal god (index CHAL_FIRST_GOAL + completions, capped at the
 // last god) completes it, lifts the rule for the rest of the run and permanently multiplies a stat by (1+per).
 const CHALLENGES = [
-  { key:'few',      name:'กองทัพน้อย',     rule:'ร่างเงามีได้ไม่เกิน 10 ร่าง',                         stat:'clone', per:0.25, rdesc:'พลังร่างเงา ×1.25' },
+  { key:'few',      name:'กองทัพน้อย',     rule:'ร่างเงามีได้ไม่เกิน 10 ร่าง',                         stat:'clone', per:0.25, rdesc:`พลังร่างเงา ×${px(1.25)}` },
   { key:'nocreate', name:'โลกไร้สรรพสิ่ง',  rule:'สร้างได้เพียงร่างเงา ไร้สรรพสิ่งและอนุสรณ์',                   stat:'dp',    per:0.3,  rdesc:'พลังเทวะที่ได้ ×1.3' },
-  { key:'nomagic',  name:'ไร้มนตรา',       rule:'ฝึกวิชาเวทไม่ได้เลย',                                        stat:'myst',  per:0.3,  rdesc:'เวท ×1.3' },
-  { key:'mortal',   name:'มนุษย์ธรรมดา',    rule:'ตัดผลของอัปเกรดถาวร บารมี สัตว์คู่กาย อุปกรณ์ และบททดสอบอื่น',   stat:'stat',  per:0.2,  rdesc:'ค่าสถานะทั้งหมด ×1.2' }
+  { key:'nomagic',  name:'ไร้มนตรา',       rule:'ฝึกวิชาเวทไม่ได้เลย',                                        stat:'myst',  per:0.3,  rdesc:`เวท ×${px(1.3)}` },
+  { key:'mortal',   name:'มนุษย์ธรรมดา',    rule:'ตัดผลของอัปเกรดถาวร บารมี สัตว์คู่กาย อุปกรณ์ และบททดสอบอื่น',   stat:'stat',  per:0.2,  rdesc:`ค่าสถานะทั้งหมด ×${px(1.2)}` }
 ];
 const CHAL_MAX = 6, CHAL_FIRST_GOAL = 3, FEW_CLONES = 10;
 
@@ -164,7 +172,7 @@ const MIGHT = [
   { key:'fullArmy',  name:'จุติพร้อมทัพ',       max:1,  cost:1, desc:'จุติใหม่พร้อมร่างเงาเต็มอัตราทันที' },
   { key:'autoUb',    name:'สัญชาตญาณนักล่า',    max:1,  cost:2, desc:'ท้าสิ่งสูงสุดตนที่แกร่งที่สุดซึ่งคาดว่าชนะได้ให้เอง เมื่อพลังชีวิตเต็มและไม่มีเทพเหลือให้สู้' },
   { key:'legacy',    name:'มรดกศรัทธา',        max:10, cost:1, desc:'จุติใหม่พร้อมพลังเทวะ 10^(เลเวล+3)' },
-  { key:'power',     name:'พลังยุทธ์เทพ',       max:200, cost:1, stat:'stat', per:0.2, desc:'ค่าสถานะทั้งหมด ×1.2 ต่อเลเวล (ทบต้น)' },
+  { key:'power',     name:'พลังยุทธ์เทพ',       max:200, cost:1, stat:'stat', per:0.2, desc:`ค่าสถานะทั้งหมด ×${px(1.2)} ต่อเลเวล (ทบต้น)` },
   { key:'swift',     name:'ทีมสำรวจว่องไว',     max:3,  cost:2, desc:'เวลาสำรวจแดนลับ -20% ต่อเลเวล' }
 ];
 
@@ -286,6 +294,7 @@ const MISSION_CHAIN = [
 ];
 
 root.GKDATA = {
+  POW_K, POW_C,
   LEVEL_TIME_GROWTH, ROW_UNLOCK_LEVEL, TRAININGS, SKILLS,
   KILL_RATE, KILL_RATIO_CAP, DEATH_RATE, MONSTERS,
   CREATIONS, BASE_MAX_CLONES, HIT_INTERVAL, HP_REGEN, STRIKE_CD, STRIKE_SHARE, STRIKE_BLOWS, GODS, UNLOCK_AT,
