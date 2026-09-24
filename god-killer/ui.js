@@ -430,6 +430,7 @@ function renderGods(d, full){
       setText(pred, txt);
       setText($('fightLabel'), s.fight ? 'ถอยหนี' : 'ท้าสู้ ' + tg.name);
       setClass($('fightBtn'), 'flee', !!s.fight);
+      renderStrike();
     }
   }
   if(full){
@@ -891,7 +892,7 @@ function handleEvents(ev, quiet){
       const def = JOB_DEFS[e.kind][e.i];
       addLog('ปลดล็อก' + (e.kind === 'train' ? 'การฝึกกาย' : 'วิชาเวท') + 'ใหม่: ' + def.name);
       alerts[e.kind] = true;
-      if(!quiet) toast('ปลดล็อกใหม่: ' + def.name);
+      if(!quiet){ toast('ปลดล็อกใหม่: ' + def.name); sfx('ping'); }
     } else if(e.type === 'firstCreate'){
       const c = G.creationByKey(e.key);
       addLog('สร้าง ' + c.name + ' ได้เป็นครั้งแรก! (' + c.desc + ' ต่อชิ้น)');
@@ -906,13 +907,13 @@ function handleEvents(ev, quiet){
       if(r.unlock === 'rebirth') alerts.rebirth = true;
       if(r.unlock === 'pets') alerts.pets = true;
       alerts.mon = true;
-      if(!quiet){ toast('⚔ สังหาร ' + god.name + ' สำเร็จ!', 3); celebrate(); }
+      if(!quiet){ toast('⚔ สังหาร ' + god.name + ' สำเร็จ!', 3); celebrate(); banner('⚔ สังหาร ' + god.name + '!'); sfx('win'); }
       save();
     } else if(e.type === 'ach'){
       const a = D.ACHIEVEMENTS.find(x=>x.key===e.key);
       addLog('🏆 ความสำเร็จ: ' + a.name + ' (ค่าสถานะทั้งหมด +' + Math.round(D.ACH_BONUS*100) + '%)');
       alerts.rebirth = G.rebirthUnlocked(s);
-      if(!quiet) toast('🏆 ความสำเร็จ: ' + a.name);
+      if(!quiet){ toast('🏆 ความสำเร็จ: ' + a.name); sfx('ping'); }
     } else if(e.type === 'pet'){
       const p = G.petDef(e.key);
       addLog('🐾 คู่หูใหม่: ' + p.name + ' เข้าร่วมทีม!');
@@ -933,14 +934,14 @@ function handleEvents(ev, quiet){
       const u = D.ULTIMATES[e.i];
       addLog('💥 ชนะ ' + u.name + ' → Lv.' + e.lv + ' ได้ ' + e.mp + ' แต้ม Might');
       alerts.rebirth = true;
-      if(!quiet){ toast('💥 ชนะ ' + u.name + '! +' + e.mp + ' Might', 2); celebrate(); }
+      if(!quiet){ toast('💥 ชนะ ' + u.name + '! +' + e.mp + ' Might', 2); celebrate(); banner('💥 ชนะ ' + u.name + '!'); sfx('win'); }
       save();
     } else if(e.type === 'ubLose'){
       addLog('พ่ายแพ้ต่อ ' + D.ULTIMATES[e.i].name + ' — ต้องแข็งแกร่งกว่านี้');
-      if(!quiet) toast('พ่ายแพ้... ต้องแข็งแกร่งกว่านี้', 2);
+      if(!quiet){ toast('พ่ายแพ้... ต้องแข็งแกร่งกว่านี้', 2); banner('พ่ายแพ้...', true); sfx('lose'); }
     } else if(e.type === 'godLose'){
       addLog('พ่ายแพ้ต่อ ' + D.GODS[e.i].name + ' — ฝึกให้แข็งแกร่งขึ้นแล้วกลับมาใหม่');
-      if(!quiet) toast('พ่ายแพ้... ต้องแข็งแกร่งกว่านี้', 2);
+      if(!quiet){ toast('พ่ายแพ้... ต้องแข็งแกร่งกว่านี้', 2); banner('พ่ายแพ้...', true); sfx('lose'); }
     }
   }
   ev.length = 0;
@@ -1027,6 +1028,7 @@ function hitFx(){
   const g = centerOf($('godArt')), h = centerOf($('heroPixel').parentNode);
   fx.burst(g.x, g.y, 6, '#ece7fb', 70);
   fx.burst(h.x, h.y, 4, '#ff6b6b', 50);
+  sfx('hit');
   const d = G.derive(s), tg = G.fightTarget(s, s.fight);
   floatDmg(g, G.blow(d.atk, tg.def), 'dealt');
   floatDmg(h, G.blow(tg.atk, d.def), 'taken');
@@ -1123,6 +1125,7 @@ function onMainClick(e){
     const u = D.UPGRADES.find(x=>x.key===b.dataset.key);
     if(G.buyUpgrade(s, b.dataset.key)){ addLog('อัปเกรดถาวร ' + u.name + ' เป็น Lv.' + s.meta.up[u.key]); save(); }
   }
+  if(/^(build|upgrade|buildMax|upgradeMax|might|forge|target|inc)$/.test(act)) sfx('buy');
   render(true);
 }
 function onGenMax(){
@@ -1170,6 +1173,8 @@ const KEY_HELP = [
   ['1 – 8', 'เปิดแท็บตามลำดับ (ฝึกกาย … เกิดใหม่)'],
   ['L', 'เปิด/ปิดบันทึกและเซฟ'],
   ['F / Space', 'ท้าสู้หรือถอยหนี (ในแท็บท้าเทพ)'],
+  ['S', 'ฟาดฟันเทวะ ระหว่างต่อสู้'],
+  ['H', 'เปิด/ปิดวิธีเล่น'],
   ['[ ]', 'สลับมุมมองย่อย (คู่หู · เกิดใหม่)'],
   ['Esc', 'ยกเลิกการยืนยันที่ค้างอยู่ / ปิดบันทึก'],
   ['?', 'เปิด/ปิดหน้านี้']
@@ -1225,6 +1230,8 @@ function onKey(e){
     return;
   }
   if(e.code === 'KeyL'){ e.preventDefault(); toggleLog(); return; }
+  if(e.code === 'KeyS' && activeTab === 'gods' && s.fight){ e.preventDefault(); if(!e.repeat) onStrike(); return; }
+  if(e.code === 'KeyH'){ e.preventDefault(); showGuide(!($('guide') && $('guide').classList.contains('open'))); return; }
   if(e.code === 'BracketLeft' || e.code === 'BracketRight'){ if(cycleSubView(e.code === 'BracketLeft' ? -1 : 1)) e.preventDefault(); return; }
   const space = e.code === 'Space';
   if((e.code === 'KeyF' || space) && activeTab === 'gods'){
@@ -1249,6 +1256,152 @@ function initPlatform(){
   kb.addEventListener('click', ()=>showHelp(true));
   $('logBtn').after(kb);
   document.addEventListener('keydown', onKey);
+}
+
+// ---------- sound: tiny synthesized effects, remembered on/off ----------
+const SETTINGS_KEY = 'godKillerSettings';
+const settings = (()=>{ try{ return Object.assign({ sound:true }, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); }catch(e){ return { sound:true }; } })();
+function saveSettings(){ try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }catch(e){} }
+let actx = null, lastSfx = {};
+function tone(f, dur, type, vol, f2, delay){
+  const t = actx.currentTime + (delay || 0), o = actx.createOscillator(), g = actx.createGain();
+  o.type = type || 'sine'; o.frequency.setValueAtTime(f, t);
+  if(f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(actx.destination); o.start(t); o.stop(t + dur + 0.02);
+}
+const SFX = {
+  hit:    ()=>tone(160, 0.06, 'square', 0.025, 90),
+  strike: ()=>{ tone(220, 0.25, 'sawtooth', 0.07, 55); tone(880, 0.18, 'triangle', 0.05, 1320, 0.02); },
+  win:    ()=>[523, 659, 784, 1047].forEach((f,i)=>tone(f, 0.28, 'triangle', 0.07, 0, i*0.1)),
+  lose:   ()=>tone(300, 0.5, 'sawtooth', 0.05, 90),
+  ping:   ()=>tone(988, 0.15, 'sine', 0.05, 1480),
+  buy:    ()=>tone(660, 0.08, 'triangle', 0.04, 880)
+};
+const SFX_GAP = { hit:150, ping:300, buy:80 };
+function sfx(name){
+  if(!settings.sound || document.hidden) return;
+  const now = performance.now();
+  if(now - (lastSfx[name] || 0) < (SFX_GAP[name] || 60)) return;
+  lastSfx[name] = now;
+  try{
+    if(!actx){ const AC = window.AudioContext || window.webkitAudioContext; if(!AC) return; actx = new AC(); }
+    if(actx.state === 'suspended') actx.resume();
+    SFX[name]();
+  }catch(e){}
+}
+function renderSoundBtn(){ const b = $('soundBtn'); b.textContent = settings.sound ? '🔊' : '🔇'; b.title = settings.sound ? 'ปิดเสียง' : 'เปิดเสียง'; b.setAttribute('aria-pressed', String(settings.sound)); }
+
+// ---------- big moments: victory / defeat banner ----------
+function banner(text, lose){
+  if(REDUCED_MOTION && lose) return;
+  let b = $('banner');
+  if(!b){ b = document.createElement('div'); b.id = 'banner'; b.setAttribute('aria-hidden', 'true'); document.body.appendChild(b); }
+  b.textContent = text;
+  setClass(b, 'lose', !!lose);
+  replayAnim(b, 'show');
+}
+
+// ---------- active strike ----------
+function onStrike(){
+  const dmg = G.strike(s);
+  if(!dmg) return;
+  sfx('strike');
+  if(fx && activeTab === 'gods'){
+    const g = centerOf($('godArt'));
+    fx.burst(g.x, g.y, 24, '#ffd66b', 130);
+    if(!REDUCED_MOTION){ const el = document.createElement('span'); el.className = 'dmg big'; el.textContent = '⚡-' + fmt(dmg); el.style.left = g.x + 'px'; el.style.top = (g.y - 34) + 'px'; $('arena').appendChild(el); setTimeout(()=>el.remove(), 800); }
+  }
+  render(true);
+}
+function renderStrike(){
+  const b = $('strikeBtn');
+  setShown(b, !!s.fight);
+  if(!s.fight) return;
+  const w = G.strikeWait(s);
+  setDisabled(b, w > 0);
+  setText($('strikeLabel'), w > 0 ? '⚡ ฟาดฟันเทวะ (พร้อมใน ' + Math.ceil(w) + ' วิ)' : '⚡ ฟาดฟันเทวะ! (S)');
+}
+
+// ---------- how-to-play guide ----------
+function guideSections(){
+  const god = k => D.GODS[D.UNLOCK_AT[k]].name;
+  return [
+    ['เป้าหมายของเกม', `<p>สังหารเทพทั้ง ${D.GODS.length} องค์ ตั้งแต่ ${D.GODS[0].name} จนถึง ${D.GODS[D.GODS.length-1].name} เทพแต่ละองค์ที่สังหารได้จะปลดล็อกระบบใหม่และทำให้แข็งแกร่งขึ้น</p>`],
+    ['ร่างเงา', `<p>ร่างเงาถูกสร้างขึ้นเองทีละร่าง (ที่แท็บสร้าง) ส่งไปทำงานด้วยปุ่ม <b>+</b> เลือก ×1, ×10, ×100 หรือ "ทั้งหมด" เพื่อส่งทีละหลายร่าง บนมือถือกดค้างที่ + เพื่อเพิ่มต่อเนื่อง</p>`],
+    ['ฝึกกาย / วิชาเวท', `<p>ฝึกกายเพิ่ม <b>พลังโจมตี</b> วิชาเวทเพิ่ม <b>พลังป้องกัน</b> ขั้นถัดไปปลดล็อกเมื่อขั้นก่อนถึง Lv.${D.ROW_UNLOCK_LEVEL} และให้พลังมากกว่าเดิมหลายเท่า ย้ายร่างเงาไปขั้นสูงสุดเสมอ (ปุ่ม "ย้ายไปขั้นที่ดีที่สุด")</p><p>วิชาเวทปลดล็อกเมื่อสังหาร ${god('skills')}</p>`],
+    ['สนามรบ', `<p>ส่งร่างเงาไปสู้มอนสเตอร์เพื่อหา <b>พลังเทวะ (DP)</b> และค่ายุทธ์ ดูสีพลังศัตรู:</p><ul><li><b style="color:var(--ok)">เขียว</b> ปลอดภัย</li><li><b style="color:var(--warn)">เหลือง</b> ร่างเงาบางส่วนตาย</li><li><b style="color:var(--danger)">แดง</b> ร่างเงาตายเร็วมาก</li></ul>`],
+    ['การสร้าง', `<p>เลือกของที่อยากสร้าง ตัวละครจะทำวัตถุดิบที่ขาดให้เอง ของทุกชิ้นที่เคยสร้างให้โบนัสจนจบรอบ ปลดล็อกเมื่อสังหาร ${god('create')} เกมจำของที่เลือกไว้ข้ามการเกิดใหม่</p>`],
+    ['ท้าเทพ', `<p>ดูบรรทัด <b>คาดการณ์</b> ถ้าขึ้นว่า "ชนะ" ให้กดท้าสู้ ระหว่างสู้กด <b>⚡ ฟาดฟันเทวะ</b> เพื่อโจมตีแรงพิเศษ (ทุก ${D.STRIKE_CD} วินาที) ถ้าแพ้ พลังชีวิตจะฟื้นเองเมื่อออกจากการต่อสู้</p>`],
+    ['เทวาลัย', `<p><b>เครื่องผลิต</b> สร้าง DP ให้ตลอดเวลา (ปลดล็อกเมื่อสังหาร ${god('gen')}) · <b>อนุสรณ์</b> ใช้ DP กับของที่สร้างแลกตัวคูณ (ปลดล็อกเมื่อสังหาร ${god('monuments')}) ทั้งคู่รีเซ็ตเมื่อเกิดใหม่ ใช้ปุ่ม "สูงสุด" เพื่อซื้อทีเดียวจนเงินหมด</p>`],
+    ['เกิดใหม่และ God Power', `<p>ปลดล็อกเมื่อสังหาร ${god('rebirth')} เกิดใหม่จะเริ่มรอบใหม่ แต่ได้ <b>God Power</b> ตามเทพที่สังหารในรอบนั้น ใช้ซื้ออัปเกรดถาวร ถ้าแถบเป้าหมายบอกว่า "ยังห่างอีกมาก" แปลว่าเกิดใหม่คุ้มแล้ว</p>`],
+    ['ความท้าทาย', `<p>เล่นรอบใหม่ภายใต้กฎพิเศษ ${D.CHALLENGES.length} แบบ สังหารเทพเป้าหมายได้จะได้โบนัสถาวร ทำซ้ำได้แบบละ ${D.CHAL_MAX} ครั้ง</p>`],
+    ['สิ่งมีชีวิตสูงสุดและ Might', `<p>หลังสังหารเทพครบ ${D.GODS.length} องค์ในรอบเดียว จะสู้สิ่งมีชีวิตสูงสุดได้ไม่จำกัด ชนะแล้วได้แต้ม <b>Might</b> ไว้ซื้อความสามารถถาวร</p>`],
+    ['คู่หู ดันเจี้ยน อุปกรณ์', `<p>ปลดล็อกเมื่อสังหาร ${god('pets')} ส่งทีมคู่หู ${D.TEAM_SIZE} ตัวไปดันเจี้ยนเพื่อเก็บเลเวลและวัตถุดิบ แล้วเอาวัตถุดิบไปตีบวกอุปกรณ์ ทั้งหมดอยู่ถาวรข้ามการเกิดใหม่</p>`],
+    ['ความสำเร็จ', `<p>ทุกความสำเร็จเพิ่มค่าสถานะทั้งหมด +${Math.round(D.ACH_BONUS*100)}% ดูได้ที่แท็บเกิดใหม่ › สำเร็จ</p>`],
+    ['เล่นตอนออฟไลน์', `<p>ปิดเกมไปก็ยังได้ความคืบหน้าสูงสุด 8 ชั่วโมง กลับมาจะมีการ์ดสรุปให้ดู</p>`],
+    ['ย้ายเซฟ', `<p>เซฟเก็บในเบราว์เซอร์ของแต่ละเครื่อง ย้ายเครื่องให้กด "คัดลอกโค้ด" ในหน้านี้ แล้วไปวางที่ช่อง "วางโค้ดเซฟ" ในเครื่องใหม่</p>`],
+    ['เคล็ดลับ', `<ul><li>เปิด "จัดอัตโนมัติ" เพื่อให้เกมจัดร่างเงาเอง</li><li>บนคอมกด <b>?</b> ดูปุ่มลัด · บนมือถือปัดซ้าย/ขวาเพื่อเปลี่ยนแท็บ</li><li>ติดตั้งเกมเป็นแอปได้จากเมนูเบราว์เซอร์ "เพิ่มลงหน้าจอหลัก"</li></ul>`]
+  ];
+}
+function showGuide(on){
+  let box = $('guide');
+  if(!box){
+    const secs = guideSections();
+    box = document.createElement('div');
+    box.id = 'guide';
+    box.innerHTML = `<div class="gBox" role="dialog" aria-modal="true" aria-labelledby="gTitle" tabindex="-1">
+        <div class="row"><b id="gTitle">📖 วิธีเล่น God Killer</b><button class="miniBtn" id="gClose">ปิด</button></div>
+        <div class="gToc">${secs.map((x,i)=>`<a href="#g${i}" data-g="${i}">${x[0]}</a>`).join('')}</div>
+        ${secs.map((x,i)=>`<h4 id="g${i}">${x[0]}</h4>${x[1]}`).join('')}
+      </div>`;
+    document.body.appendChild(box);
+    box.addEventListener('click', e=>{
+      if(e.target === box || e.target.id === 'gClose'){ showGuide(false); return; }
+      const a = e.target.closest('[data-g]');
+      if(a){ e.preventDefault(); box.querySelector('#g' + a.dataset.g).scrollIntoView({ behavior:'smooth', block:'start' }); }
+    });
+    box.addEventListener('keydown', e=>{ if(e.key === 'Escape'){ e.stopPropagation(); showGuide(false); } });
+  }
+  setClass(box, 'open', on);
+  if(on){ box._ret = document.activeElement; box.querySelector('.gBox').focus(); }
+  else if(box._ret && box._ret.focus) box._ret.focus();
+}
+
+// ---------- touch: hold +/− to repeat, swipe between tabs ----------
+function initTouch(){
+  let holdT = 0, repT = 0, held = null, repeats = 0;
+  const stop = ()=>{ clearTimeout(holdT); clearTimeout(repT); held = null; };
+  const tick = (start)=>{
+    if(!held || held.disabled){ stop(); return; }
+    held.click(); repeats++;
+    repT = setTimeout(()=>tick(start), Date.now() - start > 2000 ? 50 : 110);
+  };
+  $('main').addEventListener('pointerdown', e=>{
+    const b = e.target.closest('.ctlBtn');
+    if(!b || e.button > 0) return;
+    stop(); held = b; repeats = 0;
+    const start = Date.now();
+    holdT = setTimeout(()=>{ if(navigator.vibrate) try{ navigator.vibrate(8); }catch(x){} tick(start); }, 400);
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(t=>$('main').addEventListener(t, stop));
+  $('main').addEventListener('scroll', stop, { passive:true });
+  // the click that ends a hold would count once more: swallow it
+  $('main').addEventListener('click', e=>{ if(repeats && e.isTrusted && e.target.closest('.ctlBtn')){ repeats = 0; e.stopPropagation(); e.preventDefault(); } }, true);
+
+  if(!window.matchMedia('(pointer: coarse)').matches) return;
+  let sx = 0, sy = 0, st = 0;
+  $('main').addEventListener('touchstart', e=>{ const t = e.touches[0]; sx = t.clientX; sy = t.clientY; st = Date.now(); }, { passive:true });
+  $('main').addEventListener('touchend', e=>{
+    const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+    if(Date.now() - st > 600 || Math.abs(dx) < 70 || Math.abs(dy) > Math.abs(dx)*0.5) return;
+    if(e.target.closest('textarea,input,.seg')) return;
+    const order = [...document.querySelectorAll('#tabs .tab')].map(x=>x.dataset.tab).filter(n=>!tabLocked(n));
+    const i = order.indexOf(activeTab);
+    if(i < 0) return;
+    const next = order[i + (dx < 0 ? 1 : -1)];
+    if(next) selectTab(next);
+  }, { passive:true });
 }
 
 // ---------- save / load ----------
@@ -1351,6 +1504,12 @@ function boot(saved){
   $('fightBtn').addEventListener('click', onFight);
   $('genBtn').addEventListener('click', onGen);
   $('genMaxBtn').addEventListener('click', onGenMax);
+  $('strikeBtn').addEventListener('click', onStrike);
+  $('guideBtn').addEventListener('click', ()=>showGuide(true));
+  $('soundBtn').addEventListener('click', ()=>{ settings.sound = !settings.sound; saveSettings(); renderSoundBtn(); sfx('ping'); });
+  renderSoundBtn();
+  initTouch();
+  if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(()=>{});
   $('backToGod').addEventListener('click', ()=>{ arenaSel = 'god'; render(true); });
   $('autoFight').addEventListener('change', e=>{ s.meta.autoFight = e.target.checked; save(); render(true); });
   $('tutorBtn').addEventListener('click', ()=>{ s.meta.tut = 999; save(); render(true); });

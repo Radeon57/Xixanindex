@@ -55,7 +55,9 @@ const CREATIONS = [
 
 const BASE_MAX_CLONES = 10;
 const HIT_INTERVAL = 0.5;      // seconds between blows in a god fight
-const HP_REGEN = 0.1;          // share of max HP regained per second outside a fight
+const HP_REGEN = 0.1;
+// active strike in a fight: the bigger of STRIKE_BLOWS normal blows or STRIKE_SHARE of the foe's max HP, then a cooldown
+const STRIKE_CD = 12, STRIKE_SHARE = 0.04, STRIKE_BLOWS = 5;          // share of max HP regained per second outside a fight
 
 // Gods are fought by the hero. Each one killed unlocks something and makes the hero stronger.
 // unlock: 'skills' | 'create' | 'gen' | 'monuments' | 'pets' | 'rebirth'; monsters unlock two at a time per god.
@@ -207,7 +209,7 @@ const ACHIEVEMENTS = [
 root.GKDATA = {
   LEVEL_TIME_GROWTH, ROW_UNLOCK_LEVEL, TRAININGS, SKILLS,
   KILL_RATE, KILL_RATIO_CAP, DEATH_RATE, MONSTERS,
-  CREATIONS, BASE_MAX_CLONES, HIT_INTERVAL, HP_REGEN, GODS, UNLOCK_AT,
+  CREATIONS, BASE_MAX_CLONES, HIT_INTERVAL, HP_REGEN, STRIKE_CD, STRIKE_SHARE, STRIKE_BLOWS, GODS, UNLOCK_AT,
   UPGRADES, UPGRADE_COST_GROWTH, GEN_RATE, GEN_GROWTH, GEN_COST, GEN_COST_GROWTH, MONUMENTS, ACH_BONUS, ACHIEVEMENTS,
   PETS, PET_GROWTH, PET_EXP_BASE, PET_EXP_GROWTH, PET_MAX_LV, TEAM_SIZE,
   DUNGEONS, DEPTH_GROWTH, MAX_DEPTH, DUNGEON_UNLOCK_DEPTH, MATERIALS, GEAR, FORGE_COST, FORGE_GROWTH, FORGE_MIN_CHANCE,

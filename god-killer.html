@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>God Killer</title>
 <meta name="description" content="God Killer — เกมไอเดิลสายฝึกฝน สร้างร่างเงา ฝึกกายและเวท แล้วท้าสังหารเทพทั้งสิบองค์">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b0a17">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="God Killer">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%230b0a17'/%3E%3Cpath d='M13 3 5 14h6l-1 7 8-11h-6z' fill='%23e8c76f'/%3E%3C/svg%3E">
 <style>
 :root{
@@ -366,6 +372,27 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
 @keyframes lvUp{0%{box-shadow:inset 0 0 0 0 rgba(232,199,111,0);background:rgba(232,199,111,.18)}100%{background:transparent}}
 .jobLv.bump{display:inline-block;animation:bump .45s ease-out}
 @keyframes bump{0%{transform:scale(1)}35%{transform:scale(1.35)}100%{transform:scale(1)}}
+/* ---------- strike, banner, sound, guide, touch ---------- */
+.strikeBtn{margin-top:6px;background:linear-gradient(180deg,#d8a53a,#8a6420);border-color:var(--gold);color:#fff;font-weight:bold}
+.strikeBtn:not(:disabled){animation:strikeGlow 1.2s ease-in-out infinite}
+@keyframes strikeGlow{0%,100%{box-shadow:0 0 0 rgba(232,199,111,0)}50%{box-shadow:0 0 14px rgba(232,199,111,.7)}}
+.dmg.big{font-size:1.15rem;color:#ffd66b}
+#banner{position:fixed;left:0;right:0;top:32%;z-index:55;pointer-events:none;text-align:center;opacity:0;font-size:1.6rem;font-weight:bold;color:var(--gold);text-shadow:0 0 18px rgba(232,199,111,.8),0 2px 4px #000;padding:14px 0;background:linear-gradient(90deg,transparent,rgba(11,10,23,.85),transparent)}
+#banner.lose{color:var(--danger);text-shadow:0 0 14px rgba(255,107,107,.7),0 2px 4px #000}
+#banner.show{animation:bannerIn 1.8s ease-out forwards}
+@keyframes bannerIn{0%{opacity:0;transform:scale(1.6)}15%{opacity:1;transform:scale(1)}75%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.96)}}
+#soundBtn{font-size:.8rem;line-height:1;padding:3px 6px}
+#guide{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(5,4,12,.7)}
+#guide.open{display:flex}
+.gBox{width:min(620px,100%);max-height:100%;overflow:auto;background:var(--panel);border:1px solid var(--gold);border-radius:14px;padding:12px 16px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.gBox .row b{color:var(--gold);font-size:1rem}
+.gBox h4{color:var(--gold);margin:14px 0 4px;font-size:.86rem}
+.gBox p,.gBox li{font-size:.78rem;color:var(--text);line-height:1.6;margin:2px 0}
+.gBox ul{padding-left:18px;margin:4px 0}
+.gToc{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
+.gToc a{font-size:.7rem;color:var(--sub);border:1px solid var(--border);border-radius:8px;padding:3px 7px;text-decoration:none}
+.ctlBtn,.maxBtn,.selBtn{touch-action:manipulation;user-select:none;-webkit-user-select:none}
+#main{overscroll-behavior:contain}
 </style>
 </head>
 <body>
@@ -454,6 +481,7 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
     <div class="hudTop">
       <div class="brand">God Killer</div>
       <div class="godCount"><svg class="ic" width="14" height="14"><use href="#icon-crown"></use></svg>สังหารเทพ <b id="hudGods">0/0</b>
+        <button class="logBtn" id="soundBtn" aria-label="เปิด/ปิดเสียง"></button>
         <button class="logBtn" id="logBtn" aria-label="เปิดบันทึก"><svg class="ic" width="15" height="15"><use href="#icon-scroll"></use></svg></button></div>
     </div>
     <div class="chalBar" id="chalBar"></div>
@@ -527,6 +555,7 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
         </div>
         <div class="predict" id="predict"></div>
         <button class="b bPrimary" id="fightBtn"><svg class="ic" width="16" height="16"><use href="#icon-sword"></use></svg><span id="fightLabel">ท้าสู้</span></button>
+        <button class="b strikeBtn" id="strikeBtn" style="display:none"><span id="strikeLabel">⚡ ฟาดฟันเทวะ</span></button>
         <label class="toggle" id="autoFightRow"><input type="checkbox" id="autoFight"> ท้าเทพองค์ถัดไปอัตโนมัติเมื่อพลังชีวิตเต็มและคาดว่าชนะ</label>
         <div class="note" id="autoFightLock">ท้าเทพอัตโนมัติจะปลดล็อกหลังเกิดใหม่ครั้งแรก</div>
         <div class="rewardBox" id="godReward"></div>
@@ -609,6 +638,7 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
     </section>
 
     <section id="tab-log" class="panel">
+      <button class="b bPrimary" id="guideBtn" style="margin-bottom:8px">📖 วิธีเล่น</button>
       <div class="secTitle" style="margin-top:0">ย้ายเซฟ <span class="secSub">คัดลอกโค้ดไปวางในอีกเครื่องเพื่อเล่นต่อ</span></div>
       <div class="btnPair">
         <button class="miniBtn" id="exportBtn">สร้างโค้ดเซฟ</button>
