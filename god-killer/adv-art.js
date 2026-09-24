@@ -4,7 +4,7 @@
 'use strict';
 const T = 16;                 // tile size in world pixels (the camera zooms 2x, so the art stays crisp)
 const MAP_W = 44, MAP_H = 30; // tiles per zone
-const SOLID = [3, 4, 5];      // water, tree, rock
+const SOLID = [3, 4, 5, 9, 10, 11, 12];   // water, tree, rock; in the realm also pavilion, spring, furnace, lotus
 const MON_PER_ZONE = 8;
 
 // one palette per zone, in the order of D.MONSTERS
@@ -151,5 +151,72 @@ function findPath(map, sx, sy, tx, ty){
   return null;
 }
 
-window.GKAdvArt = { T, MAP_W, MAP_H, SOLID, MON_PER_ZONE, THEMES, rng, shade, drawTileset, drawHero, drawMonsters, makeMap, walkable, findPath };
+// ---------- the personal realm (มิติส่วนตัว) ----------
+// realm tiles: 0 grass, 1 grass alt, 2 stone path, 3 pond, 4 bamboo, 5 rock, 6 flowers, 7 gate,
+// 8 tilled plot, 9 pavilion, 10 spirit spring, 11 alchemy furnace, 12 lotus on water
+const REALM_PLOT_MAX = 18;
+const plotPos = i => [27 + (i % 6) * 2, 19 + Math.floor(i / 6) * 3];
+function drawRealmTiles(){
+  const c = document.createElement('canvas'); c.width = T * 13; c.height = T;
+  const x = c.getContext('2d'), r = rng(11), g1 = '#4f8a5a', g2 = '#5a9664';
+  const grass = (o, base) => { px(x, base, o, 0, T, T); for(let i = 0; i < 14; i++) px(x, shade(base, r() < .5 ? 1.2 : .82), o + (r()*T|0), r()*T|0, 1, 2); };
+  grass(0, g1); grass(T, g2);
+  px(x, '#a8a498', 2*T, 0, T, T); px(x, '#8a877c', 2*T, 7, T, 1); px(x, '#8a877c', 2*T + 7, 0, 1, 7); px(x, '#8a877c', 2*T + 3, 8, 1, 8); px(x, '#8a877c', 2*T + 12, 8, 1, 8);
+  px(x, '#3f7fa0', 3*T, 0, T, T); for(let i = 0; i < 4; i++) px(x, '#7fc0e0', 3*T + 2 + (r()*10|0), 2 + i*4, 4, 1);
+  grass(4*T, g2); [[3,'#6fbf5a'],[7,'#5aa84a'],[11,'#7fd06a']].forEach(([bx, col])=>{ px(x, col, 4*T + bx, 0, 2, T); for(let y = 3; y < T; y += 5) px(x, '#2f5a2a', 4*T + bx, y, 2, 1); px(x, '#8ae07a', 4*T + bx + 2, 4 + bx % 5, 2, 1); });
+  grass(5*T, g1); x.fillStyle = '#9aa0a4'; x.beginPath(); x.ellipse(5*T + 8, 10, 6.5, 5, 0, 0, 7); x.fill(); px(x, '#c4c8cc', 5*T + 5, 7, 3, 1);
+  grass(6*T, g1); [['#ffd66b',4,5],['#ffb0c8',10,3],['#ffffff',7,11],['#c9a6ff',12,12]].forEach(([c2,a,b])=>px(x, c2, 6*T + a, b, 2, 2));
+  px(x, '#a8a498', 7*T, 0, T, T); x.strokeStyle = '#e8c76f'; x.lineWidth = 2; x.beginPath(); x.arc(7*T + 8, 8, 5.5, 0, 7); x.stroke(); px(x, '#c9a6ff', 7*T + 6, 6, 4, 4);
+  px(x, '#5a3e2a', 8*T, 0, T, T); for(let y = 2; y < T; y += 4) px(x, '#3e2a1c', 8*T + 1, y, T - 2, 1);
+  px(x, '#c0392b', 9*T, 0, T, 6); px(x, '#8a2a1e', 9*T, 5, T, 1); px(x, '#e8c76f', 9*T, 0, T, 1); px(x, '#d8c8a8', 9*T, 6, T, 10); px(x, '#8a2a1e', 9*T + 2, 6, 2, 10); px(x, '#8a2a1e', 9*T + 12, 6, 2, 10);
+  grass(10*T, g1); x.fillStyle = '#6ff0ff'; x.beginPath(); x.ellipse(10*T + 8, 9, 6.5, 5, 0, 0, 7); x.fill(); px(x, '#dffcff', 10*T + 5, 7, 4, 1); px(x, '#a8a498', 10*T + 1, 13, 14, 2);
+  grass(11*T, g2); x.fillStyle = '#8a6a2a'; x.beginPath(); x.arc(11*T + 8, 10, 5.5, 0, 7); x.fill(); px(x, '#e8c76f', 11*T + 3, 5, 10, 2); px(x, '#5a3e14', 11*T + 4, 14, 2, 2); px(x, '#5a3e14', 11*T + 10, 14, 2, 2); px(x, '#ff9a3c', 11*T + 6, 8, 4, 2);
+  px(x, '#3f7fa0', 12*T, 0, T, T); x.fillStyle = '#3f8a4a'; x.beginPath(); x.arc(12*T + 8, 9, 5, 0, 7); x.fill(); px(x, '#ffb0c8', 12*T + 6, 5, 4, 3); px(x, '#fff', 12*T + 7, 5, 2, 1);
+  return c;
+}
+function makeRealmMap(lv, plots){
+  const r = rng(424242), m = [];
+  for(let y = 0; y < MAP_H; y++){ const row = []; for(let x = 0; x < MAP_W; x++) row.push(r() < .5 ? 0 : 1); m.push(row); }
+  for(let y = 0; y < MAP_H; y++) for(let x = 0; x < MAP_W; x++) if(x < 2 || y < 2 || x > MAP_W - 3 || y > MAP_H - 3) m[y][x] = 4;   // bamboo wall
+  for(let i = 0; i < 40; i++){ const x = 3 + (r()*(MAP_W-6)|0), y = 3 + (r()*(MAP_H-6)|0); m[y][x] = r() < .7 ? 6 : 5; }
+  for(let y = -4; y <= 4; y++) for(let x = -6; x <= 6; x++) if(x*x/36 + y*y/16 <= 1) m[21 + y][10 + x] = r() < .18 ? 12 : 3;   // lotus pond
+  for(let y = 4; y <= 8; y++) for(let x = 18; x <= 25; x++) m[y][x] = 9;                                                      // pavilion
+  for(let y = 9; y <= 14; y++) for(let x = 21; x <= 22; x++) m[y][x] = 2;
+  m[6][30] = m[6][31] = m[7][30] = m[7][31] = 10;                                                                                // spirit spring
+  m[10][27] = m[10][28] = m[11][27] = m[11][28] = 11;                                                                            // furnace
+  const mid = MAP_H >> 1;
+  for(let x = 2; x < MAP_W; x++){ m[mid][x] = 2; m[mid+1][x] = 2; }
+  for(let y = mid; y <= 28; y++) m[y][25] = 2;
+  for(let y = 17; y <= 27; y++) for(let x = 26; x <= 38; x++) if(m[y][x] !== 2) m[y][x] = r() < .5 ? 0 : 1;
+  for(let i = 0; i < Math.min(plots, REALM_PLOT_MAX); i++){ const [px2, py] = plotPos(i); m[py][px2] = 8; }
+  m[mid][MAP_W-1] = 7; m[mid+1][MAP_W-1] = 7; m[mid][MAP_W-2] = 2; m[mid+1][MAP_W-2] = 2;
+  return m;
+}
+// herbs: one column per growth stage (sprout, growing, ripe), one row per herb in D.HERBS order
+function drawHerbs(colors){
+  const c = document.createElement('canvas'); c.width = T * 3; c.height = T * colors.length;
+  const x = c.getContext('2d');
+  colors.forEach((col, h)=>{
+    const oy = h*T;
+    px(x, '#6fbf5a', 7, oy + 11, 2, 4); px(x, '#8ae07a', 5, oy + 12, 2, 1); px(x, '#8ae07a', 9, oy + 11, 2, 1);                       // sprout
+    px(x, '#5aa84a', T + 7, oy + 6, 2, 9); px(x, '#8ae07a', T + 4, oy + 9, 3, 2); px(x, '#8ae07a', T + 9, oy + 7, 3, 2); px(x, col, T + 6, oy + 4, 4, 3);
+    px(x, '#4a9a3a', 2*T + 7, oy + 5, 2, 10); px(x, '#8ae07a', 2*T + 3, oy + 9, 4, 2); px(x, '#8ae07a', 2*T + 9, oy + 8, 4, 2);          // ripe
+    x.fillStyle = col; x.beginPath(); x.arc(2*T + 8, oy + 4, 4, 0, 7); x.fill(); px(x, '#ffffff', 2*T + 6, oy + 2, 2, 1);
+  });
+  return c;
+}
+// pets for the realm: small critters in each pet's color, 2 bob frames
+function drawPets(colors){
+  const c = document.createElement('canvas'); c.width = T * 2; c.height = T * colors.length;
+  const x = c.getContext('2d');
+  colors.forEach((col, i)=>{ for(let f = 0; f < 2; f++){
+    const ox = f*T, oy = i*T + f;
+    px(x, col, ox + 4, oy + 7, 8, 6); px(x, col, ox + 9, oy + 4, 5, 5); px(x, shade(col, .7), ox + 4, oy + 13, 2, 2); px(x, shade(col, .7), ox + 10, oy + 13, 2, 2);
+    px(x, '#1a1420', ox + 12, oy + 6); px(x, shade(col, 1.25), ox + 2, oy + 6, 3, 2);
+  } });
+  return c;
+}
+
+window.GKAdvArt = { T, MAP_W, MAP_H, SOLID, MON_PER_ZONE, THEMES, rng, shade, drawTileset, drawHero, drawMonsters, makeMap, walkable, findPath,
+  REALM_PLOT_MAX, plotPos, drawRealmTiles, makeRealmMap, drawHerbs, drawPets };
 })();

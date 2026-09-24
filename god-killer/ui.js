@@ -843,7 +843,7 @@ function renderHud(d, full){
 }
 const TABS = ['train','skill','mon','create','temple','pets','gods','rebirth','adv','log'];
 const TAB_LOCK = { skill:['skills', ()=>G.skillsUnlocked(s)], temple:['gen', ()=>G.genUnlocked(s)], rebirth:['rebirth', ()=>G.rebirthUnlocked(s)], pets:['pets', ()=>G.petsUnlocked(s)], adv:['adv', ()=>G.advUnlocked(s)] };
-const TAB_NAME = { adv:'โหมดผจญภัย', skill:'วิชาเวท', temple:'เทวาลัย', rebirth:'การเกิดใหม่', pets:'คู่หู' };
+const TAB_NAME = { adv:'มิติส่วนตัว', skill:'วิชาเวท', temple:'เทวาลัย', rebirth:'การเกิดใหม่', pets:'คู่หู' };
 function tabLocked(name){ const l = TAB_LOCK[name]; return !!l && !l[1](); }
 function renderTabs(d){
   if(s.gods < D.GODS.length && !s.fight && s.hp >= d.maxHp*0.999 && fightOutlook(d, godTarget()).win) alerts.gods = true;
@@ -1109,6 +1109,20 @@ function onMainClick(e){
         toast('เริ่มความท้าทาย: ' + c.name); save();
       }
     }
+  } else if(act === 'realmSeed'){
+    realmSeed = b.dataset.v;
+  } else if(act === 'plotAct'){
+    plotAct(+b.dataset.i); return;
+  } else if(act === 'harvestAll'){
+    let n = 0; s.meta.realm.plots.forEach((p, i)=>{ if(G.plotReady(s, i)){ G.harvest(s, i); n++; } });
+    if(n){ toast('เก็บเกี่ยว ' + n + ' แปลง'); sfx('ping'); save(); }
+  } else if(act === 'brew'){
+    const p = G.pillDef(b.dataset.key);
+    if(G.brew(s, b.dataset.key)){ addLog('💊 หลอม' + p.name + ' สำเร็จ' + (p.perm ? ' — แข็งแกร่งขึ้นถาวร' : ' — ฤทธิ์ยาออกแล้ว')); toast('💊 ' + p.name + '!'); sfx('win'); save(); }
+  } else if(act === 'realmUp'){
+    if(G.realmUpgrade(s)){ addLog('🏯 ยกระดับมิติเป็น ' + D.REALM_NAMES[s.meta.realm.lv - 1]); toast('มิติยกระดับ!'); celebrate(); save(); }
+  } else if(act === 'springUp'){
+    if(G.springUpgrade(s)){ addLog('ขยายบ่อน้ำพุวิญญาณเป็น Lv.' + s.meta.realm.spring); save(); }
   } else if(act === 'petView'){
     petView = b.dataset.v;
   } else if(act === 'depth'){
@@ -1399,7 +1413,12 @@ function guideSections(){
     ['ความท้าทาย', `<p>เล่นรอบใหม่ภายใต้กฎพิเศษ ${D.CHALLENGES.length} แบบ สังหารเทพเป้าหมายได้จะได้โบนัสถาวร ทำซ้ำได้แบบละ ${D.CHAL_MAX} ครั้ง</p>`],
     ['สิ่งมีชีวิตสูงสุดและ Might', `<p>หลังสังหารเทพครบ ${D.GODS.length} องค์ในรอบเดียว จะสู้สิ่งมีชีวิตสูงสุดได้ไม่จำกัด ชนะแล้วได้แต้ม <b>Might</b> ไว้ซื้อความสามารถถาวร</p>`],
     ['คู่หู ดันเจี้ยน อุปกรณ์', `<p>ปลดล็อกเมื่อสังหาร ${god('pets')} ส่งทีมคู่หู ${D.TEAM_SIZE} ตัวไปดันเจี้ยนเพื่อเก็บเลเวลและวัตถุดิบ แล้วเอาวัตถุดิบไปตีบวกอุปกรณ์ ทั้งหมดอยู่ถาวรข้ามการเกิดใหม่</p>`],
-    ['ผจญภัย', `<p>แท็บที่ 9 เป็นโลก 2D ที่ตัวละครเดินได้จริง แต่ละเขตคือสนามรบของมอนสเตอร์หนึ่งชนิด มอนสเตอร์จะไล่ตามเมื่อเข้าใกล้ ฆ่าได้ 1 ตัวเท่ากับฆ่าในสนามรบ ${D.ADV_KILL_WORTH} ตัว (ได้ DP และค่ายุทธ์) ยิ่งร่างเงาแข็งแกร่ง ตัวละครยิ่งตีแรงและทนขึ้น</p><ul><li>คอม: WASD หรือลูกศรเดิน · J หรือ Space โจมตี</li><li>มือถือ: แตะพื้นเพื่อเดิน แตะมอนสเตอร์เพื่อเดินเข้าไปโจมตีเอง</li><li>เดินเข้าประตูทองด้านขวาเพื่อไปเขตถัดไป</li></ul>`],
+    ['มิติส่วนตัวและดินแดนลับ', `<p>แท็บที่ 9 คือ<b>มิติหยก</b>ของท่าน โลกส่วนตัวที่อยู่ถาวรแม้เกิดใหม่ มีศาลา สระบัว บ่อน้ำพุวิญญาณ เตาหลอมโอสถ และแปลงสมุนไพร สัตว์คู่หูของท่านจะมาเดินเล่นในมิติ</p>
+      <ul><li><b>ปลูกสมุนไพร</b>: แตะแปลงเพื่อปลูก สมุนไพรเติบโตตามเวลาจริงแม้ปิดเกม โตเต็มแล้วแตะอีกครั้งเพื่อเก็บเกี่ยว (ได้เมล็ดคืน 1)</li>
+      <li><b>เตาหลอมโอสถ</b>: ยาชั่วคราวเพิ่มพลัง ×2–×3 นาน 10 นาที · ยาทะลวงขั้นและยาเซียนอมตะเพิ่มค่าสถานะถาวร</li>
+      <li><b>หินวิญญาณ</b>: ใช้ยกระดับมิติ (ได้แปลงเพิ่ม) และขยายบ่อน้ำพุ (โตเร็วขึ้น) · มิติขั้น ${D.REALM_CHAMBER_LV} ขึ้นไปเปิดห้องบำเพ็ญเวลาเร่ง ความเร็วฝึกเพิ่มขึ้น</li>
+      <li><b>ดินแดนลับ</b>: เดินออกประตูทองทางขวาของมิติ มอนสเตอร์ไล่ตามเมื่อเข้าใกล้ ฆ่าแล้วได้ DP ค่ายุทธ์ หินวิญญาณ และเมล็ดสมุนไพร (ดินแดนยิ่งลึก เมล็ดยิ่งหายาก)</li>
+      <li>คอม: WASD หรือลูกศรเดิน · J หรือ Space โจมตี · มือถือ: แตะพื้นเพื่อเดิน แตะมอนสเตอร์เพื่อเข้าโจมตี</li></ul>`],
     ['ความสำเร็จ', `<p>ทุกความสำเร็จเพิ่มค่าสถานะทั้งหมด +${Math.round(D.ACH_BONUS*100)}% ดูได้ที่แท็บเกิดใหม่ › สำเร็จ</p>`],
     ['เล่นตอนออฟไลน์', `<p>ปิดเกมไปก็ยังได้ความคืบหน้าสูงสุด 8 ชั่วโมง กลับมาจะมีการ์ดสรุปให้ดู</p>`],
     ['ย้ายเซฟ', `<p>เซฟเก็บในเบราว์เซอร์ของแต่ละเครื่อง ย้ายเครื่องให้กด "คัดลอกโค้ด" ในหน้านี้ แล้วไปวางที่ช่อง "วางโค้ดเซฟ" ในเครื่องใหม่</p>`],
@@ -1407,7 +1426,7 @@ function guideSections(){
   ];
 }
 // sections for systems the player hasn't reached yet are shown locked, without spoilers
-const GUIDE_LOCK = { 'ผจญภัย':'adv', 'วิชาเวท':'skills', 'การสร้าง':'create', 'เทวาลัย':'gen', 'เกิดใหม่และ God Power':'rebirth', 'ความท้าทาย':'rebirth', 'คู่หู ดันเจี้ยน อุปกรณ์':'pets' };
+const GUIDE_LOCK = { 'มิติส่วนตัวและดินแดนลับ':'adv', 'วิชาเวท':'skills', 'การสร้าง':'create', 'เทวาลัย':'gen', 'เกิดใหม่และ God Power':'rebirth', 'ความท้าทาย':'rebirth', 'คู่หู ดันเจี้ยน อุปกรณ์':'pets' };
 function guideLocked(title){
   const m = s.meta;
   if(title === 'สิ่งมีชีวิตสูงสุดและ Might') return G.ubUnlocked(s) || m.mpTotal > 0 ? '' : 'ปลดล็อกเมื่อสังหารเทพครบ ' + D.GODS.length + ' องค์ในรอบเดียว';
@@ -1481,9 +1500,17 @@ function initTouch(){
 }
 
 // ---------- adventure mode host (the Phaser scene lives in adventure.js, loaded on first visit) ----------
-let advState = 0, advCtl = null, advZone = 0, advAtkQueued = false;   // advState: 0 not loaded, 1 loading, 2 ready
+let advState = 0, advCtl = null, advZone = -1, advAtkQueued = false, realmSeed = 'grass';   // advZone -1 = the personal realm   // advState: 0 not loaded, 1 loading, 2 ready
 const advApi = {
   startZone: ()=>Math.min(advZone, G.advZones(s) - 1),
+  realm: ()=>s.meta.realm,
+  herbColors: ()=>D.HERBS.map(h=>h.color),
+  petColors: ()=>D.PETS.map(p=>p.color),
+  ownedPets: ()=>D.PETS.map((p, i)=>s.meta.pets[p.key] ? i : -1).filter(i=>i >= 0),
+  herbIndex: key=>D.HERBS.findIndex(h=>h.key === key),
+  herbTime: key=>G.herbDef(key).time,
+  plotTap: i=>plotAct(i),
+  openPanel: what=>{ const el = $(what === 'furnace' ? 'rlFurnace' : 'rlInfo'); if(el) el.scrollIntoView({ behavior:'smooth', block:'center' }); },
   zones: ()=>G.advZones(s),
   stats: z=>G.advStats(s, z),
   kill: z=>{ const g = G.advKill(s, z); if(g) sfx('ping'); return g; },
@@ -1507,11 +1534,67 @@ function ensureAdv(){
     if(activeTab !== 'adv') advCtl.sleep();
   }).catch(()=>{ advState = 0; setText($('advMsg'), 'โหลดโหมดผจญภัยไม่สำเร็จ — ตรวจการเชื่อมต่อแล้วเปิดแท็บนี้ใหม่'); });
 }
+function plotAct(i){
+  const r = s.meta.realm, p = r.plots[i];
+  if(!p) return;
+  if(G.plotReady(s, i)){ const h = G.herbDef(p.herb), n = G.harvest(s, i); toast('เก็บเกี่ยว ' + h.name + ' +' + n); sfx('ping'); save(); }
+  else if(!p.herb){
+    const key = (r.seeds[realmSeed] > 0) ? realmSeed : (D.HERBS.find(h=>r.seeds[h.key] > 0) || {}).key;
+    if(key && G.plant(s, i, key)){ toast('ปลูก ' + G.herbDef(key).name); sfx('buy'); save(); }
+    else toast('ไม่มีเมล็ด — ฆ่ามอนสเตอร์ในดินแดนลับเพื่อหาเมล็ดและหินวิญญาณ');
+  } else toast(G.herbDef(p.herb).name + ' จะโตเต็มที่ในอีก ' + fmtTime((G.herbDef(p.herb).time - p.t) / G.growSpeed(s)));
+  render(true);
+}
+function renderRealm(){
+  const r = s.meta.realm, ps = D.PILLS;
+  setText($('rlName'), D.REALM_NAMES[r.lv - 1] + ' (ขั้น ' + r.lv + '/' + D.REALM_MAX_LV + ')');
+  setText($('rlStones'), '💎 หินวิญญาณ ' + fmt(r.stones));
+  const chamber = r.lv >= D.REALM_CHAMBER_LV ? ' · ห้องบำเพ็ญเวลาเร่ง: ความเร็วฝึก ×' + fmt(1 + D.REALM_CHAMBER_PER*(r.lv - D.REALM_CHAMBER_LV + 1)) : ' · ห้องบำเพ็ญเวลาเร่งเปิดที่ขั้น ' + D.REALM_CHAMBER_LV;
+  setText($('rlInfo'), 'แปลง ' + r.plots.length + ' · บ่อน้ำพุวิญญาณ Lv.' + r.spring + ' (โตเร็ว ×' + fmt(G.growSpeed(s)) + ')' + chamber);
+  setText($('rlUp'), r.lv >= D.REALM_MAX_LV ? 'มิติขั้นสูงสุดแล้ว' : 'ยกระดับมิติ · ' + fmt(G.realmCost(s)) + ' หิน');
+  setDisabled($('rlUp'), r.lv >= D.REALM_MAX_LV || r.stones < G.realmCost(s));
+  setText($('rlSpring'), r.spring >= D.SPRING_MAX ? 'บ่อน้ำพุสูงสุดแล้ว' : 'ขยายบ่อน้ำพุ · ' + fmt(G.springCost(s)) + ' หิน');
+  setDisabled($('rlSpring'), r.spring >= D.SPRING_MAX || r.stones < G.springCost(s));
+  // buttons are built once (or when the realm grows) and only their contents change, so a tap is never lost mid-press
+  const seedBox = $('rlSeeds');
+  if(seedBox.children.length !== D.HERBS.length) seedBox.innerHTML = D.HERBS.map(h=>'<button data-act="realmSeed" data-v="' + h.key + '"></button>').join('');
+  [...seedBox.children].forEach((b, i)=>{ const h = D.HERBS[i]; setText(b, h.name + ' ×' + fmt(r.seeds[h.key] || 0)); setOn(b, realmSeed === h.key); setDisabled(b, !r.seeds[h.key]); });
+  const plotBox = $('rlPlots');
+  if(plotBox.children.length !== r.plots.length) plotBox.innerHTML = r.plots.map((p, i)=>'<button class="plot" data-act="plotAct" data-i="' + i + '"></button>').join('');
+  let ready = 0;
+  [...plotBox.children].forEach((b, i)=>{
+    const p = r.plots[i];
+    if(!p.herb){ setClass(b, 'ready', false); setHTML(b, '<b>แปลง ' + (i+1) + '</b>ว่าง — แตะเพื่อปลูก'); return; }
+    const h = G.herbDef(p.herb), ok = G.plotReady(s, i);
+    if(ok) ready++;
+    setClass(b, 'ready', ok);
+    setHTML(b, '<b>' + h.name + '</b>' + (ok ? '✨ พร้อมเก็บเกี่ยว' : 'อีก ' + fmtTime((h.time - p.t) / G.growSpeed(s))) +
+      '<div class="bar gold"><i style="transform:scaleX(' + Math.min(1, p.t / h.time).toFixed(2) + ')"></i></div>');
+  });
+  setShown($('rlHarvestAll'), ready > 0, 'block');
+  setText($('rlHerbs'), 'มี: ' + D.HERBS.map(h=>h.name + ' ' + fmt(r.herbs[h.key] || 0)).join(' · '));
+  const pillBox = $('rlPills');
+  if(pillBox.children.length !== ps.length) pillBox.innerHTML = ps.map(p=>'<div class="cItem"><div class="jobHead"><span class="jobName">💊 ' + p.name + '</span></div><div class="cDesc"></div>' +
+    '<div class="cFoot"><span class="cCost"></span><button class="selBtn" data-act="brew" data-key="' + p.key + '">หลอม</button></div></div>').join('');
+  [...pillBox.children].forEach((el, i)=>{
+    const p = ps[i];
+    const eff = p.buff ? STAT_TH[p.buff.stat] + ' ×' + p.buff.mult + ' นาน ' + fmtTime(p.buff.sec) + (r.buffs[p.key] ? ' (เหลือ ' + fmtTime(r.buffs[p.key]) + ')' : '')
+                       : (p.perm.stat === 'stat' ? 'ค่าสถานะทั้งหมด' : STAT_TH[p.perm.stat]) + ' +' + Math.round(p.perm.per*100) + '% ถาวร (กินแล้ว ' + (r.perm[p.key] || 0) + '/' + D.PILL_PERM_MAX + ')';
+    setText(el.querySelector('.cDesc'), eff);
+    setHTML(el.querySelector('.cCost'), Object.keys(p.needs).map(k=>'<span class="' + ((r.herbs[k] || 0) < p.needs[k] ? 'short' : '') + '">' + G.herbDef(k).name + ' ×' + p.needs[k] + '</span>').join(' · '));
+    setDisabled(el.querySelector('.selBtn'), !G.canBrew(s, p.key));
+  });
+  const act = Object.keys(r.buffs).map(k=>G.pillDef(k).name + ' ' + fmtTime(r.buffs[k]));
+  setText($('rlBuffs'), act.length ? '🔥 ฤทธิ์ยาที่ออกอยู่: ' + act.join(' · ') : '');
+}
 function renderAdv(){
-  const n = G.advZones(s), z = Math.min(advZone, n - 1), mon = D.MONSTERS[z], rt = G.advStats(s, z);
-  setText($('advZone'), (z + 1) + '/' + n + ' ' + mon.name);
+  const n = G.advZones(s), z = Math.min(advZone, n - 1), inRealm = z < 0;
+  setShown($('realmPanel'), inRealm); setShown($('advHpBar'), !inRealm); setShown($('advAtk'), !inRealm, 'inline-block');
+  setDisabled($('advPrev'), z <= -1); setDisabled($('advNext'), z >= n - 1);
+  if(inRealm){ setText($('advZone'), 'มิติ' + D.REALM_NAMES[s.meta.realm.lv - 1]); setText($('advKills'), '💎 ' + fmt(s.meta.realm.stones)); renderRealm(); return; }
+  const mon = D.MONSTERS[z], rt = G.advStats(s, z);
+  setText($('advZone'), 'ดินแดนลับ ' + (z + 1) + '/' + n + ' ' + mon.name);
   setHTML($('advKills'), 'ฆ่าแล้ว ' + fmt(s.meta.adv.kills) + '<span class="advRatio"> · แข็งกว่ามอนสเตอร์ ×' + fmt(rt.ratio) + '</span>');
-  setDisabled($('advPrev'), z <= 0); setDisabled($('advNext'), z >= n - 1);
 }
 
 // ---------- save / load ----------
@@ -1616,7 +1699,7 @@ function boot(saved){
   $('genMaxBtn').addEventListener('click', onGenMax);
   $('strikeBtn').addEventListener('click', onStrike);
   $('advAtk').addEventListener('click', ()=>{ advAtkQueued = true; });
-  $('advPrev').addEventListener('click', ()=>{ if(advCtl) advCtl.goZone(Math.max(0, advCtl.zone() - 1)); });
+  $('advPrev').addEventListener('click', ()=>{ if(advCtl) advCtl.goZone(Math.max(-1, advCtl.zone() - 1)); });
   $('advNext').addEventListener('click', ()=>{ if(advCtl) advCtl.goZone(Math.min(G.advZones(s) - 1, advCtl.zone() + 1)); });
   $('guideBtn').addEventListener('click', ()=>showGuide(true));
   $('soundBtn').addEventListener('click', ()=>{ settings.sound = !settings.sound; saveSettings(); renderSoundBtn(); sfx('ping'); });
