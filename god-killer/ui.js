@@ -118,9 +118,9 @@ function rewardParts(i){
   if(r.unlock === 'create') out.push('ปลดล็อก <b>การสร้างสรรพสิ่ง</b>');
   if(r.unlock === 'gen') out.push('ปลดล็อก <b>เครื่องผลิตพลังเทวะ</b>');
   if(r.unlock === 'monuments') out.push('ปลดล็อก <b>อนุสรณ์</b>');
-  if(r.unlock === 'rebirth') out.push('ปลดล็อก <b>การเกิดใหม่</b>');
-  if(r.unlock === 'pets') out.push('ปลดล็อก <b>คู่หูและดันเจี้ยน</b>');
-  out.push('<b>' + D.GODS[i].gp + ' God Power</b> เมื่อเกิดใหม่');
+  if(r.unlock === 'rebirth') out.push('ปลดล็อก <b>การจุติใหม่</b>');
+  if(r.unlock === 'pets') out.push('ปลดล็อก <b>สัตว์คู่กายและแดนลับ</b>');
+  out.push('<b>' + D.GODS[i].gp + ' ปราณเทพ</b> เมื่อจุติใหม่');
   const monBefore = Math.min(D.MONSTERS.length, 2 + 2*i), monAfter = Math.min(D.MONSTERS.length, 2 + 2*(i+1));
   if(monAfter > monBefore) out.push('สนามรบใหม่ <b>'+(monAfter-monBefore)+' แห่ง</b>');
   if(r.maxClones) out.push('ร่างเงาสูงสุด <b>+'+r.maxClones+'</b>');
@@ -218,11 +218,11 @@ function renderJobs(kind, d, full){
       setText(ref.lv, 'พลัง ' + fmt(defs[i].power));
       const cls = rt.ratio >= 1 ? 'safe' : rt.ratio >= 0.5 ? 'risky' : 'deadly';
       if(ref.lv._c !== cls){ ref.lv._c = cls; ref.lv.className = 'jobLv pow ' + cls; }
-      setText(ref.s1, 'ต่อตัว +' + fmt(defs[i].dp*d.m.dp) + ' DP · +' + fmt(defs[i].battle*d.m.battle) + ' ยุทธ์ · ฆ่าแล้ว ' + fmt(r.kills));
+      setText(ref.s1, 'ต่อตัว +' + fmt(defs[i].dp*d.m.dp) + ' DP · +' + fmt(defs[i].battle*d.m.battle) + ' ค่ายุทธ์ · ปราบแล้ว ' + fmt(r.kills));
       let rate;
-      if(r.n) rate = 'ฆ่า ' + fmt(rt.kills) + '/วิ' + (rt.deaths ? ' · <span class="die">ร่างเงาตาย ' + fmt(rt.deaths) + '/วิ</span>' : '');
+      if(r.n) rate = 'ปราบ ' + fmt(rt.kills) + '/วิ' + (rt.deaths ? ' · <span class="die">ร่างเงาสลาย ' + fmt(rt.deaths) + '/วิ</span>' : '');
       else if(rt.ratio >= 1) rate = 'ร่างเงาแข็งแกร่งกว่า ×' + fmt(rt.ratio) + ' — ปลอดภัย';
-      else rate = '<span class="die">ร่างเงาอ่อนกว่า (' + Math.round(rt.ratio*100) + '%) — จะถูกฆ่า</span>';
+      else rate = '<span class="die">ร่างเงาอ่อนกว่า (' + Math.round(rt.ratio*100) + '%) — จะถูกสังหาร</span>';
       setHTML(ref.s2, rate);
     } else {
       const mult = kind === 'train' ? d.m.phys : d.m.myst;
@@ -230,8 +230,8 @@ function renderJobs(kind, d, full){
       if(ref._lv !== undefined && r.lv > ref._lv && !motionOff() && !(now - ref._lvAt < 1500)){ ref._lvAt = now; replayAnim(ref.el, 'lvUp'); replayAnim(ref.lv, 'bump'); }
       ref._lv = r.lv;
       setText(ref.lv, 'Lv.' + r.lv);
-      const eta = r.n ? fmtTime((G.levelTime(defs[i], r.lv) - r.prog) / (r.n * d.m.speed)) : 'ไม่มีร่างเงา';
-      setText(ref.s1, '+' + fmt(defs[i].gain*mult) + ' ' + (kind==='train' ? 'กาย' : 'เวท') + '/เลเวล · เลเวลถัดไป ' + eta);
+      const eta = r.n ? fmtTime((G.levelTime(defs[i], r.lv) - r.prog) / (r.n * d.m.speed)) : 'ต้องมีร่างเงาก่อน';
+      setText(ref.s1, '+' + fmt(defs[i].gain*mult) + ' ' + (kind==='train' ? 'กาย' : 'เวท') + '/เลเวล · เลเวลถัดไป: ' + eta);
     }
   }
   if(!full) return;
@@ -239,9 +239,9 @@ function renderJobs(kind, d, full){
   setText(sec.idle, fmt(free));
   if(kind === 'train'){ setHTML(sec.sum1, 'กายรวม <b>' + fmt(d.phys) + '</b>'); setText(sec.sum2, 'ความเร็วฝึก ×' + fmt(d.m.speed)); }
   if(kind === 'skill'){ setHTML(sec.sum1, 'เวทรวม <b>' + fmt(d.myst) + '</b>'); setText(sec.sum2, 'ความเร็วฝึก ×' + fmt(d.m.speed)); }
-  if(kind === 'mon'){ setHTML(sec.sum1, 'พลังร่างเงา <b>' + fmt(d.clonePower) + '</b>'); setHTML(sec.sum2, 'ยุทธ์รวม <b>' + fmt(d.battle) + '</b>'); }
+  if(kind === 'mon'){ setHTML(sec.sum1, 'พลังร่างเงา <b>' + fmt(d.clonePower) + '</b>'); setHTML(sec.sum2, 'ค่ายุทธ์รวม <b>' + fmt(d.battle) + '</b>'); }
   setShown(sec.hint, free > 0 && !planOn);
-  if(free > 0 && !planOn) setText(sec.hint, 'มีร่างเงาว่าง ' + fmt(free) + ' ร่าง — กด + เพื่อส่งมาทำงาน' + (kind==='mon' ? ' (เลือกศัตรูสีเขียวเพื่อไม่ให้ร่างเงาตาย)' : ''));
+  if(free > 0 && !planOn) setText(sec.hint, 'มีร่างเงาว่าง ' + fmt(free) + ' ร่าง — กด + เพื่อส่งไปทำงาน' + (kind==='mon' ? ' (เลือกอสูรสีเขียว ร่างเงาจะไม่สลาย)' : ''));
   const pu = G.planUnlocked(s), p = s.meta.plan;
   setShown(sec.planBar, true, 'flex');
   setShown(sec.planBtn, pu, 'inline-block');
@@ -252,8 +252,8 @@ function renderJobs(kind, d, full){
   setDisabled(sec.planBar.querySelector('[data-act="best"]'), planOn);
   if(planOn){
     sec.presets.forEach(b=>{ const pr = D.PLAN_PRESETS.find(x=>x.key===b.dataset.v); setOn(b, pr.train===p.train && pr.skill===p.skill && pr.mon===p.mon); });
-    setText(sec.planNote, 'ร่างเงาถูกจัดให้เองทุกวินาที: ฝึกกาย ' + p.train + '% · วิชาเวท ' + p.skill + '% · สนามรบ ' + p.mon +
-      '% ไปที่ขั้นสูงสุดและศัตรูสีเขียวที่ดีที่สุด (ส่วนที่ยังใช้ไม่ได้จะย้ายไปฝึกกาย) · จำไว้ข้ามการเกิดใหม่');
+    setText(sec.planNote, 'จัดร่างเงาให้อัตโนมัติทุกวินาที: ฝึกกาย ' + p.train + '% · วิชาเวท ' + p.skill + '% · สนามรบ ' + p.mon +
+      '% ลงขั้นสูงสุดและอสูรสีเขียวที่ดีที่สุด (ส่วนที่ยังใช้ไม่ได้จะไปฝึกกายแทน) · ค่านี้คงอยู่แม้จุติใหม่');
   }
 }
 
@@ -270,7 +270,7 @@ function costHTML(c, d){
 function buildCreate(){
   $('createList').innerHTML = D.CREATIONS.map((c,i)=>`<div class="cItem" data-i="${i}">
       <div class="jobHead"><span class="jobName">${c.name}</span><span class="cOwn"></span></div>
-      <div class="cDesc">${c.bonus ? c.desc + ' ต่อชิ้น (สูงสุด ' + c.bonus.cap + ' ชิ้น)' : c.desc + ' (ใช้แค่เวลา)'}</div>
+      <div class="cDesc">${c.bonus ? c.desc + ' ต่อชิ้น (สูงสุด ' + c.bonus.cap + ' ชิ้น)' : c.desc + ' (ใช้เพียงเวลา)'}</div>
       <div class="cFoot"><span class="cCost"></span><button class="selBtn" data-act="target" data-key="${c.key}">เลือกสร้าง</button></div>
       <div class="lockTxt"></div>
     </div>`).join('');
@@ -299,12 +299,12 @@ function renderCreate(d, full){
   let note = '';
   if(cur){
     if(c.cur === 'clone' && c.target !== 'clone') note = 'เติมร่างเงาให้เต็มก่อน แล้วจะกลับไปสร้าง ' + target.name;
-    else if(c.cur !== c.target) note = 'กำลังทำวัตถุดิบสำหรับ ' + target.name;
+    else if(c.cur !== c.target) note = 'กำลังสร้างวัตถุดิบให้ ' + target.name;
   } else if(c.target === 'clone'){
-    note = s.clones >= d.maxClones ? (G.createUnlocked(s) ? 'ร่างเงาเต็มแล้ว — เลือกของที่จะสร้างด้านล่าง' : 'ร่างเงาเต็มแล้ว') : '';
+    note = s.clones >= d.maxClones ? (G.createUnlocked(s) ? 'ร่างเงาเต็มแล้ว — เลือกสิ่งที่จะสร้างด้านล่าง' : 'ร่างเงาเต็มแล้ว') : '';
   } else {
     const blk = dpBlocker(c.target);
-    if(blk) note = 'รอพลังเทวะ ' + fmt(blk.dp) + ' เพื่อสร้าง ' + blk.name + ' (มี ' + fmt(s.dp) + ')';
+    if(blk) note = 'รอพลังเทวะ ' + fmt(blk.dp) + ' เพื่อสร้าง ' + blk.name + ' (ตอนนี้มี ' + fmt(s.dp) + ')';
   }
   setText($('cCurNote'), note);
   setText($('cSpeed'), fmt(d.m.create));
@@ -313,8 +313,8 @@ function renderCreate(d, full){
   const createOpen = G.createUnlocked(s);
   setShown($('createLock'), !createOpen);
   if(!createOpen){
-    if(s.challenge === 'nocreate') setHTML($('createLock'), 'ความท้าทาย "โลกไร้สรรพสิ่ง" — สร้างได้แค่ร่างเงาจนกว่าจะผ่าน');
-    else setHTML($('createLock'), 'สร้างได้แค่ร่างเงาก่อน — ปลดล็อกการสร้างสรรพสิ่งเมื่อสังหาร <b>' + D.GODS[1].name + '</b>');
+    if(s.challenge === 'nocreate') setHTML($('createLock'), 'บททดสอบ "โลกไร้สรรพสิ่ง" — สร้างได้เพียงร่างเงาจนกว่าจะผ่าน');
+    else setHTML($('createLock'), 'ตอนนี้สร้างได้เพียงร่างเงา — สังหาร <b>' + D.GODS[1].name + '</b> เพื่อปลดล็อกการสร้างสรรพสิ่ง');
   }
   let lockedShown = false;
   D.CREATIONS.forEach((item, i)=>{
@@ -325,9 +325,9 @@ function renderCreate(d, full){
     setShown(ref.el, show);
     if(!show) return;
     setClass(ref.el, 'locked', !open);
-    if(!open){ setText(ref.lock, 'ปลดล็อกเมื่อสร้าง ' + D.CREATIONS[i-1].name + ' ได้ครั้งแรก'); return; }
+    if(!open){ setText(ref.lock, 'ปลดล็อกเมื่อสร้าง ' + D.CREATIONS[i-1].name + ' สำเร็จครั้งแรก'); return; }
     setClass(ref.el, 'active', c.target === item.key);
-    setText(ref.btn, c.target === item.key ? 'กำลังเลือก' : 'เลือกสร้าง');
+    setText(ref.btn, c.target === item.key ? 'เลือกอยู่' : 'เลือกสร้าง');
     if(item.key === 'clone') setText(ref.own, fmt(s.clones) + '/' + fmt(d.maxClones));
     else setText(ref.own, 'มี ' + fmt(s.own[item.key]||0) + ' · โบนัส ' + Math.min(s.made[item.key]||0, item.bonus.cap) + '/' + item.bonus.cap);
     setHTML(ref.cost, costHTML(item, d));
@@ -415,7 +415,7 @@ function renderGods(d, full){
         loadArt($('godArt'));
       }
       setHTML($('godReward'), tg.kind === 'ub'
-        ? 'รางวัลเมื่อชนะ: <b>+' + D.ULTIMATES[tg.i].mp + ' แต้ม Might</b> · เลเวลถัดไปแข็งขึ้น ×' + D.UB_GROWTH
+        ? 'รางวัลเมื่อชนะ: <b>+' + D.ULTIMATES[tg.i].mp + ' บารมี</b> · เลเวลถัดไปแกร่งขึ้น ×' + D.UB_GROWTH
         : 'รางวัลเมื่อสังหาร: ' + rewardParts(tg.i).join(' · '));
       setText($('aGodName'), tg.name);
       setText($('aHeroHpTxt'), fmt(s.hp) + ' / ' + fmt(d.maxHp));
@@ -426,8 +426,8 @@ function renderGods(d, full){
       const o = fightOutlook(d, tg);
       const pred = $('predict');
       setClass(pred, 'win', o.win); setClass(pred, 'lose', !o.win);
-      let txt = o.win ? 'คาดการณ์: ชนะ ภายในราว ' + fmtTime(o.secs)
-        : (G.neededFactor(s, d, tg) <= 1.0001 ? 'คาดการณ์: แพ้ตอนนี้ — รอพลังชีวิตฟื้นเต็มแล้วจะชนะ'
+      let txt = o.win ? 'คาดการณ์: ชนะในราว ' + fmtTime(o.secs)
+        : (G.neededFactor(s, d, tg) <= 1.0001 ? 'คาดการณ์: ตอนนี้แพ้ — รอพลังชีวิตฟื้นเต็มก่อนจึงจะชนะ'
           : 'คาดการณ์: แพ้ — ต้องแข็งแกร่งขึ้นอีกราว ×' + fmt(G.neededFactor(s, d, tg)) + ' (ตอนนี้ทำดาเมจได้ ' + Math.floor(o.share*100) + '%)');
       if(!s.fight && s.hp < d.maxHp*0.999) txt += ' (พลังชีวิตยังฟื้นไม่เต็ม)';
       setText(pred, txt);
@@ -470,7 +470,7 @@ function renderGods(d, full){
     const st = G.ubStats(s, i), o = G.outlook(s, d, st, st.hp);
     setText(ref.lv, 'Lv.' + G.ubLevel(s, i));
     setText(ref.desc, 'HP ' + fmt(st.hp) + ' · โจมตี ' + fmt(st.atk) + ' · ป้องกัน ' + fmt(st.def));
-    setHTML(ref.cost, '<span class="pow ' + (o.win ? 'safe' : 'deadly') + '">' + (o.win ? 'คาดว่าชนะ' : 'คาดว่าแพ้') + '</span> · ชนะได้ +' + u.mp + ' Might');
+    setHTML(ref.cost, '<span class="pow ' + (o.win ? 'safe' : 'deadly') + '">' + (o.win ? 'คาดว่าชนะ' : 'คาดว่าแพ้') + '</span> · ชนะได้ +' + u.mp + ' บารมี');
     const sel = arenaSel === i;
     setText(ref.btn, sel ? 'เลือกอยู่' : 'เลือกสู้');
     setDisabled(ref.btn, sel || !!s.fight);
@@ -503,7 +503,7 @@ function renderTemple(d, full){
   setDisabled($('genBtn'), s.dp < cost); setDisabled($('genMaxBtn'), s.dp < cost);
   const open = G.monumentsUnlocked(s);
   setShown($('monoLock'), !open);
-  if(!open) setHTML($('monoLock'), s.challenge === 'nocreate' ? 'ความท้าทาย "โลกไร้สรรพสิ่ง" ปิดอนุสรณ์ไว้จนกว่าจะผ่าน'
+  if(!open) setHTML($('monoLock'), s.challenge === 'nocreate' ? 'บททดสอบ "โลกไร้สรรพสิ่ง" ผนึกอนุสรณ์ไว้จนกว่าจะผ่าน'
     : 'ปลดล็อกอนุสรณ์เมื่อสังหาร <b>' + D.GODS[D.UNLOCK_AT.monuments].name + '</b>');
   setShown($('monoTitle'), open);
   setShown($('monoList'), open, 'grid');
@@ -520,8 +520,8 @@ function renderTemple(d, full){
 }
 
 // ---------- rebirth: God Power shop & achievements ----------
-const ACH_LABEL = { clones:'มีร่างเงา', trainLv:'เลเวลฝึกกายรวม', skillLv:'เลเวลวิชาเวทรวม', kills:'ฆ่ามอนสเตอร์ในรอบเดียว', made:'สร้างของในรอบเดียว',
-  gods:'สังหารเทพในรอบเดียว', rebirths:'เกิดใหม่', dpLife:'พลังเทวะสะสมตลอดกาล', monuments:'เลเวลอนุสรณ์รวม', genLv:'เครื่องผลิต Lv.' };
+const ACH_LABEL = { clones:'มีร่างเงา', trainLv:'เลเวลฝึกกายรวม', skillLv:'เลเวลวิชาเวทรวม', kills:'ปราบอสูรในรอบเดียว', made:'สร้างสรรพสิ่งในรอบเดียว',
+  gods:'สังหารเทพในรอบเดียว', rebirths:'จุติใหม่', dpLife:'พลังเทวะสะสมตลอดกาล', monuments:'เลเวลอนุสรณ์รวม', genLv:'เครื่องผลิต Lv.' };
 function buildRebirth(){
   $('upList').innerHTML = D.UPGRADES.map((u,i)=>`<div class="cItem" data-i="${i}">
       <div class="jobHead"><span class="jobName">${u.name}</span><span class="jobLv"></span></div>
@@ -557,11 +557,11 @@ function renderChallenges(){
   D.CHALLENGES.forEach((c,i)=>{
     const ref = R.chal[i], n = G.chalDone(s, c.key), maxed = n >= D.CHAL_MAX, active = s.challenge === c.key;
     setClass(ref.el, 'active', active);
-    setText(ref.lv, 'สำเร็จ ' + n + '/' + D.CHAL_MAX);
+    setText(ref.lv, 'ผ่านแล้ว ' + n + '/' + D.CHAL_MAX);
     setText(ref.desc, 'รางวัลต่อครั้ง: ' + c.rdesc + (n ? ' · ตอนนี้ ×' + fmt(Math.pow(1+c.per, n)) : ''));
-    setText(ref.cost, maxed ? 'ทำครบแล้ว' : 'เป้าหมาย: สังหาร ' + D.GODS[G.chalGoal(s, c.key)].name);
+    setText(ref.cost, maxed ? 'ผ่านครบแล้ว' : 'เป้าหมาย: สังหาร ' + D.GODS[G.chalGoal(s, c.key)].name);
     setText(ref.btn, active ? (isArmed('quit:' + c.key) ? 'แตะอีกครั้งเพื่อยอมแพ้' : 'ยอมแพ้')
-                            : (isArmed('chal:' + c.key) ? 'แตะอีกครั้งเพื่อเกิดใหม่' : 'เริ่ม'));
+                            : (isArmed('chal:' + c.key) ? 'แตะอีกครั้งเพื่อจุติ' : 'เริ่ม'));
     setDisabled(ref.btn, !active && (maxed || !!s.challenge || !G.rebirthUnlocked(s)));
   });
 }
@@ -573,7 +573,7 @@ function renderMight(){
     const ref = R.might[i], L = G.mightLv(s, x.key), maxed = L >= x.max, c = G.mightCost(s, x);
     setText(ref.lv, x.max === 1 ? (L ? 'มีแล้ว' : '') : 'Lv.' + L + '/' + x.max);
     if(x.key === 'legacy') setText(ref.desc, 'เริ่มรอบใหม่พร้อมพลังเทวะ ' + (L ? fmt(Math.pow(10, L+3)) + ' (เลเวลถัดไป ' + fmt(Math.pow(10, L+4)) + ')' : fmt(1e4) + ' ที่เลเวล 1'));
-    setHTML(ref.cost, maxed ? 'สูงสุดแล้ว' : '<span class="' + (m.mp < c ? 'short' : '') + '">' + c + ' Might</span>');
+    setHTML(ref.cost, maxed ? 'สูงสุดแล้ว' : '<span class="' + (m.mp < c ? 'short' : '') + '">' + c + ' บารมี</span>');
     setDisabled(ref.btn, !open || maxed || m.mp < c);
   });
 }
@@ -585,16 +585,16 @@ function renderRebirth(d, full){
   if(rbView === 'might') return renderMight();
   const m = s.meta, gain = G.rebirthGain(s);
   setText($('gpTxt'), fmt(m.gp));
-  setText($('rbInfo'), 'เกิดใหม่แล้ว ' + m.rebirths + ' ครั้ง · ถ้าเกิดใหม่ตอนนี้จะได้ +' + gain + ' God Power (จากเทพ ' + s.gods + ' องค์ที่สังหารในรอบนี้)');
+  setText($('rbInfo'), 'จุติมาแล้ว ' + m.rebirths + ' ครั้ง · หากจุติตอนนี้จะได้ +' + gain + ' ปราณเทพ (จากเทพ ' + s.gods + ' องค์ที่สังหารในรอบนี้)');
   const armed = isArmed('rebirth');
-  setText($('rbBtn'), !gain ? 'ต้องสังหารเทพอย่างน้อย 1 องค์ในรอบนี้' : armed ? 'แตะอีกครั้งเพื่อยืนยันการเกิดใหม่' : 'เกิดใหม่ · +' + gain + ' God Power');
+  setText($('rbBtn'), !gain ? 'ต้องสังหารเทพอย่างน้อย 1 องค์ในรอบนี้' : armed ? 'แตะอีกครั้งเพื่อยืนยันการจุติ' : 'จุติใหม่ · +' + gain + ' ปราณเทพ');
   setDisabled($('rbBtn'), !gain);
   setClass($('rbBtn'), 'flee', armed);
   D.UPGRADES.forEach((u,i)=>{
     const ref = R.up[i], L = m.up[u.key] || 0, c = G.upgradeCost(s, u);
     setText(ref.lv, 'Lv.' + L);
     setText(ref.desc, u.desc + ' ต่อเลเวล' + (u.add ? '' : ' (ทบต้น)') + (L ? ' · ตอนนี้ ' + bonusText(u, L, true) : ''));
-    setHTML(ref.cost, '<span class="' + (m.gp < c ? 'short' : '') + '">' + c + ' God Power</span>');
+    setHTML(ref.cost, '<span class="' + (m.gp < c ? 'short' : '') + '">' + c + ' ปราณเทพ</span>');
     setDisabled(ref.btn, m.gp < c); setDisabled(ref.max, m.gp < c);
   });
   const n = G.achCount(s);
@@ -607,14 +607,14 @@ function renderRebirth(d, full){
 }
 
 // ---------- pets: dungeons, pets, gear ----------
-const STAT_TH = { phys:'กาย', myst:'เวท', dp:'พลังเทวะที่ได้', battle:'ยุทธ์', speed:'ความเร็วฝึก', clone:'พลังร่างเงา' };
+const STAT_TH = { phys:'กาย', myst:'เวท', dp:'พลังเทวะที่ได้', battle:'ค่ายุทธ์', speed:'ความเร็วฝึก', clone:'พลังร่างเงา' };
 let petView = 'dg';
 const dgDepthSel = {}, dgMaxSeen = {};
 function petUnlockText(p){
   const u = p.unlock;
   if(u.type === 'gods') return 'เข้าร่วมเมื่อสังหารเทพได้ ' + u.n + ' องค์ในรอบเดียว';
-  if(u.type === 'rebirths') return 'เข้าร่วมเมื่อเกิดใหม่ ' + u.n + ' ครั้ง';
-  return 'เข้าร่วมเมื่อได้ความสำเร็จ ' + u.n + ' อย่าง';
+  if(u.type === 'rebirths') return 'เข้าร่วมเมื่อจุติครบ ' + u.n + ' ครั้ง';
+  return 'เข้าร่วมเมื่อปลดล็อกความสำเร็จ ' + u.n + ' รายการ';
 }
 function buildPets(){
   $('dgList').innerHTML = D.DUNGEONS.map((g,i)=>`<div class="cItem" data-i="${i}">
@@ -661,7 +661,7 @@ function renderPets(d, full){
   if(petView === 'dg'){
     setText($('dgCur'), run ? D.DUNGEONS[run.i].name + ' ชั้น ' + run.depth : '—');
     setText($('dgNote'), run ? 'เหลือ ' + fmtTime(G.dungeonTime(s, run.i) - run.t) + ' · โอกาสชนะ ' + Math.round(G.winChance(s, run.i, run.depth)*100) + '%'
-      : (m.team.length ? 'เลือกดันเจี้ยนด้านล่างแล้วกดสำรวจ' : 'ยังไม่มีคู่หูในทีม — จัดทีมที่แท็บย่อย "คู่หู"'));
+      : (m.team.length ? 'เลือกแดนลับด้านล่างแล้วกดสำรวจ' : 'ยังไม่มีสัตว์คู่กายในทีม — จัดทีมที่แท็บย่อย "คู่หู"'));
     if($('dgAuto').checked !== m.dgAuto) $('dgAuto').checked = m.dgAuto;
     setShown($('dgStop'), !!run);
     setText($('teamPow'), 'พลังทีม ' + fmt(tp));
@@ -681,18 +681,18 @@ function renderPets(d, full){
       let dep = Math.min(dgDepthSel[i] || maxD, maxD);
       dgDepthSel[i] = dep;
       const pow = G.dungeonPower(i, dep), wc = G.winChance(s, i, dep);
-      setText(ref.lv, 'ผ่านสูงสุดชั้น ' + (m.dgBest[g.key] || 0) + '/' + D.MAX_DEPTH);
+      setText(ref.lv, 'ผ่านได้ถึงชั้น ' + (m.dgBest[g.key] || 0) + '/' + D.MAX_DEPTH);
       setText(ref.time, fmtTime(G.dungeonTime(s, i)));
       setText(ref.n, 'ชั้น ' + dep);
       setDisabled(ref.dec, dep <= 1); setDisabled(ref.inc, dep >= maxD);
-      setHTML(ref.info, 'พลังศัตรู ' + fmt(pow) + ' · <span class="' + (wc >= 1 ? 'pow safe' : wc >= 0.5 ? 'pow risky' : 'pow deadly') + '">โอกาสชนะ ' + Math.round(wc*100) + '%</span> · ชนะได้ ' + D.MATERIALS[g.mat] + ' ×' + (dep+1) + ', exp ' + fmt(g.exp*dep));
+      setHTML(ref.info, 'พลังศัตรู ' + fmt(pow) + ' · <span class="' + (wc >= 1 ? 'pow safe' : wc >= 0.5 ? 'pow risky' : 'pow deadly') + '">โอกาสชนะ ' + Math.round(wc*100) + '%</span> · ชนะได้ ' + D.MATERIALS[g.mat] + ' ×' + (dep+1) + ' · exp ' + fmt(g.exp*dep));
       const cur = run && run.i === i && run.depth === dep;
       setText(ref.go, cur ? 'กำลังสำรวจ' : 'สำรวจ');
       setDisabled(ref.go, cur || !m.team.length);
     });
   } else if(petView === 'pets'){
     setDisabled($('bestTeam'), Object.keys(m.pets).length === 0);
-    setText($('teamLine'), 'ทีม ' + m.team.length + '/' + D.TEAM_SIZE + ' · พลังทีม ' + fmt(tp) + ' · คู่หูทุกตัวที่มีให้โบนัส แม้ไม่ได้อยู่ในทีม');
+    setText($('teamLine'), 'ทีม ' + m.team.length + '/' + D.TEAM_SIZE + ' · พลังทีม ' + fmt(tp) + ' · สัตว์คู่กายทุกตัวให้โบนัส แม้ไม่ได้อยู่ในทีม');
     D.PETS.forEach((p,i)=>{
       const ref = R.pet[i], st = m.pets[p.key];
       setClass(ref.el, 'locked', !st);
@@ -715,7 +715,7 @@ function renderPets(d, full){
       setText(ref.lv, L ? '+' + L : 'ยังไม่มี');
       setText(ref.desc, g.desc + ' ต่อเลเวล (ทบต้น)' + (L ? ' · ตอนนี้ ×' + fmt(Math.pow(1+g.per, L)) : ''));
       setHTML(ref.cost, '<span class="' + (have < cost ? 'short' : '') + '">' + D.MATERIALS[g.mat] + ' ' + fmt(have) + '/' + fmt(cost) + '</span> · โอกาสสำเร็จ ' + Math.round(G.forgeChance(L)*100) + '%');
-      setText(ref.btn, L ? 'ตีบวก' : 'สร้าง');
+      setText(ref.btn, L ? 'ตีบวก' : 'หลอม');
       setDisabled(ref.btn, have < cost);
     });
   }
@@ -724,22 +724,22 @@ function renderPets(d, full){
 // ---------- tutorial & first-visit tips ----------
 // each step finishes itself once its condition holds; the last one waits for the player
 const TUT = [
-  { tab:'train',  text:`ร่างเงาจะถูกสร้างขึ้นเองทีละร่าง — กด + ที่ "${D.TRAININGS[0].name}" เพื่อส่งไปฝึก (เลือก "ทั้งหมด" เพื่อส่งทุกร่างในครั้งเดียว)`, done:()=>s.train.some(r=>r.n>0) || s.meta.bestGods >= 1 },
-  { tab:'mon',    text:`ส่งร่างเงาบางส่วนไปสู้ "${D.MONSTERS[0].name}" เพื่อหาพลังเทวะและค่ายุทธ์ — ศัตรูสีเขียวแปลว่าร่างเงาจะไม่ตาย`, done:()=>s.mon.some(r=>r.n>0) || s.meta.bestGods >= 1 },
-  { tab:'train',  text:`${D.TRAININGS[0].name}ถึง Lv.10 แล้ว "${D.TRAININGS[1].name}" จะปลดล็อก — ย้ายร่างเงาไปขั้นที่สูงกว่า เพราะได้พลังต่อเลเวลมากกว่า 6 เท่า`, done:()=>s.train[1].n>0 || s.meta.bestGods >= 1 },
-  { tab:'gods',   text:`ดูคาดการณ์ที่แท็บท้าเทพ เมื่อขึ้นว่า "ชนะ" ให้กดท้าสู้${D.GODS[0].name}`, done:()=>s.meta.bestGods >= 1 },
-  { tab:'skill',  text:'วิชาเวทปลดล็อกแล้ว! แบ่งร่างเงาไปฝึกวิชาเวทเพื่อเพิ่มพลังป้องกัน — จำเป็นสำหรับเทพองค์ต่อไป', done:()=>s.skill.some(r=>r.n>0) || s.meta.bestGods >= 2 },
-  { tab:'gods',   text:`เป้าหมายต่อไป: สังหาร${D.GODS[1].name} เพื่อปลดล็อกการสร้างสรรพสิ่ง`, done:()=>s.meta.bestGods >= 2 },
-  { tab:'create', text:'การสร้างปลดล็อกแล้ว! เลือกสร้าง "แสงสวรรค์" — ของทุกชิ้นที่เคยสร้างให้โบนัสถาวรจนจบรอบ', done:()=>(s.made.light||0) > 0 || s.meta.rebirths > 0 },
-  { tab:null,     text:'จบบทสอนพื้นฐานแล้ว! ระบบใหม่จะปลดล็อกเมื่อสังหารเทพเพิ่ม — จุดสีทองบนแท็บบอกว่ามีอะไรใหม่', manual:true }
+  { tab:'train',  text:`ร่างเงาจะก่อกำเนิดขึ้นเองทีละร่าง — กด + ที่ "${D.TRAININGS[0].name}" เพื่อส่งไปฝึก (เลือก "ทั้งหมด" เพื่อส่งทุกร่างพร้อมกัน)`, done:()=>s.train.some(r=>r.n>0) || s.meta.bestGods >= 1 },
+  { tab:'mon',    text:`แบ่งร่างเงาบางส่วนไปปราบ "${D.MONSTERS[0].name}" เพื่อเก็บพลังเทวะและค่ายุทธ์ — ศัตรูสีเขียวแปลว่าร่างเงาจะไม่ตาย`, done:()=>s.mon.some(r=>r.n>0) || s.meta.bestGods >= 1 },
+  { tab:'train',  text:`เมื่อ${D.TRAININGS[0].name}ถึง Lv.10 จะปลดล็อก "${D.TRAININGS[1].name}" — ย้ายร่างเงาไปขั้นที่สูงกว่า เพราะได้พลังต่อเลเวลมากกว่า 6 เท่า`, done:()=>s.train[1].n>0 || s.meta.bestGods >= 1 },
+  { tab:'gods',   text:`ดูบรรทัดคาดการณ์ในแท็บท้าเทพ เมื่อขึ้นว่า "ชนะ" ให้กดท้าสู้${D.GODS[0].name}`, done:()=>s.meta.bestGods >= 1 },
+  { tab:'skill',  text:'ปลดล็อกวิชาเวทแล้ว! แบ่งร่างเงาไปฝึกเวทเพื่อเสริมพลังป้องกัน — จำเป็นต่อการท้าเทพองค์ถัดไป', done:()=>s.skill.some(r=>r.n>0) || s.meta.bestGods >= 2 },
+  { tab:'gods',   text:`เป้าหมายถัดไป: สังหาร${D.GODS[1].name} เพื่อปลดล็อกการสร้างสรรพสิ่ง`, done:()=>s.meta.bestGods >= 2 },
+  { tab:'create', text:'ปลดล็อกการสร้างแล้ว! เลือกสร้าง "แสงสวรรค์" — ของทุกชิ้นที่สร้างไว้ให้โบนัสไปจนจบรอบ', done:()=>(s.made.light||0) > 0 || s.meta.rebirths > 0 },
+  { tab:null,     text:'จบบทเรียนพื้นฐานแล้ว! ระบบใหม่จะปลดล็อกเมื่อสังหารเทพได้มากขึ้น — จุดสีทองบนแท็บหมายถึงมีสิ่งใหม่', manual:true }
 ];
 const TIPS = {
-  mon:'ร่างเงาที่อ่อนกว่าศัตรูจะตาย! ดูสีพลังศัตรู: เขียว = ปลอดภัย, เหลือง = เสี่ยง, แดง = อันตราย',
-  create:'เลือกของที่ต้องการ แล้วตัวละครจะสร้างต่อเนื่องเอง ถ้าวัตถุดิบขาดจะทำวัตถุดิบให้ก่อนอัตโนมัติ',
-  gods:'ตัวละครสู้เองโดยแลกหมัดทุก 0.5 วินาที ถ้าแพ้ พลังชีวิตจะฟื้นเองเมื่อออกจากการต่อสู้',
-  temple:'เครื่องผลิตสร้างพลังเทวะให้เองตลอดเวลา · อนุสรณ์ใช้พลังเทวะกับของที่สร้างไว้แลกตัวคูณ — ทั้งคู่รีเซ็ตเมื่อเกิดใหม่',
-  pets:'คู่หู อุปกรณ์ และวัตถุดิบอยู่ถาวรข้ามการเกิดใหม่ · ส่งทีมไปดันเจี้ยนเก็บเลเวล แล้วนำวัตถุดิบไปตีบวกอุปกรณ์',
-  rebirth:'ติดเทพองค์ไหนนานๆ ให้เกิดใหม่ — God Power ที่ได้ใช้ซื้ออัปเกรดถาวร ทำให้รอบต่อไปแข็งแกร่งกว่าเดิมมาก'
+  mon:'ร่างเงาที่อ่อนกว่าศัตรูจะตาย! ดูสีพลังของอสูร: เขียว = ปลอดภัย, เหลือง = เสี่ยง, แดง = อันตราย',
+  create:'เลือกของที่ต้องการ ตัวละครจะสร้างต่อเนื่องเอง หากวัตถุดิบไม่พอจะทำวัตถุดิบให้ก่อนโดยอัตโนมัติ',
+  gods:'ตัวละครสู้เอง แลกกระบวนท่ากันทุก 0.5 วินาที หากแพ้ พลังชีวิตจะฟื้นฟูเองเมื่อออกจากการต่อสู้',
+  temple:'เครื่องผลิตสร้างพลังเทวะให้ตลอดเวลา · อนุสรณ์ใช้พลังเทวะและของที่สร้างไว้แลกตัวคูณ — ทั้งคู่รีเซ็ตเมื่อจุติใหม่',
+  pets:'สัตว์คู่กาย อุปกรณ์ และวัตถุดิบคงอยู่ข้ามการจุติ · ส่งทีมไปแดนลับเพื่อเก็บเลเวล แล้วนำวัตถุดิบไปตีบวกอุปกรณ์',
+  rebirth:'ติดเทพองค์ใดนานเกินไป ให้จุติใหม่ — ปราณเทพ (GP) ที่ได้ใช้ซื้ออัปเกรดถาวร ทำให้รอบต่อไปแข็งแกร่งขึ้นมาก'
 };
 function renderTutor(){
   const m = s.meta;
@@ -767,14 +767,14 @@ function nextGoal(){
   const d = G.derive(s), gain = G.rebirthGain(s), rb = G.rebirthUnlocked(s) && gain > 0;
   if(s.gods < D.GODS.length){
     const tg = godTarget(), o = fightOutlook(d, tg);
-    if(s.fight) return 'กำลังสู้กับ ' + tg.name + '...';
+    if(s.fight) return 'กำลังต่อสู้กับ ' + tg.name + '...';
     if(o.win) return 'พร้อมท้า ' + tg.name + ' แล้ว! ไปที่แท็บท้าเทพ (คาดว่าชนะใน ' + fmtTime(o.secs) + ')';
     const f = G.neededFactor(s, d, tg);
     let t = 'ต้องแข็งแกร่งขึ้นอีก ×' + fmt(f) + ' เพื่อชนะ ' + tg.name;
-    if(rb && f > 20) t += ' · ยังห่างอีกมาก ลองเกิดใหม่ได้ +' + gain + ' God Power';
+    if(rb && f > 20) t += ' · ยังห่างอีกมาก ลองจุติใหม่ได้ +' + gain + ' ปราณเทพ';
     return t;
   }
-  if(G.ubUnlocked(s)) return 'สังหารเทพครบแล้ว! สู้สิ่งมีชีวิตสูงสุดเพื่อเก็บแต้ม Might' + (rb ? ' · หรือเกิดใหม่ได้ +' + gain + ' God Power' : '');
+  if(G.ubUnlocked(s)) return 'สังหารเทพครบแล้ว! ท้าสู้สิ่งสูงสุดเพื่อสั่งสมบารมี' + (rb ? ' · หรือจุติใหม่ได้ +' + gain + ' ปราณเทพ' : '');
   return '';
 }
 
@@ -811,7 +811,7 @@ function initSaveTools(){
   });
   $('importBtn').addEventListener('click', ()=>{
     let next;
-    try{ next = decodeSave($('importBox').value); }catch(e){ msg('โค้ดไม่ถูกต้อง — ตรวจว่าคัดลอกมาครบทั้งหมด'); return; }
+    try{ next = decodeSave($('importBox').value); }catch(e){ msg('โค้ดไม่ถูกต้อง — ตรวจดูว่าคัดลอกมาครบถ้วน'); return; }
     replaceState(next);
     $('importBox').value = '';
     addLog('โหลดเซฟจากโค้ดสำเร็จ');
@@ -821,7 +821,7 @@ function initSaveTools(){
   $('wipeBtn').addEventListener('click', ()=>{
     if(!confirmTap('wipe')){ render(true); return; }
     replaceState(G.newState());
-    addLog('เริ่มเกมใหม่ทั้งหมด — เริ่มต้นเส้นทางสังหารเทพอีกครั้ง');
+    addLog('เริ่มเกมใหม่ทั้งหมด — ก้าวสู่เส้นทางสังหารเทพอีกครั้ง');
     msg('ลบเซฟแล้ว เริ่มใหม่ตั้งแต่ต้น');
     selectTab('train');
   });
@@ -834,7 +834,7 @@ function renderHud(d, full){
   setText($('hudGods'), s.gods + '/' + D.GODS.length);
   const ch = s.challenge && D.CHALLENGES.find(c=>c.key===s.challenge);
   setShown($('chalBar'), !!ch);
-  if(ch) setText($('chalBar'), '⚔ ความท้าทาย: ' + ch.name + ' — เป้าหมาย: สังหาร ' + D.GODS[G.chalGoal(s, ch.key)].name);
+  if(ch) setText($('chalBar'), '⚔ บททดสอบ: ' + ch.name + ' — เป้าหมาย: สังหาร ' + D.GODS[G.chalGoal(s, ch.key)].name);
   setText($('hudHp'), fmt(s.hp) + '/' + fmt(d.maxHp));
   setText($('hudAtk'), fmt(d.atk));
   setText($('hudDef'), fmt(d.def));
@@ -843,7 +843,7 @@ function renderHud(d, full){
 }
 const TABS = ['train','skill','mon','create','temple','pets','gods','rebirth','log'];
 const TAB_LOCK = { skill:['skills', ()=>G.skillsUnlocked(s)], temple:['gen', ()=>G.genUnlocked(s)], rebirth:['rebirth', ()=>G.rebirthUnlocked(s)], pets:['pets', ()=>G.petsUnlocked(s)] };
-const TAB_NAME = { skill:'วิชาเวท', temple:'เทวาลัย', rebirth:'การเกิดใหม่', pets:'คู่หู' };
+const TAB_NAME = { skill:'วิชาเวท', temple:'เทวาลัย', rebirth:'การจุติ', pets:'คู่หู' };
 function tabLocked(name){ const l = TAB_LOCK[name]; return !!l && !l[1](); }
 function renderTabs(d){
   if(s.gods < D.GODS.length && !s.fight && s.hp >= d.maxHp*0.999 && fightOutlook(d, godTarget()).win) alerts.gods = true;
@@ -857,7 +857,7 @@ function renderTabs(d){
 function selectTab(name){
   if(tabLocked(name)){
     const blocker = s.challenge && (name === 'skill' && s.challenge === 'nomagic');
-    toast(blocker ? 'ความท้าทาย "' + D.CHALLENGES.find(c=>c.key===s.challenge).name + '" ปิดวิชาเวทไว้จนกว่าจะผ่าน'
+    toast(blocker ? 'บททดสอบ "' + D.CHALLENGES.find(c=>c.key===s.challenge).name + '" ปิดวิชาเวทไว้จนกว่าจะผ่าน'
                   : 'ปลดล็อก' + TAB_NAME[name] + 'เมื่อสังหาร ' + D.GODS[D.UNLOCK_AT[TAB_LOCK[name][0]]].name);
     return;
   }
@@ -919,25 +919,25 @@ function handleEvents(ev, quiet){
       if(!quiet){ toast('🏆 ความสำเร็จ: ' + a.name); sfx('ping'); }
     } else if(e.type === 'pet'){
       const p = G.petDef(e.key);
-      addLog('🐾 คู่หูใหม่: ' + p.name + ' เข้าร่วมทีม!');
+      addLog('🐾 สัตว์คู่กายใหม่: ' + p.name + ' เข้าร่วมทีม!');
       alerts.pets = true;
-      if(!quiet) toast('🐾 คู่หูใหม่: ' + p.name, 2);
+      if(!quiet) toast('🐾 สัตว์คู่กายใหม่: ' + p.name, 2);
     } else if(e.type === 'dgDepth'){
       addLog('ผ่าน ' + D.DUNGEONS[e.i].name + ' ชั้น ' + e.depth + ' เป็นครั้งแรก');
     } else if(e.type === 'dgUnlock'){
-      addLog('ปลดล็อกดันเจี้ยนใหม่: ' + D.DUNGEONS[e.i].name);
+      addLog('ปลดล็อกแดนลับใหม่: ' + D.DUNGEONS[e.i].name);
       alerts.pets = true;
-      if(!quiet) toast('ปลดล็อกดันเจี้ยน: ' + D.DUNGEONS[e.i].name);
+      if(!quiet) toast('ปลดล็อกแดนลับ: ' + D.DUNGEONS[e.i].name);
     } else if(e.type === 'chalDone'){
       const c = D.CHALLENGES.find(x=>x.key===e.key);
-      addLog('🏅 ผ่านความท้าทาย ' + c.name + ' ครั้งที่ ' + e.n + '! ' + c.rdesc + ' ถาวร');
-      if(!quiet){ toast('🏅 ผ่านความท้าทาย: ' + c.name, 3); celebrate(); }
+      addLog('🏅 ผ่านบททดสอบ ' + c.name + ' ครั้งที่ ' + e.n + '! ' + c.rdesc + ' ถาวร');
+      if(!quiet){ toast('🏅 ผ่านบททดสอบ: ' + c.name, 3); celebrate(); }
       save();
     } else if(e.type === 'ubWin'){
       const u = D.ULTIMATES[e.i];
-      addLog('💥 ชนะ ' + u.name + ' → Lv.' + e.lv + ' ได้ ' + e.mp + ' แต้ม Might');
+      addLog('💥 ชนะ ' + u.name + ' → Lv.' + e.lv + ' ได้บารมี +' + e.mp);
       alerts.rebirth = true;
-      if(!quiet){ toast('💥 ชนะ ' + u.name + '! +' + e.mp + ' Might', 2); celebrate(); banner('💥 ชนะ ' + u.name + '!'); sfx('win'); }
+      if(!quiet){ toast('💥 ชนะ ' + u.name + '! +' + e.mp + ' บารมี', 2); celebrate(); banner('💥 ชนะ ' + u.name + '!'); sfx('win'); }
       save();
     } else if(e.type === 'ubLose'){
       addLog('พ่ายแพ้ต่อ ' + D.ULTIMATES[e.i].name + ' — ต้องแข็งแกร่งกว่านี้');
@@ -954,8 +954,8 @@ function handleEvents(ev, quiet){
     const now = Date.now();
     if(!quiet && now - lastDeathToast > 15000){
       lastDeathToast = now;
-      toast('ร่างเงาถูกฆ่าในสนามรบ ' + fmt(n) + ' ร่าง!');
-      addLog('ร่างเงาถูกศัตรูที่แข็งแกร่งกว่าฆ่า — ย้ายไปสู้ศัตรูสีเขียวเพื่อความปลอดภัย');
+      toast('ร่างเงาถูกสังหารในสนามรบ ' + fmt(n) + ' ร่าง!');
+      addLog('ร่างเงาถูกศัตรูที่แกร่งกว่าสังหาร — ย้ายไปสู้ศัตรูสีเขียวเพื่อความปลอดภัย');
       alerts.mon = true;
     }
   }
@@ -1072,7 +1072,7 @@ function onMainClick(e){
     if(G.buildMonument(s, b.dataset.key)){ addLog('สร้าง ' + mo.name + ' เป็น Lv.' + s.mono[mo.key]); toast(mo.name + ' Lv.' + s.mono[mo.key]); }
   } else if(act === 'buildMax'){
     const mo = D.MONUMENTS.find(x=>x.key===b.dataset.key), n = G.buildMonumentMax(s, b.dataset.key);
-    if(n){ addLog('สร้าง ' + mo.name + ' +' + n + ' เลเวล เป็น Lv.' + s.mono[mo.key]); toast(mo.name + ' Lv.' + s.mono[mo.key]); }
+    if(n){ addLog('ยกระดับ ' + mo.name + ' +' + n + ' เลเวล เป็น Lv.' + s.mono[mo.key]); toast(mo.name + ' Lv.' + s.mono[mo.key]); }
   } else if(act === 'upgradeMax'){
     const u = D.UPGRADES.find(x=>x.key===b.dataset.key), n = G.buyUpgradeMax(s, b.dataset.key);
     if(n){ addLog('อัปเกรดถาวร ' + u.name + ' +' + n + ' เลเวล เป็น Lv.' + s.meta.up[u.key]); save(); }
@@ -1083,7 +1083,7 @@ function onMainClick(e){
   } else if(act === 'preset'){
     G.setPlan(s, b.dataset.v); save();
   } else if(act === 'best'){
-    if(!G.moveToBest(s, b.dataset.kind)) toast(b.dataset.kind === 'mon' ? 'ยังไม่มีศัตรูที่ร่างเงาสู้ได้อย่างปลอดภัย' : 'ยังไม่มีขั้นที่ใช้ได้');
+    if(!G.moveToBest(s, b.dataset.kind)) toast(b.dataset.kind === 'mon' ? 'ยังไม่มีศัตรูที่ร่างเงาสู้ได้อย่างปลอดภัย' : 'ยังไม่มีขั้นที่ฝึกได้');
   } else if(act === 'rbView'){
     rbView = b.dataset.v;
   } else if(act === 'ubSel'){
@@ -1091,19 +1091,19 @@ function onMainClick(e){
     $('main').scrollTop = 0;
   } else if(act === 'might'){
     const x = D.MIGHT.find(y=>y.key===b.dataset.key);
-    if(G.buyMight(s, x.key)){ addLog('Might: ' + x.name + (x.max > 1 ? ' Lv.' + G.mightLv(s, x.key) : '')); save(); }
+    if(G.buyMight(s, x.key)){ addLog('บารมี: ' + x.name + (x.max > 1 ? ' Lv.' + G.mightLv(s, x.key) : '')); save(); }
   } else if(act === 'chal'){
     const key = b.dataset.key, c = D.CHALLENGES.find(x=>x.key===key);
     if(s.challenge === key){
-      if(confirmTap('quit:' + key)){ G.abandonChallenge(s); addLog('ยอมแพ้ความท้าทาย ' + c.name + ' — กฎถูกยกเลิก รอบนี้เล่นต่อตามปกติ'); }
+      if(confirmTap('quit:' + key)){ G.abandonChallenge(s); addLog('ถอนตัวจากบททดสอบ ' + c.name + ' — ยกเลิกกฎพิเศษ รอบนี้เล่นต่อตามปกติ'); }
     }
     else if(confirmTap('chal:' + key)){
       const gain = G.rebirthGain(s);
       if(G.startChallenge(s, key)){
         rebirthFx();
         lastLost = s.clonesLost; shownArt = ''; arenaSel = 'god'; clearAlerts();
-        addLog('⚔ เริ่มความท้าทาย ' + c.name + (gain ? ' (ได้ ' + gain + ' God Power)' : ''));
-        toast('เริ่มความท้าทาย: ' + c.name); save();
+        addLog('⚔ เริ่มบททดสอบ ' + c.name + (gain ? ' (ได้ ' + gain + ' ปราณเทพ)' : ''));
+        toast('เริ่มบททดสอบ: ' + c.name); save();
       }
     }
   } else if(act === 'petView'){
@@ -1118,12 +1118,12 @@ function onMainClick(e){
     G.toggleTeam(s, b.dataset.key);
   } else if(act === 'bestTeam'){
     s.meta.team = Object.keys(s.meta.pets).sort((a,b2)=>G.petPower(s, b2) - G.petPower(s, a)).slice(0, D.TEAM_SIZE);
-    addLog('จัดทีมคู่หูที่แข็งที่สุด: ' + s.meta.team.map(k=>G.petDef(k).name).join(', '));
+    addLog('จัดทีมสัตว์คู่กายที่แกร่งที่สุด: ' + s.meta.team.map(k=>G.petDef(k).name).join(', '));
   } else if(act === 'forge'){
     const g = D.GEAR.find(x=>x.key===b.dataset.key), L = s.meta.gear[g.key] || 0;
     const ok = G.forge(s, g.key);
     if(ok === true){ addLog((L ? 'ตีบวก ' : 'สร้าง ') + g.name + ' สำเร็จ! +' + s.meta.gear[g.key]); toast(g.name + ' +' + s.meta.gear[g.key]); }
-    else if(ok === false){ addLog('ตีบวก ' + g.name + ' ล้มเหลว เสียวัตถุดิบ'); toast('ตีบวกล้มเหลว!'); }
+    else if(ok === false){ addLog('ตีบวก ' + g.name + ' ล้มเหลว วัตถุดิบสูญหาย'); toast('ตีบวกล้มเหลว!'); }
     save();
   } else if(act === 'upgrade'){
     const u = D.UPGRADES.find(x=>x.key===b.dataset.key);
@@ -1145,15 +1145,15 @@ function onRebirth(){
   if(!confirmTap('rebirth')){ render(true); return; }
   G.rebirth(s);
   lastLost = s.clonesLost; shownArt = ''; arenaSel = 'god'; clearAlerts();
-  addLog('🔄 เกิดใหม่ครั้งที่ ' + s.meta.rebirths + ' — ได้รับ ' + gain + ' God Power');
-  toast('เกิดใหม่สำเร็จ! +' + gain + ' God Power');
+  addLog('🔄 จุติใหม่ครั้งที่ ' + s.meta.rebirths + ' — ได้รับ ' + gain + ' ปราณเทพ');
+  toast('จุติใหม่สำเร็จ! +' + gain + ' ปราณเทพ');
   celebrate(); rebirthFx();
   save();
   selectTab('rebirth');
 }
 function onFight(){
   const tg = arenaTarget();
-  if(s.fight){ G.flee(s); addLog('ถอยหนีจาก ' + (tg ? tg.name : 'การต่อสู้')); }
+  if(s.fight){ G.flee(s); addLog('ถอยออกจาก ' + (tg ? tg.name : 'การต่อสู้')); }
   else if(tg && (tg.kind === 'ub' ? G.startUbFight(s, tg.i) : G.startFight(s))){ addLog('ท้าสู้ ' + tg.name + '!'); lastHits = 0; }
   render(true);
 }
@@ -1166,21 +1166,21 @@ function toggleLog(){
   selectTab('log');
 }
 const HUD_TIPS = {
-  hudHp:'พลังชีวิต — ลดลงระหว่างสู้กับเทพ และฟื้นเองเมื่อไม่ได้สู้ · เพิ่มได้จากกาย เวท และยุทธ์',
-  hudAtk:'พลังโจมตี — ดาเมจที่ทำใส่เทพต่อครั้ง · มาจากกาย (ฝึกกาย) และยุทธ์ (สนามรบ)',
-  hudDef:'พลังป้องกัน — ลดดาเมจที่ได้รับจากเทพ · มาจากเวท (วิชาเวท) และยุทธ์ (สนามรบ)',
+  hudHp:'พลังชีวิต — ลดลงเมื่อสู้กับเทพ และฟื้นฟูเองเมื่อพักรบ · เพิ่มได้จากกาย เวท และค่ายุทธ์',
+  hudAtk:'พลังโจมตี — ความเสียหายที่ทำต่อเทพในแต่ละครั้ง · มาจากกาย (ฝึกกาย) และค่ายุทธ์ (สนามรบ)',
+  hudDef:'พลังป้องกัน — ลดความเสียหายที่ได้รับจากเทพ · มาจากเวท (วิชาเวท) และค่ายุทธ์ (สนามรบ)',
   hudDp:'พลังเทวะ (DP) — ได้จากสนามรบและเครื่องผลิต · ใช้สร้างสรรพสิ่ง อัปเกรดเครื่องผลิต และสร้างอนุสรณ์',
-  hudClones:'ร่างเงาที่มี / สูงสุด — ส่งร่างเงาไปฝึกกาย วิชาเวท และสนามรบ · สร้างเพิ่มได้ที่แท็บสร้าง',
-  hudGods:'จำนวนเทพที่สังหารในรอบนี้ / ทั้งหมด'
+  hudClones:'ร่างเงาที่มี / สูงสุด — ส่งไปฝึกกาย ฝึกวิชาเวท หรือออกสนามรบ · สร้างเพิ่มได้ที่แท็บสร้าง',
+  hudGods:'เทพที่สังหารแล้วในรอบนี้ / ทั้งหมด'
 };
 const KEY_HELP = [
-  ['1 – 8', 'เปิดแท็บตามลำดับ (ฝึกกาย … เกิดใหม่)'],
+  ['1 – 8', 'เปิดแท็บตามลำดับ (ฝึกกาย … จุติ)'],
   ['L', 'เปิด/ปิดบันทึกและเซฟ'],
   ['F / Space', 'ท้าสู้หรือถอยหนี (ในแท็บท้าเทพ)'],
-  ['S', 'ฟาดฟันเทวะ ระหว่างต่อสู้'],
+  ['S', 'ใช้ฟาดฟันเทวะระหว่างต่อสู้'],
   ['H', 'เปิด/ปิดวิธีเล่น'],
-  ['[ ]', 'สลับมุมมองย่อย (คู่หู · เกิดใหม่)'],
-  ['Esc', 'ยกเลิกการยืนยันที่ค้างอยู่ / ปิดบันทึก'],
+  ['[ ]', 'สลับหน้าย่อย (คู่หู · จุติ)'],
+  ['Esc', 'ยกเลิกปุ่มที่รอยืนยัน / ปิดบันทึก'],
   ['?', 'เปิด/ปิดหน้านี้']
 ];
 function kbd(k){ const e = document.createElement('kbd'); e.className = 'kHint'; e.textContent = k; e.setAttribute('aria-hidden', 'true'); return e; }
@@ -1308,11 +1308,11 @@ function showSettings(on){
         <div class="row"><b id="stTitle">⚙ ตั้งค่า</b><button class="miniBtn" data-close>ปิด</button></div>
         <label class="stRow"><span>เสียงประกอบ</span><input type="checkbox" data-set="sound"></label>
         <label class="stRow"><span>ความดังเสียง</span><input type="range" min="0" max="1" step="0.05" data-set="vol"></label>
-        <label class="stRow"><span>สั่นเมื่อมีเหตุการณ์ (มือถือ)</span><input type="checkbox" data-set="vibrate"></label>
+        <label class="stRow"><span>สั่นเมื่อมีเหตุการณ์สำคัญ (มือถือ)</span><input type="checkbox" data-set="vibrate"></label>
         <label class="stRow"><span>รูปแบบตัวเลข</span><select data-set="sci"><option value="0">ย่อ (1.5M, 2.3B)</option><option value="1">วิทยาศาสตร์ (1.50e6)</option></select></label>
-        <label class="stRow"><span>อนิเมชัน</span><select data-set="motion"><option value="auto">ตามเครื่อง</option><option value="full">เต็ม</option><option value="reduced">ลดลง</option></select></label>
+        <label class="stRow"><span>แอนิเมชัน</span><select data-set="motion"><option value="auto">ตามเครื่อง</option><option value="full">เต็มที่</option><option value="reduced">ลดน้อยลง</option></select></label>
         <div class="btnPair"><button class="miniBtn" data-open="guide">📖 วิธีเล่น</button><button class="miniBtn" data-open="keys">⌨ ปุ่มลัด</button></div>
-        <div class="note">การตั้งค่าเก็บแยกจากเซฟเกม ไม่หายเมื่อเกิดใหม่หรือโหลดเซฟ</div>
+        <div class="note">การตั้งค่าเก็บแยกจากเซฟเกม จึงไม่หายเมื่อจุติใหม่หรือโหลดเซฟ</div>
       </div>`;
     document.body.appendChild(box);
     box.addEventListener('click', e=>{
@@ -1375,41 +1375,41 @@ function renderStrike(){
   if(!s.fight) return;
   const w = G.strikeWait(s);
   setDisabled(b, w > 0);
-  setText($('strikeLabel'), w > 0 ? '⚡ ฟาดฟันเทวะ (พร้อมใน ' + Math.ceil(w) + ' วิ)' : '⚡ ฟาดฟันเทวะ! (S)');
+  setText($('strikeLabel'), w > 0 ? '⚡ ฟาดฟันเทวะ (รออีก ' + Math.ceil(w) + ' วิ)' : '⚡ ฟาดฟันเทวะ! (S)');
 }
 
 // ---------- how-to-play guide ----------
 function guideSections(){
   const god = k => D.GODS[D.UNLOCK_AT[k]].name;
   return [
-    ['เป้าหมายของเกม', `<p>สังหารเทพทั้ง ${D.GODS.length} องค์ ตั้งแต่ ${D.GODS[0].name} จนถึง ${D.GODS[D.GODS.length-1].name} เทพแต่ละองค์ที่สังหารได้จะปลดล็อกระบบใหม่และทำให้แข็งแกร่งขึ้น</p>`],
-    ['ร่างเงา', `<p>ร่างเงาถูกสร้างขึ้นเองทีละร่าง (ที่แท็บสร้าง) ส่งไปทำงานด้วยปุ่ม <b>+</b> เลือก ×1, ×10, ×100 หรือ "ทั้งหมด" เพื่อส่งทีละหลายร่าง บนมือถือกดค้างที่ + เพื่อเพิ่มต่อเนื่อง</p>`],
-    ['ฝึกกาย / วิชาเวท', `<p>ฝึกกายเพิ่ม <b>พลังโจมตี</b> วิชาเวทเพิ่ม <b>พลังป้องกัน</b> ขั้นถัดไปปลดล็อกเมื่อขั้นก่อนถึง Lv.${D.ROW_UNLOCK_LEVEL} และให้พลังมากกว่าเดิมหลายเท่า ย้ายร่างเงาไปขั้นสูงสุดเสมอ (ปุ่ม "ย้ายไปขั้นที่ดีที่สุด")</p><p>วิชาเวทปลดล็อกเมื่อสังหาร ${god('skills')}</p>`],
-    ['สนามรบ', `<p>ส่งร่างเงาไปสู้มอนสเตอร์เพื่อหา <b>พลังเทวะ (DP)</b> และค่ายุทธ์ ดูสีพลังศัตรู:</p><ul><li><b style="color:var(--ok)">เขียว</b> ปลอดภัย</li><li><b style="color:var(--warn)">เหลือง</b> ร่างเงาบางส่วนตาย</li><li><b style="color:var(--danger)">แดง</b> ร่างเงาตายเร็วมาก</li></ul>`],
-    ['การสร้าง', `<p>เลือกของที่อยากสร้าง ตัวละครจะทำวัตถุดิบที่ขาดให้เอง ของทุกชิ้นที่เคยสร้างให้โบนัสจนจบรอบ ปลดล็อกเมื่อสังหาร ${god('create')} เกมจำของที่เลือกไว้ข้ามการเกิดใหม่</p>`],
-    ['ท้าเทพ', `<p>ดูบรรทัด <b>คาดการณ์</b> ถ้าขึ้นว่า "ชนะ" ให้กดท้าสู้ ระหว่างสู้กด <b>⚡ ฟาดฟันเทวะ</b> เพื่อโจมตีแรงพิเศษ (ทุก ${D.STRIKE_CD} วินาที) ถ้าแพ้ พลังชีวิตจะฟื้นเองเมื่อออกจากการต่อสู้</p>`],
-    ['เทวาลัย', `<p><b>เครื่องผลิต</b> สร้าง DP ให้ตลอดเวลา (ปลดล็อกเมื่อสังหาร ${god('gen')}) · <b>อนุสรณ์</b> ใช้ DP กับของที่สร้างแลกตัวคูณ (ปลดล็อกเมื่อสังหาร ${god('monuments')}) ทั้งคู่รีเซ็ตเมื่อเกิดใหม่ ใช้ปุ่ม "สูงสุด" เพื่อซื้อทีเดียวจนเงินหมด</p>`],
-    ['เกิดใหม่และ God Power', `<p>ปลดล็อกเมื่อสังหาร ${god('rebirth')} เกิดใหม่จะเริ่มรอบใหม่ แต่ได้ <b>God Power</b> ตามเทพที่สังหารในรอบนั้น ใช้ซื้ออัปเกรดถาวร ถ้าแถบเป้าหมายบอกว่า "ยังห่างอีกมาก" แปลว่าเกิดใหม่คุ้มแล้ว</p>`],
-    ['ความท้าทาย', `<p>เล่นรอบใหม่ภายใต้กฎพิเศษ ${D.CHALLENGES.length} แบบ สังหารเทพเป้าหมายได้จะได้โบนัสถาวร ทำซ้ำได้แบบละ ${D.CHAL_MAX} ครั้ง</p>`],
-    ['สิ่งมีชีวิตสูงสุดและ Might', `<p>หลังสังหารเทพครบ ${D.GODS.length} องค์ในรอบเดียว จะสู้สิ่งมีชีวิตสูงสุดได้ไม่จำกัด ชนะแล้วได้แต้ม <b>Might</b> ไว้ซื้อความสามารถถาวร</p>`],
-    ['คู่หู ดันเจี้ยน อุปกรณ์', `<p>ปลดล็อกเมื่อสังหาร ${god('pets')} ส่งทีมคู่หู ${D.TEAM_SIZE} ตัวไปดันเจี้ยนเพื่อเก็บเลเวลและวัตถุดิบ แล้วเอาวัตถุดิบไปตีบวกอุปกรณ์ ทั้งหมดอยู่ถาวรข้ามการเกิดใหม่</p>`],
-    ['ความสำเร็จ', `<p>ทุกความสำเร็จเพิ่มค่าสถานะทั้งหมด +${Math.round(D.ACH_BONUS*100)}% ดูได้ที่แท็บเกิดใหม่ › สำเร็จ</p>`],
-    ['เล่นตอนออฟไลน์', `<p>ปิดเกมไปก็ยังได้ความคืบหน้าสูงสุด 8 ชั่วโมง กลับมาจะมีการ์ดสรุปให้ดู</p>`],
-    ['ย้ายเซฟ', `<p>เซฟเก็บในเบราว์เซอร์ของแต่ละเครื่อง ย้ายเครื่องให้กด "คัดลอกโค้ด" ในหน้านี้ แล้วไปวางที่ช่อง "วางโค้ดเซฟ" ในเครื่องใหม่</p>`],
-    ['เคล็ดลับ', `<ul><li>เปิด "จัดอัตโนมัติ" เพื่อให้เกมจัดร่างเงาเอง</li><li>บนคอมกด <b>?</b> ดูปุ่มลัด · บนมือถือปัดซ้าย/ขวาเพื่อเปลี่ยนแท็บ</li><li>ติดตั้งเกมเป็นแอปได้จากเมนูเบราว์เซอร์ "เพิ่มลงหน้าจอหลัก"</li></ul>`]
+    ['เป้าหมายของเกม', `<p>ก้าวข้ามขีดจำกัดมนุษย์ แล้วสังหารเทพทั้ง ${D.GODS.length} องค์ ตั้งแต่ ${D.GODS[0].name} ไปจนถึง ${D.GODS[D.GODS.length-1].name} ทุกองค์ที่ล้มลงจะเปิดวิชาและระบบใหม่ ทำให้ท่านแกร่งกล้าขึ้นอีกขั้น</p>`],
+    ['ร่างเงา', `<p>ร่างเงาจะก่อกำเนิดขึ้นเองทีละร่าง (ดูที่แท็บสร้าง) ส่งไปฝึกหรือออกรบด้วยปุ่ม <b>+</b> เลือก ×1, ×10, ×100 หรือ "ทั้งหมด" เพื่อส่งทีละหลายร่าง บนมือถือกดค้างที่ + เพื่อส่งต่อเนื่อง</p>`],
+    ['ฝึกกาย / วิชาเวท', `<p>ฝึกกายเสริม <b>พลังโจมตี</b> วิชาเวทเสริม <b>พลังป้องกัน</b> ขั้นถัดไปจะเปิดเมื่อขั้นก่อนหน้าถึง Lv.${D.ROW_UNLOCK_LEVEL} และให้พลังมากกว่าเดิมหลายเท่า จึงควรย้ายร่างเงาไปขั้นสูงสุดเสมอ (ปุ่ม "ย้ายไปขั้นที่ดีที่สุด")</p><p>วิชาเวทจะเปิดเมื่อสังหาร ${god('skills')}</p>`],
+    ['สนามรบ', `<p>ส่งร่างเงาไปปราบอสูรเพื่อเก็บ <b>พลังเทวะ (DP)</b> และค่ายุทธ์ ดูสีพลังของศัตรูก่อนส่ง:</p><ul><li><b style="color:var(--ok)">เขียว</b> ปลอดภัย</li><li><b style="color:var(--warn)">เหลือง</b> ร่างเงาบางส่วนจะล้มตาย</li><li><b style="color:var(--danger)">แดง</b> ร่างเงาล้มตายอย่างรวดเร็ว</li></ul>`],
+    ['การสร้าง', `<p>เลือกสิ่งที่ต้องการสร้าง แล้วตัวละครจะหลอมวัตถุดิบที่ขาดให้เอง ทุกชิ้นที่สร้างไว้ให้โบนัสไปจนจบรอบ ปลดล็อกเมื่อสังหาร ${god('create')} และเกมจะจำสิ่งที่เลือกไว้แม้จุติใหม่</p>`],
+    ['ท้าเทพ', `<p>ดูบรรทัด <b>คาดการณ์</b> เมื่อขึ้นว่า "ชนะ" ก็กดท้าสู้ได้ ระหว่างสู้กด <b>⚡ ฟาดฟันเทวะ</b> เพื่อปล่อยการโจมตีรุนแรง (ใช้ได้ทุก ${D.STRIKE_CD} วินาที) หากพ่ายแพ้ พลังชีวิตจะฟื้นคืนเองเมื่อออกจากการต่อสู้</p>`],
+    ['เทวาลัย', `<p><b>เครื่องผลิต</b> หลั่งพลังเทวะให้ตลอดเวลา (ปลดล็อกเมื่อสังหาร ${god('gen')}) · <b>อนุสรณ์</b> ใช้พลังเทวะกับของที่สร้างไว้แลกตัวคูณ (ปลดล็อกเมื่อสังหาร ${god('monuments')}) ทั้งสองอย่างรีเซ็ตเมื่อจุติใหม่ ปุ่ม "สูงสุด" จะซื้อรวดเดียวจนทรัพยากรหมด</p>`],
+    ['จุติใหม่และปราณเทพ', `<p>ปลดล็อกเมื่อสังหาร ${god('rebirth')} การจุติใหม่จะเริ่มรอบใหม่ แต่ได้ <b>ปราณเทพ (GP)</b> ตามจำนวนเทพที่สังหารในรอบนั้น ใช้ซื้ออัปเกรดถาวร หากแถบเป้าหมายบอกว่า "ยังห่างอีกมาก" แปลว่าถึงเวลาจุติแล้ว</p>`],
+    ['บททดสอบ', `<p>จุติเข้าสู่รอบใหม่ภายใต้กฎพิเศษ ${D.CHALLENGES.length} แบบ สังหารเทพเป้าหมายได้จะได้โบนัสถาวร ผ่านซ้ำได้แบบละ ${D.CHAL_MAX} ครั้ง</p>`],
+    ['สิ่งสูงสุดและบารมี', `<p>เมื่อสังหารเทพครบ ${D.GODS.length} องค์ในรอบเดียว จะท้าสู้สิ่งสูงสุดได้ไม่จำกัด ชนะแล้วได้ <b>บารมี</b> ไว้ซื้อความสามารถถาวร</p>`],
+    ['คู่หู แดนลับ อุปกรณ์', `<p>ปลดล็อกเมื่อสังหาร ${god('pets')} ส่งทีมสัตว์คู่กาย ${D.TEAM_SIZE} ตัวออกสำรวจแดนลับเพื่อเก็บเลเวลและวัตถุดิบ แล้วนำวัตถุดิบไปตีบวกอุปกรณ์ ทั้งหมดคงอยู่ถาวรแม้จุติใหม่</p>`],
+    ['ความสำเร็จ', `<p>แต่ละความสำเร็จเพิ่มค่าสถานะทั้งหมด +${Math.round(D.ACH_BONUS*100)}% ดูได้ที่แท็บจุติ › สำเร็จ</p>`],
+    ['ฝึกตนขณะออฟไลน์', `<p>แม้ปิดเกมไป ร่างเงาก็ยังฝึกต่อได้สูงสุด 8 ชั่วโมง เมื่อกลับมาจะมีการ์ดสรุปผลให้ดู</p>`],
+    ['ย้ายเซฟ', `<p>เซฟถูกเก็บไว้ในเบราว์เซอร์ของแต่ละเครื่อง หากจะย้ายเครื่อง ให้กด "คัดลอกโค้ด" ในหน้านี้ แล้วนำไปวางที่ช่องโค้ดเซฟของเครื่องใหม่ จากนั้นกด "โหลดจากโค้ด"</p>`],
+    ['เคล็ดลับ', `<ul><li>เปิด "จัดอัตโนมัติ" ให้เกมจัดสรรร่างเงาเอง</li><li>บนคอมกด <b>?</b> เพื่อดูปุ่มลัด · บนมือถือปัดซ้าย/ขวาเพื่อเปลี่ยนแท็บ</li><li>ติดตั้งเกมเป็นแอปได้ผ่านเมนูเบราว์เซอร์ "เพิ่มลงหน้าจอหลัก"</li></ul>`]
   ];
 }
 // sections for systems the player hasn't reached yet are shown locked, without spoilers
-const GUIDE_LOCK = { 'วิชาเวท':'skills', 'การสร้าง':'create', 'เทวาลัย':'gen', 'เกิดใหม่และ God Power':'rebirth', 'ความท้าทาย':'rebirth', 'คู่หู ดันเจี้ยน อุปกรณ์':'pets' };
+const GUIDE_LOCK = { 'วิชาเวท':'skills', 'การสร้าง':'create', 'เทวาลัย':'gen', 'จุติใหม่และปราณเทพ':'rebirth', 'บททดสอบ':'rebirth', 'คู่หู แดนลับ อุปกรณ์':'pets' };
 function guideLocked(title){
   const m = s.meta;
-  if(title === 'สิ่งมีชีวิตสูงสุดและ Might') return G.ubUnlocked(s) || m.mpTotal > 0 ? '' : 'ปลดล็อกเมื่อสังหารเทพครบ ' + D.GODS.length + ' องค์ในรอบเดียว';
+  if(title === 'สิ่งสูงสุดและบารมี') return G.ubUnlocked(s) || m.mpTotal > 0 ? '' : 'ปลดล็อกเมื่อสังหารเทพครบ ' + D.GODS.length + ' องค์ในรอบเดียว';
   const k = GUIDE_LOCK[title];
   if(!k || m.bestGods > D.UNLOCK_AT[k] || m.rebirths > 0 && (k === 'rebirth' || k === 'skills' || k === 'create' || k === 'gen')) return '';
   return 'ปลดล็อกเมื่อสังหาร ' + D.GODS[D.UNLOCK_AT[k]].name;
 }
 function guideHTML(){
-  const secs = guideSections().map(([t,h])=>{ const lock = guideLocked(t); return [lock ? '🔒 ' + t : t, lock ? '<p class="note">' + lock + ' — รายละเอียดจะเปิดให้อ่านเมื่อปลดล็อก</p>' : h]; });
+  const secs = guideSections().map(([t,h])=>{ const lock = guideLocked(t); return [lock ? '🔒 ' + t : t, lock ? '<p class="note">' + lock + ' — รายละเอียดจะเผยเมื่อปลดล็อก</p>' : h]; });
   return `<div class="gBox" role="dialog" aria-modal="true" aria-labelledby="gTitle" tabindex="-1">
       <div class="row"><b id="gTitle">📖 วิธีเล่น God Killer</b><button class="miniBtn" id="gClose">ปิด</button></div>
       <div class="gToc">${secs.map((x,i)=>`<a href="#g${i}" data-g="${i}">${x[0]}</a>`).join('')}</div>
@@ -1513,16 +1513,16 @@ function catchUp(){
     ['พลังเทวะ', '+' + fmt(s.dpTotal - dp0)],
     ['กาย', '+' + fmt(d1.phys - d0.phys)],
     ['เวท', '+' + fmt(d1.myst - d0.myst)],
-    ['โจมตี', fmt(d0.atk) + ' → ' + fmt(d1.atk)]
+    ['พลังโจมตี', fmt(d0.atk) + ' → ' + fmt(d1.atk)]
   ];
   if(gods.length) rows.push(['สังหารเทพ', gods.length + ' องค์: ' + gods.join(', ')]);
   if(s.clonesLost > lost0) rows.push(['ร่างเงาตาย', fmt(s.clonesLost - lost0) + ' ร่าง']);
-  if(dg.runs) rows.push(['ดันเจี้ยน', dg.runs + ' รอบ (ชนะ ' + dg.wins + ')']);
-  if(ubWins) rows.push(['สิ่งมีชีวิตสูงสุด', 'ชนะ ' + ubWins + ' ครั้ง · Might +' + fmt(s.meta.mp - mp0)]);
-  if(ach) rows.push(['ความสำเร็จใหม่', ach + ' อย่าง']);
+  if(dg.runs) rows.push(['แดนลับ', dg.runs + ' รอบ (ชนะ ' + dg.wins + ')']);
+  if(ubWins) rows.push(['สิ่งสูงสุด', 'ชนะ ' + ubWins + ' ครั้ง · บารมี +' + fmt(s.meta.mp - mp0)]);
+  if(ach) rows.push(['ความสำเร็จใหม่', ach + ' รายการ']);
   const esc = t => String(t).replace(/[&<>]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' })[c]);
-  welcomeHTML = '<div class="wbCard" role="dialog" aria-label="สรุปขณะไม่อยู่"><div class="wbTitle">ยินดีต้อนรับกลับ!</div>' +
-    '<div class="note">ไม่อยู่ ' + fmtTime(sec) + (raw > G.MAX_OFFLINE_SEC ? ' (นับสูงสุด ' + fmtTime(G.MAX_OFFLINE_SEC) + ')' : '') + '</div>' +
+  welcomeHTML = '<div class="wbCard" role="dialog" aria-label="สรุปผลขณะไม่อยู่"><div class="wbTitle">ยินดีต้อนรับกลับมา!</div>' +
+    '<div class="note">ห่างหายไป ' + fmtTime(sec) + (raw > G.MAX_OFFLINE_SEC ? ' (นับได้สูงสุด ' + fmtTime(G.MAX_OFFLINE_SEC) + ')' : '') + '</div>' +
     rows.map(r=>'<div class="wbRow"><span>' + esc(r[0]) + '</span><b>' + esc(r[1]) + '</b></div>').join('') +
     '<button class="b bPrimary" id="wbClose" style="margin-top:10px">เล่นต่อ</button></div>';
 }
@@ -1586,7 +1586,7 @@ function boot(saved){
   $('tabTipBtn').addEventListener('click', ()=>{ s.meta.seen[activeTab] = 1; save(); render(true); });
   initSaveTools();
   document.querySelectorAll('svg.ic').forEach(i=>i.setAttribute('aria-hidden', 'true'));   // decorative icons next to text
-  $('dgStop').addEventListener('click', ()=>{ G.stopDungeon(s); addLog('หยุดสำรวจดันเจี้ยน'); render(true); });
+  $('dgStop').addEventListener('click', ()=>{ G.stopDungeon(s); addLog('หยุดสำรวจแดนลับ'); render(true); });
   $('dgAuto').addEventListener('change', e=>{ s.meta.dgAuto = e.target.checked; render(true); });
   $('rbBtn').addEventListener('click', onRebirth);
   $('logBtn').addEventListener('click', toggleLog);
@@ -1596,8 +1596,8 @@ function boot(saved){
     t.addEventListener('keydown', e=>{ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); selectTab(t.dataset.tab); } });
   });
 
-  if(!s.log.length) addLog('เริ่มต้นเส้นทางสังหารเทพ: ร่างเงาจะถูกสร้างขึ้นเองทีละร่าง ส่งไปฝึกกายและสนามรบ แล้วท้า' + D.GODS[0].name + 'เมื่อคาดการณ์ว่าชนะ');
-  if(!storageOk) addLog('เบราว์เซอร์นี้ไม่อนุญาตให้บันทึกเกม — ความคืบหน้าจะหายเมื่อปิดหน้า');
+  if(!s.log.length) addLog('เส้นทางสังหารเทพเริ่มต้นขึ้น: ร่างเงาจะก่อกำเนิดเองทีละร่าง ส่งไปฝึกกายและออกสนามรบ แล้วท้าสู้' + D.GODS[0].name + ' เมื่อคาดการณ์ว่าชนะ');
+  if(!storageOk) addLog('เบราว์เซอร์นี้ไม่อนุญาตให้บันทึกเกม — ความคืบหน้าจะหายไปเมื่อปิดหน้า');
   selectTab('train');
   initPlatform();
   showWelcome();
