@@ -11,7 +11,7 @@ function newMeta(){
   return { gp:0, gpTotal:0, rebirths:0, bestGods:0, dpLife:0, up:{}, ach:{},
            pets:{}, team:[], mats:{}, gear:{}, dgBest:{}, run:null, dgAuto:true,
            chal:{}, ub:[], mp:0, mpTotal:0, might:{},
-           tut:0, seen:{}, plan:{ on:false, train:40, skill:30, mon:30 }, autoFight:false };
+           tut:0, seen:{}, plan:{ on:false, train:40, skill:30, mon:30 }, autoFight:false, createPref:null };
 }
 function newState(meta){
   return {
@@ -269,6 +269,12 @@ function buyUpgrade(s, key){
   s.meta.up[key] = (s.meta.up[key] || 0) + 1;
   return true;
 }
+
+// buy the same thing until it can't be afforded; returns how many were bought
+function buyRepeat(f){ let n = 0; while(n < 10000 && f()) n++; return n; }
+const upgradeGenMax = s => buyRepeat(()=>upgradeGen(s));
+const buildMonumentMax = (s, key) => buyRepeat(()=>buildMonument(s, key));
+const buyUpgradeMax = (s, key) => buyRepeat(()=>buyUpgrade(s, key));
 
 // ---------- pets & dungeons (kept in meta, so they survive rebirth) ----------
 function petConditionMet(s, p){
@@ -561,6 +567,8 @@ function finishItems(s, item, k, d, ev){
 
 function stepCreate(s, dt, d, ev){
   const c = s.create;
+  // after a rebirth, go back to the player's last choice as soon as it unlocks again
+  if(c.target === 'clone' && s.meta.createPref && creationUnlocked(s, D.CREATIONS.findIndex(x=>x.key===s.meta.createPref))) c.target = s.meta.createPref;
   let left = dt * d.m.create, guard = 0;
   while(left > 0 && guard++ < 1000){
     if(!c.cur){
@@ -674,6 +682,7 @@ function setCreateTarget(s, key){
   const i = D.CREATIONS.findIndex(c=>c.key===key);
   if(i < 0 || !creationUnlocked(s, i)) return false;
   const c = s.create;
+  s.meta.createPref = key === 'clone' ? null : key;   // remembered across rebirth
   if(key === c.target) return true;   // re-selecting keeps the ingredient already in progress
   if(c.cur && c.cur !== key){ pay(s, creationByKey(c.cur), -1); c.cur = null; c.prog = 0; }
   c.target = key;
@@ -761,6 +770,7 @@ function sanitize(raw){
   m.autoFight = rm.autoFight === true || !!(rm.might && rm.might.autoFight);
   if(rm.might && rm.might.autoFight) m.mp += D.MIGHT_AUTOFIGHT_REFUND;   // that perk became a free toggle: give its cost back once
   m.tut = isNum(rm.tut) ? Math.floor(Math.max(0, rm.tut)) : (m.bestGods >= 2 || m.rebirths ? 999 : 0);
+  m.createPref = typeof rm.createPref === 'string' && rm.createPref !== 'clone' && D.CREATIONS.some(c=>c.key===rm.createPref) ? rm.createPref : null;
   if(rm.seen && typeof rm.seen === 'object') for(const k in rm.seen) if(rm.seen[k] === 1) m.seen[k] = 1;
   const r = rm.run;
   if(r && typeof r === 'object' && Number.isInteger(r.i) && r.i >= 0 && r.i < D.DUNGEONS.length && Number.isInteger(r.depth) && r.depth >= 1 && r.depth <= D.MAX_DEPTH)
@@ -787,7 +797,7 @@ root.GK = {
   skillsUnlocked, createUnlocked, genUnlocked, monumentsUnlocked, rebirthUnlocked,
   rowUnlocked, monstersUnlocked, creationUnlocked, canAfford, creationByKey,
   achValue, achCount, genRate, genCost, upgradeGen, monumentCost, canBuild, buildMonument,
-  upgradeCost, buyUpgrade, rebirthGain, rebirth,
+  upgradeCost, buyUpgrade, rebirthGain, rebirth, upgradeGenMax, buildMonumentMax, buyUpgradeMax,
   petsUnlocked, petDef, petPower, teamPower, petExpNeed, toggleTeam, petConditionMet,
   dungeonPower, dungeonUnlocked, maxDepth, winChance, startDungeon, stopDungeon, forgeCost, forgeChance, forge, dungeonTime,
   chalDone, chalGoal, startChallenge, abandonChallenge, ubUnlocked, ubOpen, ubLevel, ubStats, startUbFight, fightTarget, outlook,
