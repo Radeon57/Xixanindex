@@ -831,6 +831,7 @@ function initSaveTools(){
 function renderHud(d, full){
   setBar($('hudHpBar'), s.hp / d.maxHp);
   if(!full) return;
+  renderRealm(d);
   setText($('hudGods'), s.gods + '/' + D.GODS.length);
   const ch = s.challenge && D.CHALLENGES.find(c=>c.key===s.challenge);
   setShown($('chalBar'), !!ch);
@@ -893,6 +894,7 @@ let lastLost = 0, lastDeathToast = 0;
 function handleEvents(ev, quiet){
   if(!quiet && ev.length && window.GKFX) GKFX.events(ev);
   for(const e of ev){
+    if(realmEvent(e, quiet)) continue;
     if(e.type === 'rowUnlock'){
       const def = JOB_DEFS[e.kind][e.i];
       addLog('ปลดล็อก' + (e.kind === 'train' ? 'การฝึกกาย' : 'วิชาเวท') + 'ใหม่: ' + def.name);
@@ -1542,6 +1544,102 @@ function showWelcome(){
   $('wbClose').focus();
 }
 
+// ---------- cultivation realms: HUD title and bar, tribulation button, lightning overlay, breakthrough banner ----------
+ACH_LABEL.realm = 'ทะลวงขอบเขตในรอบเดียว';
+SFX.thunder = ()=>{ tone(70, 0.45, 'sawtooth', 0.07, 35); tone(1400, 0.08, 'square', 0.02, 300); };
+const realmName = r => D.REALMS[r].name;
+let tribBolt = 0;
+function initRealm(){
+  const row = document.createElement('div');
+  row.className = 'realmRow'; row.id = 'realmRow';
+  row.innerHTML = '<button class="realmTitle" id="realmTitle" type="button"></button>' +
+    '<div class="bar realm" id="realmBarWrap"><i id="realmBar"></i></div>' +
+    '<button class="realmBtn" id="tribBtn" type="button"><b>⚡ ฝ่าทัณฑ์สวรรค์</b><small id="tribHint"></small></button>';
+  document.querySelector('#hud .hudTop').after(row);
+  const o = document.createElement('div');
+  o.id = 'tribFx'; o.setAttribute('aria-hidden', 'true');
+  o.innerHTML = '<div class="tribFlash"></div><div class="tribBolt" id="tribBoltEl"></div>' +
+    '<div class="tribBox"><b>ทัณฑ์สวรรค์</b><span id="tribCount"></span><div class="bar hp"><i id="tribBar"></i></div><small id="tribDmg"></small></div>';
+  document.body.appendChild(o);
+  $('tribBtn').addEventListener('click', ()=>{
+    if(!G.startTribulation(s)) return;
+    addLog('⚡ เริ่มฝ่าทัณฑ์สวรรค์ เพื่อทะลวงสู่ขั้น' + realmName(s.realm.r + 1));
+    tribBolt = 0;
+    render(true);
+  });
+  $('realmTitle').addEventListener('click', ()=>toast(realmInfo()));
+}
+function realmInfo(){
+  const R = s.realm, last = R.r >= D.REALMS.length - 1;
+  return realmName(R.r) + ' ขั้น ' + R.st + ' · ปราณ ' + fmt(G.realmQi(s)) + (last ? '' : '/' + fmt(D.REALMS[R.r].qi)) +
+    ' (เลเวลฝึกกาย+วิชาเวทรวม) · ค่าสถานะทั้งหมด ×' + Math.pow(D.REALM_STAT, R.r).toFixed(2);
+}
+function renderRealm(d){
+  const R = s.realm, last = R.r >= D.REALMS.length - 1, peak = G.atRealmPeak(s), inTrib = R.trib !== null;
+  setText($('realmTitle'), realmName(R.r) + ' · ขั้น ' + R.st + (last && G.realmQi(s) >= D.REALMS[R.r].qi ? ' สมบูรณ์' : ''));
+  const info = realmInfo();
+  if($('realmTitle').title !== info) $('realmTitle').title = info;
+  setShown($('realmBarWrap'), !peak && !inTrib);
+  setShown($('tribBtn'), peak || inTrib, 'flex');
+  if(!peak && !inTrib) setBar($('realmBar'), G.stageFrac(s));
+  else {
+    const wait = G.tribWait(s), o = G.tribOutlook(s, d);
+    setDisabled($('tribBtn'), !G.canTribulate(s));
+    setClass($('tribBtn'), 'risky', !o.ok && !inTrib && wait <= 0);
+    setText($('tribHint'), inTrib ? 'สายฟ้ากำลังฟาด…' : wait > 0 ? 'พักฟื้นลมปราณ ' + Math.ceil(wait) + ' วินาที' :
+      o.ok ? 'สู่ขั้น' + realmName(R.r + 1) + ' · คาดว่าผ่าน' : 'ร่างยังต้านไม่ไหว · เสริมพลังชีวิต/ป้องกัน');
+  }
+  // the 6-second storm follows the engine's clock, so a reload mid-storm shows the same moment
+  const box = $('tribFx');
+  setClass(box, 'show', inTrib);
+  if(!inTrib){ tribBolt = 0; return; }
+  const bolt = Math.min(D.TRIB_BOLTS, 1 + Math.floor(R.trib / D.TRIB_TIME * D.TRIB_BOLTS));
+  const o = G.tribOutlook(s, d);
+  setText($('tribCount'), 'สายฟ้าสายที่ ' + bolt + '/' + D.TRIB_BOLTS);
+  setBar($('tribBar'), Math.min(1, o.bolt * bolt / o.hp));
+  setText($('tribDmg'), 'ความเสียหายรวม ' + fmt(o.bolt * bolt) + ' / พลังชีวิต ' + fmt(o.hp));
+  if(bolt !== tribBolt){
+    tribBolt = bolt;
+    if(!motionOff()){
+      const b = $('tribBoltEl');
+      b.style.left = (18 + ((bolt * 37) % 64)) + '%';   // bolts land in a fixed, varied pattern
+      replayAnim(box.querySelector('.tribFlash'), 'hit'); replayAnim(b, 'hit');
+    }
+    sfx('thunder'); buzz(20);
+  }
+}
+function realmBanner(title, sub){
+  if(motionOff()){ toast(title + ' ' + sub, 3); return; }
+  let b = $('realmBanner');
+  if(!b){ b = document.createElement('div'); b.id = 'realmBanner'; b.setAttribute('aria-hidden', 'true'); b.innerHTML = '<b></b><span></span>'; document.body.appendChild(b); }
+  b.firstChild.textContent = title; b.lastChild.textContent = sub;
+  replayAnim(b, 'show');
+  if(window.GKFX && !GKFX.off()){
+    const x = innerWidth / 2, y = innerHeight * 0.4, R = Math.min(innerWidth, 520);
+    GKFX.ring(x, y, 12, R * 0.45, '#fff3c4', 6, 0.9);
+    GKFX.ring(x, y, 10, R * 0.3, '#8b5cf6', 4, 1.0, 0.15);
+    GKFX.burst(x, y, { n:48, colors:['#fff3d0','#e8c76f','#b39cf0','#7fb0ff'], speed:380, size:13, life:1.1, drag:0.93 });
+  }
+}
+// engine events for realms; returns true when the event was one of them
+function realmEvent(e, quiet){
+  if(e.type === 'realmStage'){
+    addLog('🌀 ลมปราณก้าวหน้า: ' + realmName(e.r) + ' ขั้น ' + e.st);
+    if(!quiet) toast('🌀 ' + realmName(e.r) + ' ขั้น ' + e.st);
+  } else if(e.type === 'realmPeak'){
+    addLog('⛈ ถึงจุดสูงสุดของขั้น' + realmName(e.r) + ' — กด "ฝ่าทัณฑ์สวรรค์" เพื่อทะลวงสู่ขั้น' + realmName(e.r + 1));
+    if(!quiet){ toast('⛈ ถึงจุดสูงสุดของขั้น' + realmName(e.r) + ' พร้อมฝ่าทัณฑ์สวรรค์แล้ว!', 2); sfx('ping'); }
+  } else if(e.type === 'realmUp'){
+    addLog('⚡ ฝ่าทัณฑ์สวรรค์สำเร็จ! ทะลวงสู่ขั้น' + realmName(e.r) + ' — ค่าสถานะทั้งหมด ×' + D.REALM_STAT + ' และฟื้นพลังชีวิตเต็ม');
+    if(!quiet){ realmBanner('ทะลวงสู่ขั้น' + realmName(e.r) + '!', 'ค่าสถานะทั้งหมด ×' + D.REALM_STAT + ' · ฟื้นพลังชีวิตเต็ม'); celebrate(); sfx('win'); buzz([60,40,120]); }
+    save();
+  } else if(e.type === 'tribFail'){
+    addLog('ฝ่าทัณฑ์สวรรค์ไม่สำเร็จ ร่างยังต้านสายฟ้าไม่ไหว — ปราณไม่หายไป พักฟื้น ' + D.TRIB_COOLDOWN + ' วินาทีแล้วลองใหม่');
+    if(!quiet){ toast('ทัณฑ์สวรรค์แรงเกินต้าน... ปราณยังอยู่ครบ พักฟื้นแล้วลองใหม่', 2); banner('ฝ่าทัณฑ์ไม่สำเร็จ...', true); sfx('lose'); }
+  } else return false;
+  return true;
+}
+
 // ---------- main loop ----------
 // the game advances every frame (wall-clock based); a 1s timer takes over when frames stop (background tab)
 const ev = [];
@@ -1568,7 +1666,7 @@ function boot(saved){
   lastLost = s.clonesLost;
 
   buildJobs('train'); buildJobs('skill'); buildJobs('mon');
-  buildCreate(); buildGods(); buildTemple(); buildRebirth(); buildPets(); buildUltimates(); buildPhase4();
+  buildCreate(); buildGods(); buildTemple(); buildRebirth(); buildPets(); buildUltimates(); buildPhase4(); initRealm();
   renderSteps();
   drawPixelHero($('heroPixel'));
   fx = initFX($('fx'));

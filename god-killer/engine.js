@@ -11,7 +11,7 @@ function newMeta(){
   return { gp:0, gpTotal:0, rebirths:0, bestGods:0, dpLife:0, up:{}, ach:{},
            pets:{}, team:[], mats:{}, gear:{}, dgBest:{}, run:null, dgAuto:true,
            chal:{}, ub:[], mp:0, mpTotal:0, might:{},
-           tut:0, seen:{}, plan:{ on:false, train:40, skill:30, mon:30 }, autoFight:false, createPref:null };
+           tut:0, seen:{}, plan:{ on:false, train:40, skill:30, mon:30 }, autoFight:false, createPref:null, bestRealm:0 };
 }
 function newState(meta){
   return {
@@ -35,6 +35,7 @@ function newState(meta){
     clonesLost: 0,
     playTime: 0,
     strikeAt: 0,
+    realm: { r:0, st:1, trib:null, cdAt:0, peak:0 },   // realm, minor stage, tribulation clock (null = none), retry time, peak noted
     lastSave: Date.now(),
     log: []
   };
@@ -94,6 +95,7 @@ function mults(s){
     compound(D.CHALLENGES.filter(c=>c.stat === 'stat'), c => s.meta.chal[c.key] || 0);
   }
   m.stat *= 1 + D.ACH_BONUS * achCount(s);
+  m.stat *= Math.pow(D.REALM_STAT, s.realm.r);
   m.phys = m.myst = m.battle = m.stat;
   apply(D.MONUMENTS, mo => s.mono[mo.key] || 0);
   // gear and pet bonuses compound per level, so they stay noticeable on the game's exponential scale
@@ -156,6 +158,7 @@ function achValue(s, type){
     case 'dpLife': return s.meta.dpLife;
     case 'monuments': return sumMono(s);
     case 'genLv': return s.gen;
+    case 'realm': return s.meta.bestRealm;
   }
   return 0;
 }
@@ -454,6 +457,74 @@ function pay(s, c, n){
 }
 const creationByKey = key => D.CREATIONS.find(c=>c.key===key);
 
+// ---------- cultivation realms (per run; meta.bestRealm is kept) ----------
+// qi is every training and skill level of this run; minor stages pass by themselves, a realm needs a tribulation
+function realmQi(s){ return sumLv(s.train) + sumLv(s.skill); }
+const realmStart = r => r > 0 ? D.REALMS[r-1].qi : 0;
+function realmStage(s, qi){
+  const r = s.realm.r, lo = realmStart(r), span = D.REALMS[r].qi - lo;
+  if(qi === undefined) qi = realmQi(s);
+  return Math.max(1, Math.min(D.REALM_STAGES, 1 + Math.floor(D.REALM_STAGES * (qi - lo) / span)));
+}
+// share of the current minor stage done (1 once the realm's end is reached)
+function stageFrac(s, qi){
+  const r = s.realm.r, lo = realmStart(r), per = (D.REALMS[r].qi - lo) / D.REALM_STAGES;
+  if(qi === undefined) qi = realmQi(s);
+  return Math.max(0, Math.min(1, (qi - lo - (realmStage(s, qi) - 1) * per) / per));
+}
+const lastRealm = s => s.realm.r >= D.REALMS.length - 1;
+const atRealmPeak = s => !lastRealm(s) && realmQi(s) >= D.REALMS[s.realm.r].qi;
+const tribWait = s => Math.max(0, s.realm.cdAt - s.playTime);
+const canTribulate = s => atRealmPeak(s) && s.realm.trib === null && tribWait(s) <= 0;
+// the tribulation's verdict is a pure function of the hero's stats: total bolt damage against max HP
+function tribOutlook(s, d){
+  d = d || derive(s);
+  const r = s.realm.r, atk = lastRealm(s) ? 0 : D.REALMS[r].trib;
+  const bolt = blow(atk, d.def), dmg = bolt * D.TRIB_BOLTS;
+  return { bolt, dmg, hp: d.maxHp, ok: dmg < d.maxHp };
+}
+function startTribulation(s){
+  if(!canTribulate(s)) return false;
+  s.realm.trib = 0;
+  return true;
+}
+function stepRealm(s, dt, ev){
+  const R = s.realm;
+  if(R.trib !== null){
+    R.trib += dt;
+    if(R.trib >= D.TRIB_TIME){
+      R.trib = null;
+      if(tribOutlook(s).ok){
+        R.r++;
+        if(R.r > s.meta.bestRealm) s.meta.bestRealm = R.r;
+        R.st = realmStage(s);
+        s.hp = derive(s).maxHp;   // the breakthrough renews the body
+        if(ev) ev.push({ type:'realmUp', r:R.r });
+      } else {
+        R.cdAt = s.playTime + D.TRIB_COOLDOWN;
+        if(ev) ev.push({ type:'tribFail', r:R.r });
+      }
+    }
+  }
+  const st = realmStage(s);
+  if(st > R.st){ R.st = st; if(ev) ev.push({ type:'realmStage', r:R.r, st }); }
+  // reaching the realm's peak is worth one note (the stage number stays 9)
+  const peak = atRealmPeak(s) ? 1 : 0;
+  if(peak !== R.peak){ R.peak = peak; if(peak && ev) ev.push({ type:'realmPeak', r:R.r }); }
+}
+function sanitizeRealm(raw, d){
+  const x = raw.realm && typeof raw.realm === 'object' ? raw.realm : {};
+  const R = d.realm, qi = realmQi(d);
+  R.r = Math.min(D.REALMS.length - 1, Math.floor(nonNeg(x.r, 0)));
+  while(R.r > 0 && qi < realmStart(R.r)) R.r--;   // never above what this run's qi allows
+  R.st = realmStage(d, qi);
+  R.trib = isNum(x.trib) && !lastRealm(d) && qi >= D.REALMS[R.r].qi ? Math.min(Math.max(0, x.trib), D.TRIB_TIME) : null;
+  R.cdAt = Math.min(nonNeg(x.cdAt, 0), d.playTime + D.TRIB_COOLDOWN);
+  R.peak = atRealmPeak(d) ? 1 : 0;   // a loaded save already at a peak shows its button without a fresh note
+  const rm = raw.meta && typeof raw.meta === 'object' ? raw.meta : {};
+  d.meta.bestRealm = Math.max(R.r, Math.min(D.REALMS.length - 1, Math.floor(nonNeg(rm.bestRealm, 0))));
+}
+
 // ---------- simulation ----------
 // ev collects things worth telling the player: {type, ...}
 function step(s, dt, ev){
@@ -518,6 +589,7 @@ function step(s, dt, ev){
       }
     }
   }
+  stepRealm(s, dt, ev);
   stepDungeon(s, dt, ev);
   s.achT = (s.achT || 0) + dt;
   if(s.achT >= 1){ s.achT = 0; checkAchievements(s, ev); checkPets(s, ev); applyPlan(s); }
@@ -801,7 +873,8 @@ function sanitize(raw){
   if(d.create.cur) d.create.prog = Math.min(d.create.prog, creationByKey(d.create.cur).time);
   over = assigned(d) - d.clones;
   for(const kind of JOB_KINDS){ for(const r of d[kind]){ if(over <= 0) break; const k = Math.min(r.n, over); r.n -= k; over -= k; } }
-  d.hp = Math.min(d.hp, dd.maxHp);
+  sanitizeRealm(raw, d);
+  d.hp = Math.min(d.hp, derive(d).maxHp);
   return d;
 }
 
@@ -817,6 +890,7 @@ root.GK = {
   chalDone, chalGoal, startChallenge, abandonChallenge, ubUnlocked, ubOpen, ubLevel, ubStats, startUbFight, fightTarget, outlook,
   mightUnlocked, mightLv, mightCost, buyMight,
   planUnlocked, autoFightUnlocked, topRow, bestSafeMonster, bestRowFor, moveToBest, applyPlan, setPlan, togglePlan, neededFactor,
+  realmQi, realmStage, stageFrac, atRealmPeak, tribWait, canTribulate, tribOutlook, startTribulation,
   strike, strikeWait, step, advance, assign, unassignKind, setCreateTarget, startFight, flee
 };
 })(typeof window !== 'undefined' ? window : globalThis);

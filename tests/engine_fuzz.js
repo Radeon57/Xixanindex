@@ -75,6 +75,18 @@ function invariants(s, where){
   const ci = D.CREATIONS.findIndex(c => c.key === s.create.target);
   if(ci < 0 || !G.creationUnlocked(s, ci)) bad.push('create target ' + s.create.target);
   if(s.create.cur && !G.creationByKey(s.create.cur)) bad.push('create cur ' + s.create.cur);
+  const rl = s.realm;
+  if(!rl || !isInt(rl.r) || rl.r >= D.REALMS.length) bad.push('realm.r ' + (rl && rl.r));
+  else {
+    if(!isInt(rl.st) || rl.st < 1 || rl.st > D.REALM_STAGES || rl.st !== G.realmStage(s)) bad.push('realm.st ' + rl.st + ' vs ' + G.realmStage(s));
+    if(rl.r > 0 && G.realmQi(s) < D.REALMS[rl.r - 1].qi) bad.push('realm above its qi');
+    if(rl.trib !== null && !(rl.trib >= 0 && rl.trib <= D.TRIB_TIME)) bad.push('realm.trib ' + rl.trib);
+    if(rl.trib !== null && !G.atRealmPeak(s)) bad.push('tribulation below the peak');
+    if(rl.cdAt > s.playTime + D.TRIB_COOLDOWN + 1e-9) bad.push('realm.cdAt too far ' + rl.cdAt);
+    if(rl.peak !== (G.atRealmPeak(s) ? 1 : 0)) bad.push('realm.peak ' + rl.peak);
+    if(m.bestRealm < rl.r || !isInt(m.bestRealm) || m.bestRealm >= D.REALMS.length) bad.push('bestRealm ' + m.bestRealm);
+    const f = G.stageFrac(s); if(!(f >= 0 && f <= 1)) bad.push('stageFrac ' + f);
+  }
   if(s.fight){
     if(s.fight.kind === 'god' && s.gods >= D.GODS.length) bad.push('god fight with no god left');
     if(s.fight.kind === 'ub' && !G.ubOpen(s, s.fight.i)) bad.push('ub fight not open');
@@ -134,6 +146,7 @@ const actions = [
   s => G.startDungeon(s, R() < .6 ? Math.floor(R() * 5) : J(), R() < .6 ? Math.floor(R() * 12) : J()),
   s => G.stopDungeon(s),
   s => G.strike(s),
+  s => G.startTribulation(s),
   s => G.upgradeGenMax(s),
   s => G.buyUpgradeMax(s, R() < .7 ? pick(D.UPGRADES).key : J()),
   s => G.toggleTeam(s, R() < .7 ? pick(D.PETS).key : J()),
@@ -151,6 +164,7 @@ function readers(s){
   for(let i = 0; i < D.ULTIMATES.length; i++){ const u = G.ubStats(s, i); G.outlook(s, d, u, u.hp); }
   if(s.gods < D.GODS.length){ const g = D.GODS[s.gods]; G.outlook(s, d, g, g.hp); G.neededFactor(s, d, g); }
   if(s.fight) G.fightTarget(s, s.fight);
+  G.realmQi(s); G.stageFrac(s); G.tribOutlook(s, d); G.tribWait(s); G.canTribulate(s);
 }
 function fuzzActions(name, make, n){
   const s = make();
@@ -186,7 +200,8 @@ function compareRuns(name, make, secs, dt, prep){
   const close = (x, y, tol) => Math.abs(x - y) <= tol * Math.max(1, Math.abs(x), Math.abs(y));
   const cmp = [['gods', a.gods, b.gods, 0], ['dpTotal', a.dpTotal, b.dpTotal, 0.05],
     ['phys', G.derive(a).phys, G.derive(b).phys, 0.05], ['myst', G.derive(a).myst, G.derive(b).myst, 0.05],
-    ['ub0', a.meta.ub[0] || 0, b.meta.ub[0] || 0, 0], ['clonesLost', a.clonesLost, b.clonesLost, 0.1],
+    ['ub0', a.meta.ub[0] || 0, b.meta.ub[0] || 0, 0], ['realm', a.realm.r + '/' + a.realm.st, b.realm.r + '/' + b.realm.st],
+    ['bestRealm', a.meta.bestRealm, b.meta.bestRealm, 0], ['clonesLost', a.clonesLost, b.clonesLost, 0.1],
     ['dgBest', JSON.stringify(a.meta.dgBest), JSON.stringify(b.meta.dgBest)],
     ['petLv', D.PETS.map(p => a.meta.pets[p.key] ? a.meta.pets[p.key].lv : 0).join(), D.PETS.map(p => b.meta.pets[p.key] ? b.meta.pets[p.key].lv : 0).join()]];
   for(const [k, x, y, tol] of cmp){
@@ -202,6 +217,11 @@ function compareRuns(name, make, secs, dt, prep){
   // across dungeon completions (cave, 120s per run) with auto-repeat
   const [c] = compareRuns('dungeon', lateSave, 400, 0.25, s => { s.meta.dgAuto = true; G.startDungeon(s, 0, 1); });
   if(!c.meta.run || c.meta.run.depth < 2) fail('dungeon scenario did not complete a run');
+  // a tribulation that passes and one that fails, timed across chunk boundaries
+  const [t1] = compareRuns('tribulation pass', lateSave, 20, 0.1, s => { s.meta.run = null; s.realm.r = 3; s.meta.bestRealm = 3; s.realm.st = G.realmStage(s); G.startTribulation(s); });
+  if(t1.realm.r !== 4 || t1.meta.bestRealm < 4) fail('tribulation pass scenario did not break through (r=' + t1.realm.r + ')');
+  const [t2] = compareRuns('tribulation fail', lateSave, 20, 0.1, s => { s.meta.run = null; s.realm.r = 6; s.meta.bestRealm = 6; s.train.forEach(r => { r.lv = 3000; }); s.realm.st = G.realmStage(s); s.battleRaw = 0; s.meta.up = {}; G.startTribulation(s); });
+  if(t2.realm.r !== 6 || t2.realm.trib !== null || !(G.tribWait(t2) > 0)) fail('tribulation fail scenario: r=' + t2.realm.r + ' wait=' + G.tribWait(t2));
   // early game: clone creation, training, monster deaths
   compareRuns('early', () => G.newState(), 900, 0.2, s => { s.clones = 10; s.mon[1].n = 5; s.train[0].n = 5; });
   // an ultimate-being fight
@@ -267,6 +287,7 @@ function bot(s, t){
   if(G.planUnlocked(s) && !s.meta.plan.on){ G.togglePlan(s, true); G.setPlan(s, 'balanced'); }
   if(!s.meta.plan.on){ const idle = G.idle(s); if(idle > 0){ G.assign(s, 'train', G.topRow(s, 'train'), Math.ceil(idle / 2)); const mi = G.bestSafeMonster(s, d); G.assign(s, mi >= 0 ? 'mon' : 'train', mi >= 0 ? mi : 0, G.idle(s)); } }
   if(G.autoFightUnlocked(s)) s.meta.autoFight = true;
+  G.startTribulation(s);
   if(!s.fight && s.gods < D.GODS.length && s.hp >= d.maxHp * 0.999 && G.outlook(s, d, D.GODS[s.gods], D.GODS[s.gods].hp).win) G.startFight(s);
   let best = 0; for(let i = 0; i < D.CREATIONS.length; i++) if(G.creationUnlocked(s, i)) best = i;
   G.setCreateTarget(s, D.CREATIONS[best].key);

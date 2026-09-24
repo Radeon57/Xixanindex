@@ -180,6 +180,24 @@ const PLAN_UNLOCK_GODS = 1, AUTOFIGHT_UNLOCK_REBIRTHS = 1;
 // MP refunded to saves that bought the old auto-fight Might perk (it is now a free toggle)
 const MIGHT_AUTOFIGHT_REFUND = 1;
 
+// ---------- cultivation realms (per run) ----------
+// Qi is the total of every training and skill level in this run, so it needs no grind of its own.
+// Realm r ends at qi REALMS[r].qi; the span from the previous realm's end is split into REALM_STAGES equal minor stages
+// that pass by themselves. Crossing into the next realm needs a heavenly tribulation: TRIB_BOLTS bolts, each dealing
+// blow(REALMS[r].trib, def); the hero passes when their sum is below max HP. A failed try only waits TRIB_COOLDOWN seconds.
+// Every realm past the first multiplies all stats by REALM_STAT (compounding).
+const REALMS = [
+  { name:'ฝึกปราณ',       qi:90,   trib:40 },
+  { name:'สร้างรากฐาน',    qi:240,  trib:2.5e9 },
+  { name:'แก่นทอง',        qi:540,  trib:1e15 },
+  { name:'กำเนิดวิญญาณ',   qi:1100, trib:3e16 },
+  { name:'แปรเทพ',         qi:1900, trib:2e17 },
+  { name:'ข้ามพ้นมิติ',     qi:3100, trib:6e17 },
+  { name:'มหายาน',         qi:4900, trib:3e18 },
+  { name:'เซียนสวรรค์',     qi:7500, trib:0 }
+];
+const REALM_STAGES = 9, REALM_STAT = 1.05, TRIB_TIME = 6, TRIB_BOLTS = 9, TRIB_COOLDOWN = 60;
+
 // Achievements are permanent and each adds ACH_BONUS to all stats.
 // type: what is measured (see engine.achValue); n: the target.
 const ACH_BONUS = 0.03;
@@ -203,7 +221,9 @@ const ACHIEVEMENTS = [
   { key:'dp1e9',  name:'ผู้มั่งคั่งศรัทธา',      type:'dpLife',   n:1e9 },
   { key:'dp1e15', name:'ทะเลแห่งศรัทธา',      type:'dpLife',   n:1e15 },
   { key:'mo10',   name:'สถาปนิกสวรรค์',      type:'monuments',n:10 },
-  { key:'gen10',  name:'ต้นธารเทวะ',      type:'genLv',    n:10 }
+  { key:'gen10',  name:'ต้นธารเทวะ',      type:'genLv',    n:10 },
+  { key:'rl2',    name:'ก่อแก่นทอง',        type:'realm',    n:2 },
+  { key:'rl7',    name:'บรรลุเซียนสวรรค์',    type:'realm',    n:7 }
 ];
 
 root.GKDATA = {
@@ -214,6 +234,7 @@ root.GKDATA = {
   PETS, PET_GROWTH, PET_EXP_BASE, PET_EXP_GROWTH, PET_MAX_LV, TEAM_SIZE,
   DUNGEONS, DEPTH_GROWTH, MAX_DEPTH, DUNGEON_UNLOCK_DEPTH, MATERIALS, GEAR, FORGE_COST, FORGE_GROWTH, FORGE_MIN_CHANCE,
   CHALLENGES, CHAL_MAX, CHAL_FIRST_GOAL, FEW_CLONES, ULTIMATES, UB_GROWTH, UB_UNLOCK_LV, MIGHT,
-  PLAN_PRESETS, PLAN_UNLOCK_GODS, AUTOFIGHT_UNLOCK_REBIRTHS, MIGHT_AUTOFIGHT_REFUND
+  PLAN_PRESETS, PLAN_UNLOCK_GODS, AUTOFIGHT_UNLOCK_REBIRTHS, MIGHT_AUTOFIGHT_REFUND,
+  REALMS, REALM_STAGES, REALM_STAT, TRIB_TIME, TRIB_BOLTS, TRIB_COOLDOWN
 };
 })(typeof window !== 'undefined' ? window : globalThis);
