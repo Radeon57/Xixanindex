@@ -26,6 +26,7 @@ https://radeon57.github.io/Xixanindex/god-killer.html (`index.html` redirects th
   - `render(full)` runs with `full` set every 200ms and without it every frame. Without `full`, it only updates bars.
   - Use the change-checked setters (`setText`, `setHTML`, `setShown`, `setClass`, `setBar`). Don't write to the DOM every frame.
 - **Animations** use transform and opacity only, and must respect `prefers-reduced-motion`.
+- **Theme** is "ink, lacquer & gold": use the `:root` tokens (`--ink*`, `--gold0/1/2`, `--jade`/`--jade2` for progress, `--cinnabar` for main actions and danger, `--paper`, `--muted`), never new purples. `--violet`/`--violetDim` are legacy aliases of cinnabar. Headings use `var(--fHead)` (Chonburi), body `var(--fBody)` (Sarabun), seal glyphs `var(--fSeal)` (Ma Shan Zheng, subset by the `&text=` list in the `<head>` link, so add any new glyph there). The background paintings are `img/bg/scene_tall|wide.webp`; `title.webp` is the banner on the welcome-back card and the guide.
 - **Offline progress** is `G.advance`, which runs in 1s chunks up to 8h. `G.step` must give the same results as `advance`.
 - **Sect missions** (ภารกิจสำนัก) are checked and paid in the engine every second (`checkMissions`), so offline play counts. The guide chain is `MISSION_CHAIN` in data.js and its position is `meta.mchain`; the UI is the "sect missions" block near the end of ui.js.
 - **Destructive buttons** use a two-tap confirm (`confirmTap`), with the second tap at least 400ms after the first.
