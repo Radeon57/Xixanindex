@@ -15,3 +15,7 @@ These images were generated through the free community [AI Horde](https://aihord
 ## Row icons (Canva)
 
 `train/01–08.webp` (ฝึกกาย), `skill/01–08.webp` (ฝึกจิต), `create/01–09.webp` (การสร้าง) and `gear/01–04.webp` (อุปกรณ์) were generated with Canva's AI image generator (round gold-and-jade medallions), exported at 200px and re-encoded to 128px WebP. A missing file falls back to the drawn icon in `icons.js`.
+
+## Gods, monsters and pets (Canva)
+
+`gods/01–10.webp` (200px painterly bust portraits, no frame) and `monsters/01–10.webp`, `pets/01–06.webp` (128px round gold-and-jade medallions) were regenerated with Canva's AI image generator to match the row icons. They replace the earlier Leonardo.ai versions; the old prompts stay in `PROMPTS.md` for reference.

@@ -211,22 +211,14 @@ There's no PIL in the original sandbox, so the conversion was done in headless C
 
 Each item has a ready-to-paste prompt for the next AI.
 
-### 1. Thorough bug hunt (never fully done)
+### 1. Bug hunt (a systematic pass was done; repeat after big changes)
 > Read HANDOFF.md and AGENTS.md. Hunt for real bugs in God Killer: read engine.js for edge cases (rebirth resets, challenge rules, sanitize gaps, step vs advance mismatches, Infinity/NaN at late game), then play through with tests/fixtures saves at 360×740 and 1366×768. Fix only confirmed bugs with minimal changes, add a fuzz invariant for each engine bug, run the full test routine, and report what you found.
 
-### 2. A unique mechanic for each god
-Fights are currently pure stat checks.
-> Give each of the 10 gods in data.js a `mech` field and implement it in engine.js deterministically (fixed timers, no randomness), for example:
-> - the thunder god charges a big hit every 8 s, which ⚡strike interrupts
-> - Yama heals 5% once at 50% HP
-> - Chang'e takes half damage from กาย-heavy builds
-> - the Time Sage enrages after 60 s
->
-> Auto-fight and offline `advance` must still be able to win, maybe a bit more slowly. Show the mechanic on the fight screen in one Thai line. Keep the god-kill timings in HANDOFF.md §6 within ±15%, and add fuzz coverage.
+### 2. ~~A unique mechanic for each god~~ (done)
+Each god now has a deterministic mechanic (see AGENTS.md, "God mechanics"). Possible follow-ups: let ⚡ strike interrupt a `charge`, or give ultimate beings mechanics too.
 
-### 3. Matching art for gods, monsters and pets
-They are Leonardo portraits, and their style differs slightly from the Canva medallions.
-> Regenerate `img/gods`, `img/monsters` and `img/pets` in the gold-jade painterly style (§8). Keep the file names, compare before and after screenshots, and replace an image only if the new one is clearly better.
+### 3. ~~Matching art for gods, monsters and pets~~ (done)
+All three sets were redrawn with Canva. The ultimates and dungeons still use the older Leonardo art.
 
 ### 4. Explanation lines for more rows
 Monsters, creations and pets could get a one-line `desc` like the trainings have.

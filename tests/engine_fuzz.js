@@ -120,6 +120,7 @@ function invariants(s, where){
   }
   if(!isInt(m.mchain) || m.mchain > D.MISSION_CHAIN.length) bad.push('mchain ' + m.mchain);
   if(!(s.buff <= D.MISSION_BUFF_MAX)) bad.push('buff ' + s.buff);
+  if(!(s.achT >= 0 && s.achT <= 1)) bad.push('achT ' + s.achT);
   if(bad.length) fail(where + ': ' + bad.slice(0, 8).join('; '), JSON.stringify(s).slice(0, 1500));
 }
 
@@ -286,6 +287,21 @@ function compareRuns(name, make, secs, dt, prep){
     const [a, b] = compareRuns('fortune boost dt=' + dt, midSave, 60, dt, s => { s.meta.run = null; s.boostT = 30.55; });
     if(a.boostT !== 0 || b.boostT !== 0) fail('fortune boost did not run out: ' + a.boostT + ' / ' + b.boostT);
   }
+  // the once-a-second rules (achievements, pets, clone plan, missions) run once per second of play at any step size:
+  // odd frame sizes and the UI's jittery ~1s background ticks used to drop the leftover and check up to half as often.
+  // Seen through the clone plan, which re-assigns every clone on each check.
+  for(const [name, size] of [['1', () => 1], ['1/60', () => 1/60], ['0.1', () => 0.1], ['0.3', () => 0.3], ['0.7', () => 0.7], ['0.98/1.02', k => k % 2 ? 1.02 : 0.98]]){
+    const s = G.newState(); s.gods = 1; s.meta.bestGods = 1; s.clones = 10; G.togglePlan(s, true);
+    let t = 0, k = 0, checks = 0;
+    while(t < 100 - 1e-9){
+      const dt = Math.min(size(k++), 100 - t);
+      for(const kind of ['train','skill','mon']) G.unassignKind(s, kind);
+      G.step(s, dt, []); t += dt;
+      if(G.assigned(s)) checks++;
+    }
+    if(checks < 99 || checks > 101) fail('once-a-second rules ran ' + checks + ' times in 100s at dt=' + name);
+    invariants(s, 'once-a-second dt=' + name);
+  }
 }
 console.log('B step/advance ok', ((Date.now() - T0) / 1000).toFixed(1) + 's');
 
@@ -338,6 +354,20 @@ function mutate(o){
     let raw; try { raw = JSON.parse(txt.slice(0, Math.floor(R() * txt.length)) + pick(['', '}', ']}', '}}', '"}'])); } catch(e){ continue; }
     invariants(G.sanitize(raw), 'sanitize(truncated)');
   }
+  // huge counters from a save: GP and materials can't buy past sanitize's own level caps (upgrades 300, gear 200),
+  // and summed kills stay finite. These used to reach Infinity/NaN after one "buy max" or a few minutes of play.
+  const huge = clone(lateSave());
+  huge.meta.gp = 1e300; huge.meta.mats = { ore: 1e308, wood: 1e308, ember: 1e308, pearl: 1e308 }; huge.mon.forEach(r => { r.kills = 1e308; });
+  const h = G.sanitize(huge);
+  invariants(h, 'sanitize(huge counters)');
+  if(!Number.isFinite(G.missionValue(h, { t:'kills' })) || !Number.isFinite(G.achValue(h, 'kills'))) fail('summed kills overflow');
+  D.UPGRADES.forEach(u => G.buyUpgradeMax(h, u.key));
+  D.GEAR.forEach(g => { for(let k = 0; k < 5000 && G.forge(h, g.key) !== null; k++); });
+  for(const k in h.meta.up) if(h.meta.up[k] > 300) fail('GP from a save bought ' + k + ' Lv.' + h.meta.up[k]);
+  for(const k in h.meta.gear) if(h.meta.gear[k] > 200) fail('materials from a save forged ' + k + ' Lv.' + h.meta.gear[k]);
+  invariants(h, 'huge counters spent');
+  seed(22); for(let t = 0; t < 600; t++){ G.step(h, 1, []); if(t % 3 === 0) bot(h); }
+  invariants(h, 'huge counters + 10 min play');
 }
 console.log('C sanitize ok', ((Date.now() - T0) / 1000).toFixed(1) + 's');
 
@@ -519,5 +549,46 @@ function bot(s, t){
   if(js.missions.length !== 3 || js.missions[0].id !== 7 || js.missions[1].c !== undefined || js.buff !== D.MISSION_BUFF_MAX || js.meta.mchain !== D.MISSION_CHAIN.length) fail('sanitize missions: ' + JSON.stringify(js.missions));
   invariants(js, 'sanitize missions'); G.advance(js, 30, []); invariants(js, 'sanitize missions + play');
   console.log('F missions ok: ' + done + ' done in 20 min, chain ' + s.meta.mchain + '/' + D.MISSION_CHAIN.length, ((Date.now() - T0) / 1000).toFixed(1) + 's');
+}
+// ---------- G. god mechanics: the forecast must match the real fight ----------
+{
+  // every god has a mechanic; ultimate beings have none
+  D.GODS.forEach((g, i) => { if(!g.mech || !g.mech.type || !g.mech.name || !g.mech.desc) fail('god ' + i + ' has no mechanic'); });
+  let fights = 0, wrong = 0, wrongSecs = 0;
+  for(let it = 0; it < 1200; it++){
+    const gi = it % D.GODS.length, s = G.newState();
+    s.gods = gi; s.meta.bestGods = gi;
+    // random training so the hero lands anywhere from hopeless to overwhelming against this god
+    const want = D.GODS[gi].atk * Math.exp((R() - 0.5) * 7);
+    for(let r = 0; r < s.train.length; r++){ s.train[r].lv = Math.floor(R() * 40); s.skill[r].lv = Math.floor(R() * 40); }
+    let d = G.derive(s), tries = 0;
+    while(d.atk < want && tries++ < 60){ const r = Math.floor(R() * s.train.length); s.train[r].lv += 5 + Math.floor(R() * 20); s.skill[r].lv += 5 + Math.floor(R() * 20); d = G.derive(s); }
+    G.step(s, 1, []); G.step(s, 1, []);   // settle: achievements for those levels land now, not mid-fight
+    d = G.derive(s); s.hp = d.maxHp;
+    if(!G.startFight(s)) fail('startFight ' + gi);
+    // sometimes forecast mid-fight, after a few exchanges or a strike
+    const pre = R() < 0.5 ? Math.floor(R() * 30) : 0;
+    const ev = [];
+    for(let k = 0; k < pre && s.fight; k++) G.step(s, D.HIT_INTERVAL, ev);
+    if(s.fight && R() < 0.3) G.strike(s);
+    if(!s.fight) continue;
+    d = G.derive(s);
+    const o = G.outlook(s, d, D.GODS[gi], s.fight.ghp, s.fight);
+    const t0 = s.playTime; let res = null, guard = 0;
+    const step = pick([D.HIT_INTERVAL, 0.3, 1, 0.7]);
+    while(!res && guard++ < 400000){
+      ev.length = 0; G.step(s, step, ev);
+      for(const e of ev){ if(e.type === 'godWin') res = 'win'; if(e.type === 'godLose') res = 'lose'; }
+    }
+    if(!res) continue;
+    fights++;
+    if((res === 'win') !== o.win){ wrong++; if(wrong <= 3) console.log('  forecast wrong', D.GODS[gi].mech.type, res, JSON.stringify(o)); }
+    if(res === 'win' && Math.abs((s.playTime - t0) - o.secs) > step + D.HIT_INTERVAL + 1e-6) wrongSecs++;
+    invariants(s, 'mech fight ' + gi);
+  }
+  if(fights < 500) fail('mech: too few fights resolved ' + fights);
+  if(wrong) fail('mech: forecast wrong in ' + wrong + '/' + fights + ' fights');
+  if(wrongSecs) fail('mech: win time off in ' + wrongSecs + ' fights');
+  console.log('G mechanics ok: ' + fights + ' fights, forecast always right', ((Date.now() - T0) / 1000).toFixed(1) + 's');
 }
 console.log('engine_fuzz: all ok,', checks, 'invariant checks in', ((Date.now() - T0) / 1000).toFixed(1) + 's');
