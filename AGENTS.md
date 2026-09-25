@@ -17,7 +17,7 @@ https://radeon57.github.io/Xixanindex/god-killer.html (`index.html` redirects th
 | `god-killer/ui.js` | Rendering and input, in one IIFE. |
 | `god-killer/fx.js` | Decorative effects exposed as `window.GKFX` (loaded before ui.js): a full-screen particle canvas, floating gains, seal stamps, the rebirth wheel and background qi motes. It reads `<html data-motion>` (set by ui.js `applyMotion`) to respect `motionOff()`, and ui.js calls it through a few `if(window.GKFX)` one-liners. |
 | `god-killer/icons.js` | Inline SVG art as `window.GKICONS`: icons for trainings, skills, creations, gear and materials, plus the hero portrait fallback. |
-| `god-killer/img/<set>/<NN>.webp` | 256×256 portraits for `gods`, `ultimates`, `monsters`, `pets`, `dungeons` and `hero`, plus 128px Canva medallions for `train`, `skill`, `create` and `gear` rows. A missing file falls back to a drawn sigil. The prompts used are in `img/PROMPTS.md`. |
+| `god-killer/img/<set>/<NN>.webp` | Portraits for `gods` (200px, Canva), `ultimates`, `dungeons` and `hero` (256px), plus 128px Canva medallions for `monsters`, `pets`, `train`, `skill`, `create` and `gear` rows. A missing file falls back to a drawn sigil. The prompts used are in `img/PROMPTS.md`. |
 | `tests/engine_fuzz.js` | Engine invariant, fuzz and long-run test. Run it with `node tests/engine_fuzz.js`, about 5s. |
 | `tests/ui_smoke.py` | Playwright click-through of every tab at 360×740 and 1366×768 with a fresh, early and late save (`tests/fixtures/`). Run `python3 tests/ui_smoke.py`; it must print `ALL PASS`. |
 
