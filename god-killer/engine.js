@@ -43,6 +43,7 @@ function newState(meta){
     realm: { r:0, st:1, trib:null, cdAt:0, peak:0 },   // realm, minor stage, tribulation clock (null = none), retry time, peak noted
     lastSave: Date.now(),
     missions: [], mseq: 0, buff: 0,
+    achT: 0,            // play seconds since the last once-a-second check (achievements, pets, plan, missions)
     log: []
   };
 }
@@ -808,8 +809,9 @@ function step(s, dt, ev){
   stepDungeon(s, dt, ev);
   if(s.boostT > 0) s.boostT = Math.max(0, s.boostT - dt);
   if(s.buff > 0) s.buff = Math.max(0, s.buff - dt);
+  // once a second of play: keep the remainder (at most 1s), so any step size checks as often as advance's 1s chunks
   s.achT = (s.achT || 0) + dt;
-  if(s.achT >= 1){ s.achT = 0; checkAchievements(s, ev); checkPets(s, ev); applyPlan(s); checkMissions(s, ev); }
+  if(s.achT >= 1){ s.achT = Math.min(1, s.achT - 1); checkAchievements(s, ev); checkPets(s, ev); applyPlan(s); checkMissions(s, ev); }
 }
 
 // what to make next for `key`: the item itself if affordable, otherwise the first missing ingredient (recursively);
@@ -1068,6 +1070,7 @@ function sanitize(raw){
   ['dp','dpTotal','battleRaw','clonesLost','playTime','hp'].forEach(k=>{ d[k] = Math.min(1e200, nonNeg(raw[k], d[k])); });   // far above real play, low enough that multipliers stay finite
   d.strikeAt = Math.min(nonNeg(raw.strikeAt, 0), d.playTime + D.STRIKE_CD);
   d.boostT = Math.min(nonNeg(raw.boostT, 0), D.FORTUNE.boostCap);
+  d.achT = Math.min(nonNeg(raw.achT, 0), 1);
   d.clones = Math.floor(capped(raw.clones, 1e9));
   d.gods = Math.min(D.GODS.length, Math.floor(nonNeg(raw.gods, 0)));
   d.lastSave = isNum(raw.lastSave) && raw.lastSave > 0 && raw.lastSave <= Date.now() ? raw.lastSave : Date.now();
@@ -1082,7 +1085,7 @@ function sanitize(raw){
   if(Array.isArray(raw.mon)) d.mon.forEach((r,i)=>{
     const x = raw.mon[i];
     if(!x || typeof x !== 'object') return;
-    r.n = Math.floor(capped(x.n, 1e9)); r.kills = Math.floor(nonNeg(x.kills, 0));
+    r.n = Math.floor(capped(x.n, 1e9)); r.kills = Math.floor(capped(x.kills, 1e15));   // summed for missions and achievements
     r.acc = Math.min(1, nonNeg(x.acc, 0)); r.dacc = Math.min(1, nonNeg(x.dacc, 0));
   });
   ['own','made'].forEach(k=>{
@@ -1101,6 +1104,7 @@ function sanitize(raw){
   const m = d.meta;
   ['gp','gpTotal','rebirths','dpLife'].forEach(k=>{ m[k] = nonNeg(rm[k], 0); });
   m.rebirths = Math.floor(m.rebirths);
+  m.gp = Math.min(m.gp, 1e15);   // spendable GP buys upgrade levels: far above real play, too little to buy past their cap
   // a phase-1 save has no meta: its current run is the best so far
   m.bestGods = Math.min(D.GODS.length, Math.floor(Math.max(nonNeg(rm.bestGods, 0), d.gods)));
   if(rm.up && typeof rm.up === 'object') D.UPGRADES.forEach(u=>{ if(isNum(rm.up[u.key])) m.up[u.key] = Math.floor(capped(rm.up[u.key], 300)); });
@@ -1111,7 +1115,7 @@ function sanitize(raw){
     if(x && typeof x === 'object') m.pets[p.key] = { lv: Math.min(D.PET_MAX_LV, Math.max(1, Math.floor(nonNeg(x.lv, 1)))), exp: nonNeg(x.exp, 0) };
   });
   if(Array.isArray(rm.team)) m.team = [...new Set(rm.team.filter(k => D.PETS.some(p=>p.key===k) && Object.prototype.hasOwnProperty.call(m.pets, k)))].slice(0, D.TEAM_SIZE);
-  if(rm.mats && typeof rm.mats === 'object') for(const k in D.MATERIALS) if(isNum(rm.mats[k])) m.mats[k] = Math.floor(Math.max(0, rm.mats[k]));
+  if(rm.mats && typeof rm.mats === 'object') for(const k in D.MATERIALS) if(isNum(rm.mats[k])) m.mats[k] = Math.floor(capped(rm.mats[k], 1e15));   // same for gear levels
   if(rm.gear && typeof rm.gear === 'object') D.GEAR.forEach(g=>{ if(isNum(rm.gear[g.key])) m.gear[g.key] = Math.floor(capped(rm.gear[g.key], 200)); });
   if(rm.dgBest && typeof rm.dgBest === 'object') D.DUNGEONS.forEach(g=>{ if(isNum(rm.dgBest[g.key])) m.dgBest[g.key] = Math.min(D.MAX_DEPTH, Math.floor(Math.max(0, rm.dgBest[g.key]))); });
   if(typeof rm.dgAuto === 'boolean') m.dgAuto = rm.dgAuto;
