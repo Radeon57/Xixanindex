@@ -550,4 +550,45 @@ function bot(s, t){
   invariants(js, 'sanitize missions'); G.advance(js, 30, []); invariants(js, 'sanitize missions + play');
   console.log('F missions ok: ' + done + ' done in 20 min, chain ' + s.meta.mchain + '/' + D.MISSION_CHAIN.length, ((Date.now() - T0) / 1000).toFixed(1) + 's');
 }
+// ---------- G. god mechanics: the forecast must match the real fight ----------
+{
+  // every god has a mechanic; ultimate beings have none
+  D.GODS.forEach((g, i) => { if(!g.mech || !g.mech.type || !g.mech.name || !g.mech.desc) fail('god ' + i + ' has no mechanic'); });
+  let fights = 0, wrong = 0, wrongSecs = 0;
+  for(let it = 0; it < 1200; it++){
+    const gi = it % D.GODS.length, s = G.newState();
+    s.gods = gi; s.meta.bestGods = gi;
+    // random training so the hero lands anywhere from hopeless to overwhelming against this god
+    const want = D.GODS[gi].atk * Math.exp((R() - 0.5) * 7);
+    for(let r = 0; r < s.train.length; r++){ s.train[r].lv = Math.floor(R() * 40); s.skill[r].lv = Math.floor(R() * 40); }
+    let d = G.derive(s), tries = 0;
+    while(d.atk < want && tries++ < 60){ const r = Math.floor(R() * s.train.length); s.train[r].lv += 5 + Math.floor(R() * 20); s.skill[r].lv += 5 + Math.floor(R() * 20); d = G.derive(s); }
+    G.step(s, 1, []); G.step(s, 1, []);   // settle: achievements for those levels land now, not mid-fight
+    d = G.derive(s); s.hp = d.maxHp;
+    if(!G.startFight(s)) fail('startFight ' + gi);
+    // sometimes forecast mid-fight, after a few exchanges or a strike
+    const pre = R() < 0.5 ? Math.floor(R() * 30) : 0;
+    const ev = [];
+    for(let k = 0; k < pre && s.fight; k++) G.step(s, D.HIT_INTERVAL, ev);
+    if(s.fight && R() < 0.3) G.strike(s);
+    if(!s.fight) continue;
+    d = G.derive(s);
+    const o = G.outlook(s, d, D.GODS[gi], s.fight.ghp, s.fight);
+    const t0 = s.playTime; let res = null, guard = 0;
+    const step = pick([D.HIT_INTERVAL, 0.3, 1, 0.7]);
+    while(!res && guard++ < 400000){
+      ev.length = 0; G.step(s, step, ev);
+      for(const e of ev){ if(e.type === 'godWin') res = 'win'; if(e.type === 'godLose') res = 'lose'; }
+    }
+    if(!res) continue;
+    fights++;
+    if((res === 'win') !== o.win){ wrong++; if(wrong <= 3) console.log('  forecast wrong', D.GODS[gi].mech.type, res, JSON.stringify(o)); }
+    if(res === 'win' && Math.abs((s.playTime - t0) - o.secs) > step + D.HIT_INTERVAL + 1e-6) wrongSecs++;
+    invariants(s, 'mech fight ' + gi);
+  }
+  if(fights < 500) fail('mech: too few fights resolved ' + fights);
+  if(wrong) fail('mech: forecast wrong in ' + wrong + '/' + fights + ' fights');
+  if(wrongSecs) fail('mech: win time off in ' + wrongSecs + ' fights');
+  console.log('G mechanics ok: ' + fights + ' fights, forecast always right', ((Date.now() - T0) / 1000).toFixed(1) + 's');
+}
 console.log('engine_fuzz: all ok,', checks, 'invariant checks in', ((Date.now() - T0) / 1000).toFixed(1) + 's');

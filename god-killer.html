@@ -195,6 +195,10 @@ section.panel{display:none}
 .bPrimary.flee{background:linear-gradient(180deg,#9b3b3b,#6e2626);border-color:var(--danger)}
 .rewardBox{font-size:.72rem;color:var(--sub);background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-top:8px;line-height:1.6}
 .rewardBox b{color:var(--gold)}
+.mechBox{font-size:.74rem;color:var(--paper,#ede3cc);text-align:center;margin:8px auto 0;padding:6px 10px;max-width:560px;border:1px solid rgba(184,50,42,.55);border-radius:10px;background:rgba(110,23,18,.22);line-height:1.5}
+.mechBox b{color:var(--gold2,#f1d38a)}
+.mechBox .mst{display:block;font-size:.68rem;color:var(--muted,#a89c84)}
+.mechBox .mst.hot{color:#ff9a8a}
 .godList{margin-top:10px;display:flex;flex-direction:column;gap:4px}
 .godRow{display:flex;align-items:center;gap:8px;font-size:.74rem;color:var(--sub);padding:5px 8px;border-radius:8px;background:var(--panel2);border:1px solid transparent}
 .godRow.done{color:var(--text)}
@@ -919,6 +923,7 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
           </div>
           <canvas id="fx" aria-hidden="true"></canvas>
         </div>
+        <div class="mechBox" id="godMech" style="display:none"></div>
         <div class="predict" id="predict"></div>
         <button class="b bPrimary" id="fightBtn"><svg class="ic" width="16" height="16"><use href="#icon-sword"></use></svg><span id="fightLabel">ท้าสู้</span></button>
         <button class="b strikeBtn" id="strikeBtn" style="display:none"><span id="strikeLabel">⚡ ฟาดฟันเทวะ</span></button>

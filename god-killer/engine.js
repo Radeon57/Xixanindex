@@ -238,10 +238,7 @@ function togglePlan(s, on){
 
 // how much stronger (atk, def and HP scaled together) the hero must get to beat target tg from full HP
 function neededFactor(s, d, tg){
-  const wins = f => {
-    const dealt = blow(d.atk*f, tg.def), taken = blow(tg.atk, d.def*f);
-    return Math.ceil(tg.hp / dealt) <= Math.ceil(d.maxHp*f / taken);
-  };
+  const wins = f => { const r = fightHits(d.atk*f, d.def*f, tg, tg.hp, d.maxHp*f, 0, false); return r.kill <= r.die && r.kill < Infinity; };
   if(wins(1)) return 1;
   let lo = 1, hi = 2;
   while(!wins(hi) && hi < 1e30) hi *= 2;
@@ -903,12 +900,14 @@ function stepFight(s, dt, d, ev){
     s.hp = Math.min(d.maxHp, s.hp + d.maxHp*D.HP_REGEN*dt);
     return;
   }
-  const tg = fightTarget(s, f);
+  const tg = fightTarget(s, f), m = f.kind === 'ub' ? null : tg.mech || null;
   f.t += dt;
   while(f.t >= D.HIT_INTERVAL){
     f.t -= D.HIT_INTERVAL;
-    f.ghp -= blow(d.atk, tg.def);
-    f.hits = (f.hits||0) + 1;
+    const k = (f.hits||0) + 1;
+    const dNow = mechDealt(m, blow(d.atk, tg.def), k, f.ghp, tg.hp);
+    f.ghp -= dNow;
+    f.hits = k;
     if(f.ghp <= 0){
       s.fight = null;
       if(f.kind === 'ub') winUltimate(s, f.i, ev);
@@ -916,7 +915,15 @@ function stepFight(s, dt, d, ev){
       s.hp = derive(s).maxHp;
       return;
     }
-    s.hp -= blow(tg.atk, d.def);
+    if(m && m.type === 'revive' && !f.rev && f.ghp <= m.below * tg.hp){
+      f.rev = true;
+      f.ghp = Math.min(tg.hp, f.ghp + m.heal * tg.hp);
+      if(ev) ev.push({ type:'mechRevive', i:s.gods });
+    }
+    const tNow = mechTaken(m, blow(tg.atk, d.def), k, dNow);
+    if(m && m.type === 'rage' && k === m.after + 1 && ev) ev.push({ type:'mechRage', i:s.gods });
+    s.hp -= tNow;
+    if(m && m.type === 'regen') f.ghp = Math.min(tg.hp, f.ghp + m.frac * tg.hp);
     if(s.hp <= 0){
       s.hp = 0;
       s.fight = null;
@@ -956,10 +963,72 @@ function winUltimate(s, i, ev){
   if(ev) ev.push({ type:'ubWin', i, lv:s.meta.ub[i], mp });
 }
 // can the hero win from the current HP? hits are traded evenly, so compare blows needed on each side
-function outlook(s, d, tg, ghp){
-  const dealt = blow(d.atk, tg.def), taken = blow(tg.atk, d.def);
-  const hitsToKill = Math.ceil(ghp / dealt), hitsToDie = Math.ceil(s.hp / taken);
-  return { win: hitsToKill <= hitsToDie, secs: hitsToKill * D.HIT_INTERVAL, share: Math.min(0.99, hitsToDie*dealt/ghp) };
+// f (optional) is the running fight, so a forecast made mid-fight knows the exchange count and a used revive
+function outlook(s, d, tg, ghp, f){
+  const r = fightHits(d.atk, d.def, tg, ghp, s.hp, f ? (f.hits||0) : 0, !!(f && f.rev));
+  return { win: r.kill <= r.die && r.kill < Infinity, secs: r.kill * D.HIT_INTERVAL, share: Math.min(0.99, r.die / r.kill) };
+}
+
+// ---------- god mechanics ----------
+// A god may have one deterministic mechanic (data.js GODS[i].mech); ultimate beings have none. Every HIT_INTERVAL
+// is one exchange k (1, 2, ...): the hero strikes, a revive may trigger, then the god strikes back (and may regenerate).
+// mechDealt/mechTaken are the per-exchange rules stepFight uses; fightHits predicts the same fight in closed form,
+// so the forecast, auto-fight, the bot and offline play all agree.
+function mechDealt(m, dealt, k, ghp, hp){
+  if(!m) return dealt;
+  if(m.type === 'miss' && k % m.n === 0) return 0;
+  if(m.type === 'guard' && ghp > m.above * hp) return dealt * m.mul;
+  return dealt;
+}
+function mechTaken(m, taken, k, dealtNow){
+  if(!m) return taken;
+  if(m.type === 'charge') return k % m.n === 0 ? taken * m.mul : taken;
+  if(m.type === 'rage') return k > m.after ? taken * m.mul : taken;
+  if(m.type === 'burn') return taken * (1 + m.grow * (k - 1));
+  if(m.type === 'reflect') return taken + m.frac * dealtNow;
+  return taken;
+}
+// smallest j >= 1 with ok(j) for a monotone ok, or Infinity
+function firstJ(ok){
+  if(ok(1)) return 1;
+  let lo = 1, hi = 2;
+  while(!ok(hi)){ lo = hi; hi *= 2; if(hi > 1e15) return Infinity; }
+  while(hi - lo > 1){ const mid = Math.floor((lo + hi) / 2); if(ok(mid)) hi = mid; else lo = mid; }
+  return hi;
+}
+// exchanges (after k0 already done) until the god dies (kill) and until the hero dies (die)
+function fightHits(atk, def, tg, ghp, heroHp, k0, rev){
+  const m = tg.mech || null, hp = tg.hp;
+  const dealt = blow(atk, tg.def), taken = blow(tg.atk, def);
+  const plain = (x, per) => per > 0 ? Math.max(1, Math.ceil(x / per)) : Infinity;
+  let kill = plain(ghp, dealt), die = plain(heroHp, taken);
+  if(!m) return { kill, die };
+  const fl = (j, n) => Math.floor((k0 + j) / n) - Math.floor(k0 / n);   // multiples of n among exchanges k0+1..k0+j
+  if(m.type === 'miss') kill = dealt > 0 ? firstJ(j => dealt * (j - fl(j, m.n)) >= ghp) : Infinity;
+  else if(m.type === 'guard'){
+    const thr = m.above * hp;
+    if(ghp > thr && dealt > 0){
+      const j1 = Math.ceil((ghp - thr) / (dealt * m.mul)), g1 = ghp - j1 * dealt * m.mul;
+      kill = g1 <= 0 ? j1 : j1 + Math.ceil(g1 / dealt);
+    }
+  }
+  else if(m.type === 'revive' && !rev && dealt > 0){
+    // blows until the god is at or below the threshold (at least one: a strike may already have pushed it there)
+    const thr = m.below * hp, j1 = ghp > thr ? Math.ceil((ghp - thr) / dealt) : 1, g1 = ghp - j1 * dealt;
+    kill = g1 <= 0 ? j1 : j1 + Math.ceil(Math.min(hp, g1 + m.heal * hp) / dealt);
+  }
+  else if(m.type === 'regen'){
+    const h = m.frac * hp;
+    kill = dealt >= ghp ? 1 : dealt <= h ? Infinity : Math.max(1, Math.ceil((ghp - h) / (dealt - h)));
+  }
+  else if(m.type === 'charge') die = taken > 0 ? firstJ(j => taken * (j + (m.mul - 1) * fl(j, m.n)) >= heroHp) : Infinity;
+  else if(m.type === 'rage'){
+    const pre = Math.max(0, m.after - k0);
+    die = taken <= 0 ? Infinity : heroHp <= taken * pre ? plain(heroHp, taken) : pre + Math.ceil((heroHp - taken * pre) / (taken * m.mul));
+  }
+  else if(m.type === 'burn') die = taken > 0 ? firstJ(j => taken * (j + m.grow * (j * k0 + j * (j - 1) / 2)) >= heroHp) : Infinity;
+  else if(m.type === 'reflect') die = plain(heroHp, taken + m.frac * dealt);
+  return { kill, die };
 }
 
 // advance in chunks so long offline gaps stay accurate (level-ups, deaths and rewards each apply as they happen)
@@ -1176,7 +1245,7 @@ root.GK = {
   planUnlocked, autoFightUnlocked, topRow, bestSafeMonster, bestRowFor, moveToBest, applyPlan, setPlan, togglePlan, neededFactor,
   fortuneUnlocked, fortuneItem, dpRate, fortuneKinds, rollFortune, fortuneMult, claimFortune, missFortune,
   realmQi, realmStage, stageFrac, atRealmPeak, tribWait, canTribulate, tribOutlook, startTribulation,
-  strike, strikeWait, step, advance, assign, unassignKind, setCreateTarget, startFight, flee,
+  strike, strikeWait, step, advance, fightHits, mechDealt, mechTaken, assign, unassignKind, setCreateTarget, startFight, flee,
   missionValue, missionProgress, missionReward, dpIncome, checkMissions
 };
 })(typeof window !== 'undefined' ? window : globalThis);

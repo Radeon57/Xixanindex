@@ -393,12 +393,30 @@ function arenaTarget(){
   if(G.ubUnlocked(s)){ arenaSel = 0; return ubTarget(0); }
   return null;
 }
-function godTarget(){ const g = D.GODS[s.gods]; return { kind:'god', i:s.gods, name:g.name, hp:g.hp, atk:g.atk, def:g.def, art:'g'+s.gods }; }
+function godTarget(){ const g = D.GODS[s.gods]; return { kind:'god', i:s.gods, name:g.name, hp:g.hp, atk:g.atk, def:g.def, mech:g.mech, art:'g'+s.gods }; }
 function ubTarget(i){ const u = G.ubStats(s, i); return { kind:'ub', i, name:u.name + ' Lv.' + G.ubLevel(s, i), hp:u.hp, atk:u.atk, def:u.def, art:'u'+i }; }
+// the god's mechanic, with a live hint during the fight (ultimate beings have none)
+function renderMech(tg){
+  const el = $('godMech'), m = tg.kind === 'god' ? tg.mech : null;
+  setShown(el, !!m);
+  if(!m) return;
+  const f = s.fight, k = f ? (f.hits || 0) : 0;
+  let st = '', hot = false;
+  if(f){
+    if(m.type === 'charge'){ const left = m.n - (k % m.n); st = left === 1 ? 'การโจมตีถัดไปจะแรง ×' + m.mul + '!' : 'อีก ' + left + ' ครั้งจะโจมตีแรง'; hot = left === 1; }
+    else if(m.type === 'miss'){ const left = m.n - (k % m.n); st = left === 1 ? 'การโจมตีถัดไปของท่านจะพลาด' : 'อีก ' + left + ' ครั้งจะพลาดเป้า'; hot = left === 1; }
+    else if(m.type === 'rage'){ st = k >= m.after ? 'คลั่งแล้ว! พลังโจมตี ×' + m.mul : 'จะคลั่งในอีก ' + Math.ceil((m.after - k) * D.HIT_INTERVAL) + ' วินาที'; hot = k >= m.after; }
+    else if(m.type === 'revive'){ st = f.rev ? 'ใช้การฟื้นคืนไปแล้ว' : 'ยังฟื้นคืนได้อีกหนึ่งครั้ง'; hot = !f.rev; }
+    else if(m.type === 'guard'){ const up = f.ghp > m.above * tg.hp; st = up ? 'เกราะยังอยู่ — ความเสียหายลดครึ่ง' : 'เกราะแตกแล้ว!'; hot = up; }
+    else if(m.type === 'burn'){ st = 'ความร้อนตอนนี้ ×' + (1 + m.grow * k).toFixed(2); hot = k > 20; }
+  }
+  setHTML(el, '⚔ กลไก: <b>' + m.name + '</b> — ' + m.desc + (st ? '<span class="mst' + (hot ? ' hot' : '') + '">' + st + '</span>' : '') +
+    (f ? '' : '<span class="mst">⚡ ฟาดฟันเทวะไม่ถูกกลไกใดขัดขวาง</span>'));
+}
 function fightOutlook(d, tg){
   tg = tg || arenaTarget();
   const ghp = s.fight ? s.fight.ghp : tg.hp;
-  return G.outlook(s, d, tg, ghp);
+  return G.outlook(s, d, tg, ghp, s.fight);
 }
 function buildUltimates(){
   $('ubList').innerHTML = D.ULTIMATES.map((u,i)=>`<div class="cItem" data-i="${i}">
@@ -430,6 +448,7 @@ function renderGods(d, full){
       setHTML($('godReward'), tg.kind === 'ub'
         ? 'รางวัลเมื่อชนะ: <b>+' + D.ULTIMATES[tg.i].mp + ' บารมี</b> · เลเวลถัดไปแกร่งขึ้น ×' + fmtX(D.UB_GROWTH)
         : 'รางวัลเมื่อสังหาร: ' + rewardParts(tg.i).join(' · '));
+      renderMech(tg);
       setText($('aGodName'), tg.name);
       setText($('aHeroHpTxt'), fmt(pwPool(s.hp, d.maxHp)) + ' / ' + fmt(pw(d.maxHp)));
       setText($('aGodHpTxt'), fmt(pwPool(s.fight ? s.fight.ghp : tg.hp, tg.hp)) + ' / ' + fmt(pw(tg.hp)));
@@ -965,6 +984,12 @@ function handleEvents(ev, quiet){
     } else if(e.type === 'godLose'){
       addLog('พ่ายแพ้ต่อ ' + D.GODS[e.i].name + ' — ฝึกให้แข็งแกร่งขึ้นแล้วกลับมาใหม่');
       if(!quiet){ toast('พ่ายแพ้... ต้องแข็งแกร่งกว่านี้', 2); banner('พ่ายแพ้...', true); sfx('lose'); }
+    } else if(e.type === 'mechRevive'){
+      addLog('⚠ ' + D.GODS[e.i].name + ' ใช้ ' + D.GODS[e.i].mech.name + ' ฟื้นคืนพลังชีวิต!');
+      if(!quiet){ toast('⚠ ' + D.GODS[e.i].mech.name + '! เทพฟื้นคืนพลังชีวิต', 2); sfx('ping'); }
+    } else if(e.type === 'mechRage'){
+      addLog('⚠ ' + D.GODS[e.i].name + ' คลั่ง! (' + D.GODS[e.i].mech.name + ')');
+      if(!quiet){ toast('⚠ ' + D.GODS[e.i].name + ' คลั่งแล้ว! พลังโจมตี ×' + D.GODS[e.i].mech.mul, 2); sfx('ping'); }
     } else if(e.type === 'mission') onMissionDone(e, quiet);
   }
   ev.length = 0;
@@ -1407,7 +1432,7 @@ function guideSections(){
     ['ขอบเขตบำเพ็ญ', `<p>ทุกเลเวลฝึกกายและฝึกจิตสะสมเป็นปราณ ขั้นย่อยจะขยับขึ้นเอง ${D.REALM_STAGES} ขั้นต่อขอบเขต เมื่อถึงยอดขอบเขต ปุ่ม <b>⚡ ฝ่าทัณฑ์สวรรค์</b> จะปรากฏใต้ชื่อเกม ผ่านได้เมื่อรับสายฟ้าทั้ง ${D.TRIB_BOLTS} สายไหว (ป้องกันและพลังชีวิตยิ่งสูงยิ่งปลอดภัย) ทะลวงแล้วค่าสถานะทั้งหมด ×${fmtX(D.REALM_STAT)} ต่อขอบเขต หากล้มเหลวปราณไม่หาย รอ ${D.TRIB_COOLDOWN} วินาทีแล้วลองใหม่</p>`],
     ['ภารกิจสำนัก', `<p>ภารกิจสั้น ๆ 3 ข้ออยู่ใต้แถบสถานะเสมอ (บนคอมพิวเตอร์อยู่ใต้เมนู) แตะภารกิจเพื่อไปยังแท็บที่ต้องทำ ทำสำเร็จแล้วรับรางวัลทันที และภารกิจใหม่จะเข้ามาแทน ช่วงแรกเป็นภารกิจนำทางที่สอนระบบทีละขั้น</p>`],
     ['โชควาสนา', `<p>หลังสังหารเทพองค์แรก สมบัติวิญญาณจะปรากฏบนจอเป็นระยะขณะเปิดเกมอยู่ แตะก่อนมันสลายไปใน ${D.FORTUNE.life} วินาที <b>ผลท้อเซียน</b> ให้พลังเทวะ <b>คัมภีร์ลับ</b> เร่งการฝึก ×${D.FORTUNE.boostMult} <b>เม็ดยาทิพย์</b> เร่งการสร้าง เก็บต่อเนื่องได้รางวัลเพิ่มขึ้น</p>`],
-    ['ท้าเทพ', `<p>ดูบรรทัด <b>คาดการณ์</b> เมื่อขึ้นว่า "ชนะ" ก็กดท้าสู้ได้ ระหว่างสู้กด <b>⚡ ฟาดฟันเทวะ</b> เพื่อปล่อยการโจมตีรุนแรง (ใช้ได้ทุก ${D.STRIKE_CD} วินาที) หากพ่ายแพ้ พลังชีวิตจะฟื้นคืนเองเมื่อออกจากการต่อสู้</p>`],
+    ['ท้าเทพ', `<p>ดูบรรทัด <b>คาดการณ์</b> เมื่อขึ้นว่า "ชนะ" ก็กดท้าสู้ได้ ระหว่างสู้กด <b>⚡ ฟาดฟันเทวะ</b> เพื่อปล่อยการโจมตีรุนแรง (ใช้ได้ทุก ${D.STRIKE_CD} วินาที) หากพ่ายแพ้ พลังชีวิตจะฟื้นคืนเองเมื่อออกจากการต่อสู้</p><p>เทพแต่ละองค์มี <b>กลไกพิเศษ</b> ของตัวเอง เช่น ผ่าสายฟ้าแรงเป็นจังหวะ ฟื้นคืนชีพหนึ่งครั้ง หรือคลั่งเมื่อสู้นาน ดูได้ใต้ภาพเทพ และระหว่างสู้จะบอกจังหวะให้เห็น บรรทัดคาดการณ์คิดกลไกไว้ให้แล้ว ส่วน ⚡ ฟาดฟันเทวะไม่ถูกกลไกใดขัดขวาง</p>`],
     ['เทวาลัย', `<p><b>เครื่องผลิต</b> หลั่งพลังเทวะให้ตลอดเวลา (ปลดล็อกเมื่อสังหาร ${god('gen')}) · <b>อนุสรณ์</b> ใช้พลังเทวะกับของที่สร้างไว้แลกตัวคูณ (ปลดล็อกเมื่อสังหาร ${god('monuments')}) ทั้งสองอย่างรีเซ็ตเมื่อจุติใหม่ ปุ่ม "สูงสุด" จะซื้อรวดเดียวจนทรัพยากรหมด</p>`],
     ['จุติใหม่และปราณเทพ', `<p>ปลดล็อกเมื่อสังหาร ${god('rebirth')} การจุติใหม่จะเริ่มรอบใหม่ แต่ได้ <b>ปราณเทพ (GP)</b> ตามจำนวนเทพที่สังหารในรอบนั้น ใช้ซื้ออัปเกรดถาวร หากแถบเป้าหมายบอกว่า "ยังห่างอีกมาก" แปลว่าถึงเวลาจุติแล้ว</p>`],
     ['บททดสอบ', `<p>จุติเข้าสู่รอบใหม่ภายใต้กฎพิเศษ ${D.CHALLENGES.length} แบบ สังหารเทพเป้าหมายได้จะได้โบนัสถาวร ผ่านซ้ำได้แบบละ ${D.CHAL_MAX} ครั้ง</p>`],

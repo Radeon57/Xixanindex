@@ -71,17 +71,36 @@ const STRIKE_CD = 12, STRIKE_SHARE = 0.04, STRIKE_BLOWS = 5;
 // unlock: 'skills' | 'create' | 'gen' | 'monuments' | 'pets' | 'rebirth'; monsters unlock two at a time per god.
 // gp: God Power paid out on rebirth for every god killed in that run.
 const GODS = [
-  { name:'จอมเทพอัสนี',   hp:7800, atk:37, def:190,       gp:3,  reward:{ unlock:'skills', maxClones:10, stat:1.3 } },
-  { name:'เทพสงครามกระบี่โลหิต',   hp:3.7e5, atk:4400, def:8800,     gp:3,  reward:{ unlock:'create', maxClones:20, stat:1.3 } },
-  { name:'ราชันยมโลก',    hp:2.4e7, atk:3.3e5, def:5.8e5,   gp:6,  reward:{ unlock:'gen', maxClones:30, stat:1.3, clone:2 } },
-  { name:'เทพีลิขิตฟ้า',  hp:2.7e9, atk:3.7e7, def:6.5e7,       gp:9,  reward:{ unlock:'monuments', maxClones:40, stat:1.3, dp:2 } },
-  { name:'ราชามังกรทะเลบูรพา',    hp:2.5e11, atk:3.5e9, def:6.1e9,  gp:12,  reward:{ unlock:'pets', maxClones:50, stat:1.3, speed:2 } },
-  { name:'เทพเพลิงจูหรง',    hp:9.5e11, atk:1.2e10, def:2.2e10,  gp:18,  reward:{ unlock:'rebirth', maxClones:60, stat:1.5 } },
-  { name:'เซียนเฒ่ากาลเวลา',  hp:8.9e14, atk:1.2e13, def:2.1e13,  gp:30, reward:{ maxClones:80, stat:1.5, speed:2 } },
-  { name:'เทพธิดาฉางเอ๋อ',   hp:5.8e15, atk:7.9e13, def:1.4e14,gp:45, reward:{ maxClones:100, stat:1.5, dp:3 } },
-  { name:'จักรพรรดิสุริยัน',   hp:2.8e16, atk:3.8e14, def:6.7e14,  gp:75, reward:{ maxClones:120, stat:1.5, clone:3 } },
-  { name:'จักรพรรดิหยก', hp:1.4e17, atk:1.9e15, def:3.3e15,gp:120, reward:{ stat:2 } }
+  { name:'จอมเทพอัสนี',   hp:6800, atk:32, def:160,       gp:3,  reward:{ unlock:'skills', maxClones:10, stat:1.3 } },
+  { name:'เทพสงครามกระบี่โลหิต',   hp:340000, atk:4100, def:8200,     gp:3,  reward:{ unlock:'create', maxClones:20, stat:1.3 } },
+  { name:'ราชันยมโลก',    hp:2.1e7, atk:300000, def:520000,   gp:6,  reward:{ unlock:'gen', maxClones:30, stat:1.3, clone:2 } },
+  { name:'เทพีลิขิตฟ้า',  hp:2.5e9, atk:3.4e7, def:6e7,       gp:9,  reward:{ unlock:'monuments', maxClones:40, stat:1.3, dp:2 } },
+  { name:'ราชามังกรทะเลบูรพา',    hp:2.3e11, atk:3.2e9, def:5.6e9,  gp:12,  reward:{ unlock:'pets', maxClones:50, stat:1.3, speed:2 } },
+  { name:'เทพเพลิงจูหรง',    hp:8.3e11, atk:1e10, def:1.9e10,  gp:18,  reward:{ unlock:'rebirth', maxClones:60, stat:1.5 } },
+  { name:'เซียนเฒ่ากาลเวลา',  hp:7.9e14, atk:1.1e13, def:1.9e13,  gp:30, reward:{ maxClones:80, stat:1.5, speed:2 } },
+  { name:'เทพธิดาฉางเอ๋อ',   hp:4.6e15, atk:6.2e13, def:1.1e14,gp:45, reward:{ maxClones:100, stat:1.5, dp:3 } },
+  { name:'จักรพรรดิสุริยัน',   hp:2.5e16, atk:3.3e14, def:5.9e14,  gp:75, reward:{ maxClones:120, stat:1.5, clone:3 } },
+  { name:'จักรพรรดิหยก', hp:1.2e17, atk:1.7e15, def:2.9e15,gp:120, reward:{ stat:2 } }
 ];
+// Each god fights with one mechanic (engine.js mechDealt/mechTaken/fightHits). ⚡ strike ignores all of them.
+// God stats above were lowered by each mechanic's measured difficulty, so fresh-save kill times stay on target.
+//   charge: every n-th exchange the god hits ×mul · regen: after each of its hits the god heals frac of its max HP
+//   revive: once, when at or below `below` of its HP, it heals `heal` of its HP · miss: every n-th of your blows misses
+//   guard: while above `above` of its HP it takes ×mul damage · burn: its hit grows by grow per exchange
+//   rage: after `after` exchanges its hits are ×mul · reflect: you also take frac of the damage you deal
+const GOD_MECHS = [
+  { type:'charge',  n:4, mul:3,          name:'อัสนีสะสม',      desc:'ทุกการโจมตีครั้งที่ 4 จะผ่าสายฟ้าแรง ×3' },
+  { type:'regen',   frac:0.005,          name:'กระบี่ดูดโลหิต',   desc:'ทุกครั้งที่ฟัน จะดูดโลหิตฟื้นพลังชีวิต 0.5% ของพลังชีวิตสูงสุด' },
+  { type:'revive',  below:0.5, heal:0.4, name:'คืนชีพจากยมโลก',  desc:'เมื่อพลังชีวิตเหลือไม่ถึงครึ่ง จะฟื้นคืน 40% หนึ่งครั้ง' },
+  { type:'miss',    n:4,                 name:'ลิขิตให้พลาด',     desc:'การโจมตีครั้งที่ 4 ของท่านจะพลาดเป้าเสมอ' },
+  { type:'guard',   above:0.7, mul:0.5,  name:'เกล็ดมังกร',       desc:'รับความเสียหายเพียงครึ่งเดียว จนกว่าพลังชีวิตจะต่ำกว่า 70%' },
+  { type:'burn',    grow:0.03,           name:'เพลิงลุกลาม',      desc:'การโจมตีร้อนแรงขึ้น 3% ทุกครั้ง ยิ่งสู้นานยิ่งอันตราย' },
+  { type:'rage',    after:20, mul:2,     name:'กาลเวลาหมดลง',     desc:'หลังแลกกระบวนท่า 20 ครั้ง (10 วินาที) จะคลั่ง พลังโจมตี ×2' },
+  { type:'reflect', frac:0.1,            name:'กระจกจันทรา',      desc:'สะท้อน 10% ของความเสียหายที่ท่านทำกลับมาหาท่าน' },
+  { type:'charge',  n:3, mul:2.5,        name:'เปลวสุริยะ',       desc:'ทุกการโจมตีครั้งที่ 3 จะแผดเผาแรง ×2.5' },
+  { type:'revive',  below:0.3, heal:0.5, name:'โองการสวรรค์',     desc:'เมื่อพลังชีวิตเหลือไม่ถึง 30% จะฟื้นคืน 50% หนึ่งครั้ง' }
+];
+GODS.forEach((g, i) => { g.mech = GOD_MECHS[i] || null; });
 // the god whose defeat unlocks each system (index into GODS)
 const UNLOCK_AT = { skills:0, create:1, gen:2, monuments:3, pets:4, rebirth:5 };
 
