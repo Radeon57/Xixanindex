@@ -478,7 +478,7 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
 /* ---------- split layout: sidebar (HUD + tabs) beside the content — desktop and landscape phones ---------- */
 @media (min-width:1024px), (orientation:landscape) and (max-height:500px) and (min-width:540px){
   #app{display:grid;grid-template-columns:var(--sideW,300px) minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);column-gap:var(--colGap,20px);max-width:1280px}
-  #side{display:flex;flex-direction:column;grid-column:1;grid-row:1/-1;min-height:0;overflow-y:auto;overscroll-behavior:contain}
+  #side{display:flex;flex-direction:column;grid-column:1;grid-row:1/-1;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}   /* x hidden: the tutorial ring, alert pings and mission slide-ins stick out a few px and would add a sideways scrollbar */
   #tutor{grid-column:2;grid-row:1}
   #tabTip{grid-column:2;grid-row:2}
   #main{grid-column:2;grid-row:3}
@@ -540,6 +540,8 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
   .tutor,.tip{font-size:.68rem;padding:5px 8px;margin-bottom:6px}
   .arena{--pw:76px}
   .tab.active::before{left:-1px;top:50%;bottom:auto;width:3px;height:16px;margin:-8px 0 0}
+  /* the HUD buttons must fit a 220px sidebar (568–740px wide phones): compact them as the phone rule at 420px does */
+  .godCount>.ic{display:none} .godCount{gap:3px} .godCount .logBtn{margin-left:3px;padding:3px 5px} #keyBtn{display:none!important}
 }
 @media (min-width:1024px) and (max-height:500px){
   .hudGrid{grid-template-columns:1fr 1fr}
@@ -577,6 +579,8 @@ kbd{display:inline-block;font:600 .7rem/1 ui-monospace,SFMono-Regular,Menlo,Cons
 #setBtn{font-size:.8rem;line-height:1;padding:3px 6px}
 .brand,.godCount{white-space:nowrap}
 @media (max-width:420px){.brand{font-size:.95rem;letter-spacing:.2px;gap:5px}.godCount>.ic{display:none}.brandSeal{width:16px;height:26px;font-size:.58rem}.godCount{gap:3px;font-size:.7rem}.godCount .logBtn{margin-left:3px;padding:3px 5px}#keyBtn{display:none!important}}
+/* under 360px the title and the god count + buttons don't fit one line (the log button was cut off): the count moves to a second line */
+@media (max-width:359px){.hudTop{flex-wrap:wrap;row-gap:4px}.godCount{margin-left:auto}}
 .portrait{position:relative}
 .portrait::after{content:'';position:absolute;inset:0;border-radius:50%;background:#fff;opacity:0;pointer-events:none}
 .portrait.hitFlash::after{animation:flashO .22s ease-out}
